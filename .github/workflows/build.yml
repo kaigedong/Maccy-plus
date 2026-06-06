@@ -9,11 +9,18 @@ on:
 jobs:
   build:
     name: Build MaccyPlus
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          # List available Xcode versions and select the latest
+          ls /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
 
       - name: Build
         run: |
