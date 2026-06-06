@@ -1521,7 +1521,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.MaccyUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -1548,7 +1548,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.MaccyUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -1572,7 +1572,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.MaccyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -1596,7 +1596,7 @@
 					"@loader_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.MaccyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -1750,7 +1750,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.6.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.Maccy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1785,7 +1785,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.6.1;
-				PRODUCT_BUNDLE_IDENTIFIER = org.p0deje.Maccy;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;

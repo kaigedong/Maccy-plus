@@ -17,7 +17,7 @@ class About {
     let string = NSMutableAttributedString(string: "Website│GitHub│Support",
                                            attributes: [NSAttributedString.Key.foregroundColor: NSColor.labelColor])
     string.addAttribute(.link, value: "https://maccy.app", range: NSRange(location: 0, length: 7))
-    string.addAttribute(.link, value: "https://github.com/p0deje/Maccy", range: NSRange(location: 8, length: 6))
+    string.addAttribute(.link, value: "https://github.com/kaigedong/Maccy-plus", range: NSRange(location: 8, length: 6))
     string.addAttribute(.link, value: "mailto:support@maccy.app", range: NSRange(location: 15, length: 7))
     return string
   }

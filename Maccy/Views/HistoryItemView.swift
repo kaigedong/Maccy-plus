@@ -7,6 +7,10 @@ struct HistoryItemView: View {
   var next: HistoryItemDecorator?
   var index: Int
 
+  @State private var isHovered = false
+  @State private var showCopiedToast = false
+  @State private var showDeleteConfirmation = false
+
   private var visualIndex: Int? {
     if appState.navigator.isMultiSelectInProgress && item.selectionIndex >= 0 {
       return item.selectionIndex
@@ -32,22 +36,80 @@ struct HistoryItemView: View {
   @Environment(AppState.self) private var appState
 
   var body: some View {
-    ListItemView(
-      id: item.id,
-      selectionId: item.id,
-      appIcon: item.applicationImage,
-      image: item.thumbnailImage,
-      accessoryImage: item.thumbnailImage != nil ? nil : ColorImage.from(item.title),
-      attributedTitle: item.attributedTitle,
-      shortcuts: item.shortcuts,
-      isSelected: item.isSelected,
-      selectionIndex: visualIndex,
-      selectionAppearance: selectionAppearance
-    ) {
-      Text(verbatim: item.title)
+    ZStack(alignment: .trailing) {
+      ListItemView(
+        id: item.id,
+        selectionId: item.id,
+        appIcon: item.applicationImage,
+        image: item.thumbnailImage,
+        accessoryImage: item.thumbnailImage != nil ? nil : ColorImage.from(item.title),
+        attributedTitle: item.attributedTitle,
+        shortcuts: item.shortcuts,
+        isSelected: item.isSelected,
+        selectionIndex: visualIndex,
+        selectionAppearance: selectionAppearance
+      ) {
+        Text(verbatim: item.title)
+      }
+      .padding(.trailing, isHovered && item.isVisible ? 56 : 0)
+      .animation(.easeInOut(duration: 0.15), value: isHovered)
+
+      // Copy & Delete buttons (show on hover)
+      if isHovered && item.isVisible {
+        HStack(spacing: 4) {
+          Button(action: {
+            Clipboard.shared.copy(item.item)
+            showCopiedToast = true
+            // Auto-hide toast after 1.5 seconds
+            Task {
+              try? await Task.sleep(for: .seconds(1.5))
+              showCopiedToast = false
+            }
+          }) {
+            Image(systemName: "doc.on.doc")
+              .font(.system(size: 11))
+              .frame(width: 20, height: 20)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .help(String(localized: "copy_button_tooltip", table: "Localizable"))
+
+          Button(action: {
+            showDeleteConfirmation = true
+          }) {
+            Image(systemName: "trash")
+              .font(.system(size: 11))
+              .frame(width: 20, height: 20)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .help(String(localized: "delete_button_tooltip", table: "Localizable"))
+        }
+        .foregroundStyle(item.isSelected ? .white : .secondary)
+        .padding(.trailing, 8)
+        .transition(.opacity)
+      }
+
+      // Copied toast overlay
+      if showCopiedToast {
+        Text(String(localized: "copied_toast", table: "Localizable"))
+          .font(.caption)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(
+            RoundedRectangle(cornerRadius: 4)
+              .fill(Color.green.opacity(0.85))
+          )
+          .foregroundStyle(.white)
+          .padding(.trailing, 8)
+          .transition(.opacity)
+      }
     }
     .onAppear {
       item.ensureThumbnailImage()
+    }
+    .onHover { hovering in
+      isHovered = hovering
     }
     .onTapGesture {
       if NSEvent.modifierFlags.contains(.command) && appState.multiSelectionEnabled {
@@ -57,6 +119,18 @@ struct HistoryItemView: View {
           appState.history.select(item)
         }
       }
+    }
+    .confirmationDialog(
+      String(localized: "delete_alert_message", table: "Localizable"),
+      isPresented: $showDeleteConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: "delete_alert_confirm", table: "Localizable"), role: .destructive) {
+        appState.history.delete(item)
+      }
+      Button(String(localized: "delete_alert_cancel", table: "Localizable"), role: .cancel) {}
+    } message: {
+      Text(String(localized: "delete_alert_comment", table: "Localizable"))
     }
   }
 }

@@ -94,7 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     panel = FloatingPanel(
       contentRect: NSRect(origin: .zero, size: Defaults[.windowSize]),
-      identifier: Bundle.main.bundleIdentifier ?? "org.p0deje.Maccy",
+      identifier: Bundle.main.bundleIdentifier ?? "com.kaigedong.MaccyPlus",
       statusBarButton: statusItem.button,
       onClose: { AppState.shared.popup.reset() }
     ) {
