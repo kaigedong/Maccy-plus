@@ -1,3 +1,4 @@
+import Defaults
 import Sparkle
 
 @Observable
@@ -11,9 +12,9 @@ class SoftwareUpdater {
   private var updater: SPUUpdater
   private var automaticallyChecksForUpdatesObservation: NSKeyValueObservation?
 
-  private let updaterController = SPUStandardUpdaterController(
+  private lazy var updaterController = SPUStandardUpdaterController(
     startingUpdater: true,
-    updaterDelegate: nil,
+    updaterDelegate: self,
     userDriverDelegate: nil
   )
 
@@ -33,5 +34,15 @@ class SoftwareUpdater {
 
   func checkForUpdates() {
     updater.checkForUpdates()
+  }
+}
+
+extension SoftwareUpdater: SPUUpdaterDelegate {
+  func feedURLString(for updater: SPUUpdater) -> String? {
+    if Defaults[.betaUpdates] {
+      return "https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/appcast-beta.xml"
+    }
+    // Return nil to use the default SUFeedURL from Info.plist
+    return nil
   }
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>MaccyPlus Beta</title>
+    <link>https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/appcast-beta.xml</link>
+    <description>Most recent beta changes with links to updates.</description>
+    <language>en</language>
+    <item>
+      <title>Beta</title>
+      <description><![CDATA[Beta build from latest master branch.]]></description>
+      <pubDate>2026-06-10</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/Maccy.app.zip"
+        sparkle:version="9999"
+        sparkle:shortVersionString="9.9.9-beta"
+        length="0"
+        type="application/octet-stream"
+      />
+    </item>
+  </channel>
+</rss>

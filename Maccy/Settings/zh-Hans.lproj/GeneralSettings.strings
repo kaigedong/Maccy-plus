@@ -20,3 +20,5 @@
 "Regex" = "正则表达式";
 "Mixed" = "混合";
 "NotificationsAndSounds" = "通知和声音 􀱁";
+"BetaUpdates" = "包含测试版更新";
+"BetaUpdatesTooltip" = "启用后，检查更新时也会查找预发布（测试版）版本。测试版可能不够稳定。";

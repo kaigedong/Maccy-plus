@@ -22,6 +22,22 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
 
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            BUILD_NUM="${{ github.run_number }}"
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="2.7.0-beta"
+            BUILD_NUM="9000"
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_num=$BUILD_NUM" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: |
           xcodebuild build \
@@ -31,6 +47,8 @@ jobs:
             -derivedDataPath build \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_num }}" \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -42,32 +60,19 @@ jobs:
 
           echo "=== Binary Info ==="
           file "$BINARY"
-          echo ""
 
           echo "=== Architecture ==="
           lipo -info "$BINARY" 2>/dev/null || echo "Single architecture binary"
-          echo ""
-
-          echo "=== Code Signature ==="
-          codesign -dv "$APP" 2>&1 || true
-          echo ""
 
           echo "=== Launch Test ==="
-          # Remove quarantine if present
           xattr -cr "$APP" 2>/dev/null || true
-
-          # Try to launch and check if it runs
           open "$APP"
           sleep 5
-
-          # Check if Maccy process is running
           if pgrep -x "Maccy" > /dev/null; then
             echo "✅ Maccy launched successfully!"
             killall Maccy 2>/dev/null || true
           else
-            echo "⚠️  Maccy process not found (may be expected for menu bar apps)"
-            # For LSUIElement apps, the process name might differ
-            ps aux | grep -i maccy | grep -v grep || echo "No Maccy process found"
+            echo "⚠️ Maccy process not found (may be expected for menu bar apps)"
           fi
 
       - name: Package
@@ -75,15 +80,62 @@ jobs:
           cd build/Build/Products/Release
           zip -r Maccy.app.zip Maccy.app
 
-      - name: Upload Artifact (latest)
-        if: "!startsWith(github.ref, 'refs/tags/v')"
+      # ── Beta: upload artifact + create/update pre-release ──
+      - name: Upload Artifact (beta)
+        if: steps.version.outputs.channel == 'beta'
         uses: actions/upload-artifact@v4
         with:
           name: Maccy-latest
           path: build/Build/Products/Release/Maccy.app.zip
 
-      - name: Upload to Release (tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Generate beta appcast
+        if: steps.version.outputs.channel == 'beta'
+        run: |
+          DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
+          cat > appcast-beta.xml << APPCAST
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>MaccyPlus Beta</title>
+              <link>https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/appcast-beta.xml</link>
+              <description>Most recent beta changes with links to updates.</description>
+              <language>en</language>
+              <item>
+                <title>MaccyPlus ${{ steps.version.outputs.version }} (${{ steps.version.outputs.build_num }})</title>
+                <description><![CDATA[Beta build from latest master branch (${{ github.sha }}).]]></description>
+                <pubDate>${DATE}</pubDate>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <enclosure
+                  url="https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/Maccy.app.zip"
+                  sparkle:version="${{ steps.version.outputs.build_num }}"
+                  sparkle:shortVersionString="${{ steps.version.outputs.version }}"
+                  length="0"
+                  type="application/octet-stream"
+                />
+              </item>
+            </channel>
+          </rss>
+          APPCAST
+
+      - name: Publish Beta Release
+        if: steps.version.outputs.channel == 'beta'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete existing latest-beta release + tag if present
+          gh release delete latest-beta --yes --cleanup-tag 2>/dev/null || true
+
+          # Create new pre-release
+          gh release create latest-beta \
+            build/Build/Products/Release/Maccy.app.zip \
+            appcast-beta.xml \
+            --title "MaccyPlus Beta (${{ steps.version.outputs.version }})" \
+            --notes "Automated beta build from master (${{ github.sha }})." \
+            --prerelease
+
+      # ── Stable: create release on tag ──
+      - name: Publish Stable Release
+        if: steps.version.outputs.channel == 'stable'
         uses: softprops/action-gh-release@v2
         with:
           files: build/Build/Products/Release/Maccy.app.zip

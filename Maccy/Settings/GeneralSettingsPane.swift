@@ -30,6 +30,10 @@ struct GeneralSettingsPane: View {
           action: { updater.checkForUpdates() },
           label: { Text("CheckNow", tableName: "GeneralSettings") }
         )
+        Defaults.Toggle(key: .betaUpdates) {
+          Text("BetaUpdates", tableName: "GeneralSettings")
+        }
+        .help(Text("BetaUpdatesTooltip", tableName: "GeneralSettings"))
       }
 
       Settings.Section(label: { Text("Open", tableName: "GeneralSettings") }) {

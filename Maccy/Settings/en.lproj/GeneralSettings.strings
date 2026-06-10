@@ -20,3 +20,5 @@
 "Regex" = "Regular expressions";
 "Mixed" = "Mixed";
 "NotificationsAndSounds" = "Notifications and sounds 􀱁";
+"BetaUpdates" = "Include beta updates";
+"BetaUpdatesTooltip" = "When enabled, update checks will also look for pre-release (beta) versions. Beta versions may be less stable.";
