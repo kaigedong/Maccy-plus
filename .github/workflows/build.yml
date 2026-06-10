@@ -27,14 +27,15 @@ jobs:
       - name: Determine version
         id: version
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${{ github.ref_name }}"
             VERSION="${TAG#v}"
             BUILD_NUM="${{ github.run_number }}"
             echo "channel=stable" >> "$GITHUB_OUTPUT"
           else
-            VERSION="2.7.0-beta"
-            BUILD_NUM="9000"
+            VERSION="2.7.0-beta.${SHORT_SHA}"
+            BUILD_NUM="${{ github.run_number }}"
             echo "channel=beta" >> "$GITHUB_OUTPUT"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
