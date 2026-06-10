@@ -208,12 +208,7 @@ class Clipboard {
       }
 
       types.forEach { type in
-        let data = item.data(forType: type)
-        // Skip storing oversized content (>512KB by default)
-        if let data, data.count > Defaults[.maxContentDataSize] {
-          return
-        }
-        contents.append(HistoryItemContent(type: type.rawValue, value: data))
+        contents.append(HistoryItemContent(type: type.rawValue, value: item.data(forType: type)))
       }
     })
 
