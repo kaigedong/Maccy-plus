@@ -2,25 +2,27 @@ import Defaults
 import Sparkle
 
 @Observable
-class SoftwareUpdater {
+class SoftwareUpdater: NSObject, SPUUpdaterDelegate {
   var automaticallyChecksForUpdates = false {
     didSet {
       updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
     }
   }
 
-  private var updater: SPUUpdater
+  private var updater: SPUUpdater!
   private var automaticallyChecksForUpdatesObservation: NSKeyValueObservation?
 
-  private lazy var updaterController = SPUStandardUpdaterController(
-    startingUpdater: true,
-    updaterDelegate: self,
-    userDriverDelegate: nil
-  )
+  private var updaterController: SPUStandardUpdaterController!
 
-  init() {
-    updater = updaterController.updater
-    automaticallyChecksForUpdatesObservation = updater.observe(
+  override init() {
+      super.init()
+      updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: self,
+        userDriverDelegate: nil
+      )
+      updater = updaterController.updater
+      automaticallyChecksForUpdatesObservation = updater.observe(
       \.automaticallyChecksForUpdates,
       options: [.initial, .new, .old]
     ) { [unowned self] updater, change in
@@ -35,9 +37,9 @@ class SoftwareUpdater {
   func checkForUpdates() {
     updater.checkForUpdates()
   }
-}
 
-extension SoftwareUpdater: SPUUpdaterDelegate {
+  // MARK: - SPUUpdaterDelegate
+
   func feedURLString(for updater: SPUUpdater) -> String? {
     if Defaults[.betaUpdates] {
       return "https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/appcast-beta.xml"
