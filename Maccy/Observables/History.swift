@@ -22,7 +22,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   var searchQuery: String = "" {
     didSet {
       throttler.throttle { [self] in
-        updateItems(search.search(string: searchQuery, within: all))
+        updateItems(search.search(string: searchQuery, within: filteredItems()))
 
         if searchQuery.isEmpty {
           AppState.shared.navigator.select(item: unpinnedItems.first)
@@ -33,6 +33,27 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
         AppState.shared.popup.needsResize = true
       }
     }
+  }
+
+  var excludedApps: Set<String> = [] {
+    didSet {
+      throttler.throttle { [self] in
+        updateItems(search.search(string: searchQuery, within: filteredItems()))
+        AppState.shared.popup.needsResize = true
+      }
+    }
+  }
+
+  var sourceApps: [(bundleId: String, image: ApplicationImage)] {
+    var seen = Set<String>()
+    var result: [(bundleId: String, image: ApplicationImage)] = []
+    for item in all {
+      if let bundleId = item.item.application, !seen.contains(bundleId) {
+        seen.insert(bundleId)
+        result.append((bundleId: bundleId, image: item.applicationImage))
+      }
+    }
+    return result
   }
 
   var pressedShortcutItem: HistoryItemDecorator? {
@@ -106,7 +127,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     let descriptor = FetchDescriptor<HistoryItem>()
     let results = try Storage.shared.context.fetch(descriptor)
     all = sorter.sort(results).map { HistoryItemDecorator($0) }
-    items = all
+    items = filteredItems()
 
     limitHistorySize(to: Defaults[.size])
 
@@ -188,7 +209,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
         all.insert(itemDecorator, at: index)
       }
 
-      items = all
+      items = filteredItems()
       updateUnpinnedShortcuts()
       AppState.shared.popup.needsResize = true
     }
@@ -219,7 +240,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
       }
       all.removeAll(where: \.isUnpinned)
       sessionLog.removeValues { $0.pin == nil }
-      items = all
+      items = filteredItems()
 
       try? Storage.shared.context.transaction {
         try? Storage.shared.context.delete(
@@ -250,7 +271,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
       }
       all.removeAll()
       sessionLog.removeAll()
-      items = all
+      items = filteredItems()
 
       try? Storage.shared.context.delete(model: HistoryItem.self)
       Storage.shared.context.processPendingChanges()
@@ -434,7 +455,7 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
       all.insert(item, at: newIndex)
     }
 
-    items = all
+    items = filteredItems()
 
     searchQuery = ""
     updateUnpinnedShortcuts()
@@ -464,6 +485,14 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     }
 
     return nil
+  }
+
+  private func filteredItems() -> [HistoryItemDecorator] {
+    if excludedApps.isEmpty { return all }
+    return all.filter { item in
+      guard let bundleId = item.item.application else { return true }
+      return !excludedApps.contains(bundleId)
+    }
   }
 
   private func updateItems(_ newItems: [Search.SearchResult]) {
