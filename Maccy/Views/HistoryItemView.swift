@@ -56,36 +56,28 @@ struct HistoryItemView: View {
 
       // Copy & Delete buttons (show on hover)
       if isHovered && item.isVisible {
-        HStack(spacing: 4) {
-          Button(action: {
+        HStack(spacing: 2) {
+          ActionIconButton(
+            icon: "doc.on.doc",
+            isDark: item.isSelected,
+            tooltip: String(localized: "copy_button_tooltip", table: "Localizable")
+          ) {
             Clipboard.shared.copy(item.item)
             showCopiedToast = true
-            // Auto-hide toast after 1.5 seconds
             Task {
               try? await Task.sleep(for: .seconds(1.5))
               showCopiedToast = false
             }
-          }) {
-            Image(systemName: "doc.on.doc")
-              .font(.system(size: 11))
-              .frame(width: 20, height: 20)
-              .contentShape(Rectangle())
           }
-          .buttonStyle(.plain)
-          .help(String(localized: "copy_button_tooltip", table: "Localizable"))
 
-          Button(action: {
+          ActionIconButton(
+            icon: "trash",
+            isDark: item.isSelected,
+            tooltip: String(localized: "delete_button_tooltip", table: "Localizable")
+          ) {
             showDeleteConfirmation = true
-          }) {
-            Image(systemName: "trash")
-              .font(.system(size: 11))
-              .frame(width: 20, height: 20)
-              .contentShape(Rectangle())
           }
-          .buttonStyle(.plain)
-          .help(String(localized: "delete_button_tooltip", table: "Localizable"))
         }
-        .foregroundStyle(item.isSelected ? .white : .secondary)
         .padding(.trailing, 8)
         .transition(.opacity)
       }
