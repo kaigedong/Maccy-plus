@@ -10,16 +10,18 @@ struct ActionIconButton: View {
 
   var body: some View {
     Image(systemName: icon)
-      .font(.system(size: 11))
-      .frame(width: 22, height: 22)
+      .font(.system(size: 11, weight: .semibold))
+      .frame(width: 24, height: 22)
       .contentShape(Rectangle())
       .background(
-        RoundedRectangle(cornerRadius: 4)
+        RoundedRectangle(cornerRadius: 5)
           .fill(backgroundColor)
       )
       .foregroundStyle(foregroundColor)
       .onHover { hovering in
-        isHovered = hovering
+        withAnimation(.easeInOut(duration: 0.1)) {
+          isHovered = hovering
+        }
       }
       .onTapGesture {
         action()
@@ -28,14 +30,23 @@ struct ActionIconButton: View {
   }
 
   private var backgroundColor: Color {
-    guard isHovered else { return .clear }
-    return isDark ? .white.opacity(0.25) : .black.opacity(0.08)
+    if !isHovered { return .clear }
+    // Use opaque colors that stand out against glass background
+    if icon == "trash" {
+      // Delete button: red tint
+      return Color.red.opacity(isDark ? 0.5 : 0.15)
+    }
+    // Copy button: blue tint
+    return Color.blue.opacity(isDark ? 0.5 : 0.15)
   }
 
   private var foregroundColor: Color {
     if isHovered {
-      return isDark ? .white : .primary
+      if icon == "trash" {
+        return isDark ? .white : Color.red
+      }
+      return isDark ? .white : Color.blue
     }
-    return isDark ? .white.opacity(0.7) : .secondary
+    return isDark ? .white.opacity(0.6) : .secondary
   }
 }
