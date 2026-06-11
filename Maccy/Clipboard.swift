@@ -20,7 +20,9 @@ class Clipboard {
   private let microsoftSourcePrefix = "com.microsoft.ole.source."
   private let supportedTypes: Set<NSPasteboard.PasteboardType> = [
     .fileURL,
+    .heic,
     .html,
+    .jpeg,
     .png,
     .rtf,
     .string,

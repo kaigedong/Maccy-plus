@@ -3,7 +3,7 @@ import Defaults
 
 struct StorageType {
   static let files = StorageType(types: [.fileURL])
-  static let images = StorageType(types: [.png, .tiff])
+  static let images = StorageType(types: [.heic, .jpeg, .png, .tiff])
   static let text = StorageType(types: [.html, .rtf, .string])
   static let all = StorageType(types: files.types + images.types + text.types)
 
@@ -55,6 +55,7 @@ extension Defaults.Keys {
   static let showSpecialSymbols = Key<Bool>("showSpecialSymbols", default: true)
   static let showTitle = Key<Bool>("showTitle", default: true)
   static let size = Key<Int>("historySize", default: 500)
+  static let isUnlimitedHistory = Key<Bool>("isUnlimitedHistory", default: false)
   static let sortBy = Key<Sorter.By>("sortBy", default: .lastCopiedAt)
   static let suppressClearAlert = Key<Bool>("suppressClearAlert", default: false)
   static let windowSize = Key<NSSize>("windowSize", default: NSSize(width: 450, height: 800))

@@ -12,3 +12,4 @@
 "FirstCopiedAt" = "Time of first copy";
 "NumberOfCopies" = "Number of copies";
 "SortByTooltip" = "Default: Time of last copy.";
+"UnlimitedHistory" = "Unlimited history";

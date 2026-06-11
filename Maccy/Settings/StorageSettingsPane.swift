@@ -57,6 +57,7 @@ struct StorageSettingsPane: View {
   }
 
   @Default(.size) private var size
+  @Default(.isUnlimitedHistory) private var isUnlimitedHistory
   @Default(.sortBy) private var sortBy
 
   @State private var viewModel = ViewModel()
@@ -93,12 +94,18 @@ struct StorageSettingsPane: View {
       }
 
       Settings.Section(label: { Text("Size", tableName: "StorageSettings") }) {
+        Defaults.Toggle(key: .isUnlimitedHistory) {
+          Text("UnlimitedHistory", tableName: "StorageSettings")
+        }
+
         HStack {
           TextField("", value: $size, formatter: sizeFormatter)
             .frame(width: 80)
             .help(Text("SizeTooltip", tableName: "StorageSettings"))
+            .disabled(isUnlimitedHistory)
           Stepper("", value: $size, in: 1...9999)
             .labelsHidden()
+            .disabled(isUnlimitedHistory)
           Text(storageSize)
             .controlSize(.small)
             .foregroundStyle(.gray)
@@ -107,6 +114,7 @@ struct StorageSettingsPane: View {
               storageSize = Storage.shared.size
             }
         }
+        .opacity(isUnlimitedHistory ? 0.5 : 1.0)
       }
 
       Settings.Section(label: { Text("SortBy", tableName: "StorageSettings") }) {
