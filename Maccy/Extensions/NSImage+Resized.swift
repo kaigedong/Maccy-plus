@@ -2,6 +2,13 @@ import AppKit.NSImage
 
 // Based on https://stackoverflow.com/questions/73062803/resizing-nsimage-keeping-aspect-ratio-reducing-the-image-size-while-trying-to-sc.
 extension NSImage {
+  var pixelSize: NSSize {
+    if let bitmapRep = representations.first(where: { $0 is NSBitmapImageRep }) as? NSBitmapImageRep {
+      return NSSize(width: CGFloat(bitmapRep.pixelsWide), height: CGFloat(bitmapRep.pixelsHigh))
+    }
+    return size
+  }
+
   func resized(to newSize: NSSize) -> NSImage {
     let ratioX = newSize.width / size.width
     let ratioY = newSize.height / size.height
