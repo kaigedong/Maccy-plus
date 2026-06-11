@@ -156,12 +156,46 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
 
   @discardableResult
   @MainActor
-  func add(_ item: HistoryItem) -> HistoryItemDecorator {
+  func add(_ item: HistoryItem, shouldAppend: Bool = false) -> HistoryItemDecorator {
     if #available(macOS 15.0, *) {
       try? History.shared.insertIntoStorage(item)
     } else {
       // On macOS 14 the history item needs to be inserted into storage directly after creating it.
       // It was already inserted after creation in Clipboard.swift
+    }
+
+    if shouldAppend, !all.isEmpty {
+      let unpinnedItems = all.filter { $0.item.pin == nil }
+      let differentItems = unpinnedItems.filter { $0.item.text != item.text }
+
+      if let mostRecentUnpinned = differentItems.max(by: { $0.item.lastCopiedAt < $1.item.lastCopiedAt }) {
+        let topItem = mostRecentUnpinned.item
+
+        if let existingText = topItem.text, let newText = item.text {
+          let combinedText = existingText + "\n" + newText
+          let combinedData = combinedText.data(using: .utf8)
+
+          if let stringContent = topItem.contents.first(where: {
+            NSPasteboard.PasteboardType($0.type) == .string
+          }) {
+            stringContent.value = combinedData
+            topItem.lastCopiedAt = Date.now
+            topItem.numberOfCopies += 1
+            topItem.title = topItem.generateTitle()
+
+            Storage.shared.context.delete(item)
+
+            mostRecentUnpinned.title = topItem.title
+            items = all
+
+            Defaults[.ignoreOnlyNextEvent] = true
+            Defaults[.ignoreEvents] = true
+            Clipboard.shared.copy(combinedText)
+
+            return mostRecentUnpinned
+          }
+        }
+      }
     }
 
     var removedItemIndex: Int?
@@ -198,8 +232,9 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     if let pin = item.pin {
       itemDecorator = HistoryItemDecorator(item, shortcuts: KeyShortcut.create(character: pin))
       // Keep pins in the same place.
+      // Clamp index to avoid crash after limitHistorySize may have removed items.
       if let removedItemIndex {
-        all.insert(itemDecorator, at: removedItemIndex)
+        all.insert(itemDecorator, at: min(removedItemIndex, all.count))
       }
     } else {
       itemDecorator = HistoryItemDecorator(item)
@@ -355,6 +390,71 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   }
 
   @MainActor
+  func startEditing(_ item: HistoryItemDecorator?) {
+    guard let item, item.item.text != nil else { return }
+    item.editingText = item.item.text ?? item.title
+    item.isEditing = true
+  }
+
+  @MainActor
+  func saveEditing(_ item: HistoryItemDecorator?) {
+    guard let item, item.isEditing else { return }
+    item.isEditing = false
+
+    let newText = item.editingText
+    guard !newText.isEmpty else {
+      delete(item)
+      return
+    }
+
+    if let content = item.item.contents.first(where: { $0.type == NSPasteboard.PasteboardType.string.rawValue }) {
+      content.value = newText.data(using: .utf8)
+    } else {
+      let content = HistoryItemContent(type: NSPasteboard.PasteboardType.string.rawValue, value: newText.data(using: .utf8))
+      item.item.contents.append(content)
+    }
+
+    item.item.title = item.item.generateTitle()
+    item.title = item.item.title
+
+    Storage.shared.context.processPendingChanges()
+    try? Storage.shared.context.save()
+  }
+
+  @MainActor
+  func cancelEditing(_ item: HistoryItemDecorator?) {
+    guard let item, item.isEditing else { return }
+    item.isEditing = false
+    item.editingText = ""
+    if item.item.title.isEmpty && (item.item.text ?? "").isEmpty {
+      delete(item)
+    }
+  }
+
+  @discardableResult
+  @MainActor
+  func addNew() -> HistoryItemDecorator {
+    let content = HistoryItemContent(
+      type: NSPasteboard.PasteboardType.string.rawValue,
+      value: "".data(using: .utf8)
+    )
+    let historyItem = HistoryItem(contents: [content])
+    historyItem.application = Bundle.main.bundleIdentifier
+    historyItem.title = ""
+
+    if #unavailable(macOS 15.0) {
+      try? insertIntoStorage(historyItem)
+    }
+
+    let decorator = add(historyItem)
+    decorator.editingText = ""
+    decorator.isEditing = true
+
+    AppState.shared.navigator.select(item: decorator)
+    return decorator
+  }
+
+  @MainActor
   func startPasteStack(selection: inout Selection<HistoryItemDecorator>) {
     guard AppState.shared.multiSelectionEnabled else { return }
     guard let item = selection.first else { return }
@@ -466,17 +566,11 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
 
   @MainActor
   private func findSimilarItem(_ item: HistoryItem) -> HistoryItem? {
-    let descriptor = FetchDescriptor<HistoryItem>()
-    if let all = try? Storage.shared.context.fetch(descriptor) {
-      let duplicates = all.filter({ $0 == item || $0.supersedes(item) })
-      if duplicates.count > 1 {
-        return duplicates.first(where: { $0 != item })
-      } else {
-        return isModified(item)
-      }
+    if let duplicate = all.first(where: { $0.item.supersedes(item) }) {
+      return duplicate.item
     }
 
-    return item
+    return isModified(item)
   }
 
   private func isModified(_ item: HistoryItem) -> HistoryItem? {
