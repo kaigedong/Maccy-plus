@@ -38,6 +38,17 @@ struct HeaderView: View {
       }
       .opacity(appState.searchVisible ? 1 : 0)
       .layoutPriority(1)
+
+      if appState.searchVisible {
+        Button {
+          appState.history.addNew()
+        } label: {
+          Image(systemName: "plus")
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(Text(String(localized: "add_new", table: "Localizable")))
+      }
     }
     .padding(.top, Popup.verticalPadding)
     .padding(.horizontal, 10)

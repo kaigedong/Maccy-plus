@@ -150,6 +150,9 @@ struct KeyHandlingView<Content: View>: View {
         case .selectCurrentItem:
           appState.select()
           return .handled
+        case .editCurrentItem:
+          appState.history.startEditing(appState.history.selectedItem)
+          return .handled
         case .close:
           appState.popup.close()
           return .handled

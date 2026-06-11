@@ -10,6 +10,7 @@ struct HistoryItemView: View {
   @State private var isHovered = false
   @State private var showCopiedToast = false
   @State private var showDeleteConfirmation = false
+  @FocusState private var editFocused: Bool
 
   private var visualIndex: Int? {
     if appState.navigator.isMultiSelectInProgress && item.selectionIndex >= 0 {
@@ -36,6 +37,14 @@ struct HistoryItemView: View {
   @Environment(AppState.self) private var appState
 
   var body: some View {
+    if item.isEditing {
+      editingView
+    } else {
+      normalView
+    }
+  }
+
+  private var normalView: some View {
     ZStack(alignment: .trailing) {
       ListItemView(
         id: item.id,
@@ -124,5 +133,69 @@ struct HistoryItemView: View {
     } message: {
       Text(String(localized: "delete_alert_comment", table: "Localizable"))
     }
+    .contextMenu {
+      if item.item.text != nil {
+        Button {
+          appState.history.startEditing(item)
+        } label: {
+          Text(String(localized: "edit", table: "Localizable"))
+        }
+      }
+
+      Button {
+        appState.history.togglePin(item)
+      } label: {
+        Text(item.isPinned
+              ? String(localized: "unpin", table: "Localizable")
+              : String(localized: "pin", table: "Localizable"))
+      }
+
+      Button {
+        showDeleteConfirmation = true
+      } label: {
+        Text(String(localized: "delete", table: "Localizable"))
+      }
+    }
+  }
+
+  private var editingView: some View {
+    HStack(spacing: 0) {
+      Spacer().frame(width: 10)
+      TextField("", text: $item.editingText, axis: .vertical)
+        .textFieldStyle(.plain)
+        .lineLimit(1...5)
+        .focused($editFocused)
+        .onAppear {
+          editFocused = true
+        }
+        .onSubmit {
+          appState.history.saveEditing(item)
+        }
+        .onExitCommand {
+          appState.history.cancelEditing(item)
+        }
+      Spacer().frame(width: 4)
+      Button {
+        appState.history.saveEditing(item)
+      } label: {
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      }
+      .buttonStyle(.plain)
+      .padding(.trailing, 4)
+      Button {
+        appState.history.cancelEditing(item)
+      } label: {
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.secondary)
+      }
+      .buttonStyle(.plain)
+      .padding(.trailing, 8)
+    }
+    .frame(minHeight: Popup.itemHeight)
+    .id(item.id)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.accentColor.opacity(0.15))
+    .clipShape(.rect(cornerRadius: Popup.cornerRadius))
   }
 }

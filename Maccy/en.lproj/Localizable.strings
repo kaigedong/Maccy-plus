@@ -35,3 +35,8 @@
 "delete_alert_comment" = "This action cannot be undone.";
 "delete_alert_confirm" = "Delete";
 "delete_alert_cancel" = "Cancel";
+"edit" = "Edit";
+"pin" = "Pin";
+"unpin" = "Unpin";
+"delete" = "Delete";
+"add_new" = "Add new item";

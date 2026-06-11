@@ -24,6 +24,8 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
     return selectionIndex != -1
   }
   var shortcuts: [KeyShortcut] = []
+  var isEditing: Bool = false
+  var editingText: String = ""
 
   var application: String? {
     if item.universalClipboard {
