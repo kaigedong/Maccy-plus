@@ -63,4 +63,7 @@ extension Defaults.Keys {
   static let showApplicationIcons = Key<Bool>("showApplicationIcons", default: true)
   static let previewWidth = Key<CGFloat>("previewWidth", default: 400)
   static let betaUpdates = Key<Bool>("betaUpdates", default: false)
+  static let syncEnabled = Key<Bool>("syncEnabled", default: false)
+  static let syncDeviceName = Key<String>("syncDeviceName", default: Host.current().localizedName ?? "Mac")
+  static let syncDeviceID = Key<String>("syncDeviceID", default: UUID().uuidString)
 }

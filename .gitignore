@@ -3,3 +3,6 @@ Maccy.xcodeproj/project.xcworkspace/xcshareddata
 .idea
 .DS_Store
 Maccy/.DS_Store
+.sisyphus/
+maccy-sync/target/
+maccy-sync/Cargo.lock
