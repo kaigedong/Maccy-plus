@@ -44,18 +44,15 @@ jobs:
           echo "build_num=$BUILD_NUM" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
-        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build Rust core
-        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
         run: |
           cargo build --release
           echo "=== Built libraries ==="
           ls -lh target/release/libmaccy_core.a target/release/libmaccy_sync.a
 
       - name: Generate UniFFI Swift bindings
-        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
         run: |
           cargo run --release --bin uniffi-bindgen --package maccy-core generate \
             --library target/release/libmaccy_core.dylib \
