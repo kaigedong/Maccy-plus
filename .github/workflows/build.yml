@@ -68,15 +68,13 @@ jobs:
         run: |
           # Copy generated Swift binding into the Maccy target source tree
           cp Maccy/Generated/MaccyCore.swift Maccy/MaccyCore.swift
-          # Create a module module map that Xcode can find via SWIFT_INCLUDE_PATH
-          mkdir -p Maccy/Generated
+          # Create a modulemap that Xcode can find
           cat > Maccy/Generated/module.modulemap << 'EOF'
           module MaccyCore {
               header "MaccyCoreFFI.h"
               export *
           }
           EOF
-          cp Maccy/Generated/MaccyCoreFFI.h Maccy/Generated/
           echo "=== Prepared UniFFI sources ==="
           ls -la Maccy/MaccyCore.swift Maccy/Generated/
 
