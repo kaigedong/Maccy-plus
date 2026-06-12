@@ -14,7 +14,8 @@ struct AppFilterBar: View {
           ForEach(apps, id: \.bundleId) { app in
             AppFilterIcon(
               appImage: app.image,
-              isExcluded: appState.history.excludedApps.contains(app.bundleId)
+              isExcluded: appState.history.excludedApps.contains(app.bundleId),
+              isUnknown: app.bundleId.isEmpty
             ) {
               if appState.history.excludedApps.contains(app.bundleId) {
                 appState.history.excludedApps.remove(app.bundleId)
@@ -34,12 +35,13 @@ struct AppFilterBar: View {
 struct AppFilterIcon: View {
   let appImage: ApplicationImage
   let isExcluded: Bool
+  var isUnknown: Bool = false
   let action: () -> Void
 
   @State private var isHovered = false
 
   var body: some View {
-    Image(nsImage: appImage.nsImage)
+    Image(nsImage: isUnknown ? NSImage(systemSymbolName: "app.badge.questionmark", accessibilityDescription: "Unknown")! : appImage.nsImage)
       .resizable()
       .frame(width: 18, height: 18)
       .contentShape(Rectangle())
@@ -64,6 +66,6 @@ struct AppFilterIcon: View {
       .onTapGesture {
         action()
       }
-      .help(appImage.bundleIdentifier ?? "")
+      .help(isUnknown ? "Unknown Source" : (appImage.bundleIdentifier ?? ""))
   }
 }

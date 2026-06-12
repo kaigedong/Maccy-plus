@@ -151,7 +151,7 @@ struct KeyHandlingView<Content: View>: View {
           appState.select()
           return .handled
         case .editCurrentItem:
-          appState.history.startEditing(appState.history.selectedItem)
+          appState.history.startEditing(appState.navigator.leadHistoryItem)
           return .handled
         case .close:
           appState.popup.close()

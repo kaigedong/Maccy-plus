@@ -230,6 +230,8 @@ class Clipboard {
     }
 
     historyItem.application = sourceApp?.bundleIdentifier
+      ?? contents.first(where: { $0.type == NSPasteboard.PasteboardType.source.rawValue })?.value
+      .flatMap { String(data: $0, encoding: .utf8) }
     historyItem.title = historyItem.generateTitle()
 
     var shouldAppend = false
