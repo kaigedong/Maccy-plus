@@ -43,6 +43,19 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "build_num=$BUILD_NUM" >> "$GITHUB_OUTPUT"
 
+      - name: Install Rust toolchain
+        if: github.ref == 'refs/heads/feat/p2p-sync'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust sync engine
+        if: github.ref == 'refs/heads/feat/p2p-sync'
+        run: |
+          cd maccy-sync
+          cargo build --release
+          echo "=== Built static library ==="
+          ls -lh target/release/libmaccy_sync.a
+          cargo check 2>&1 || true
+
       - name: Build
         run: |
           xcodebuild build \

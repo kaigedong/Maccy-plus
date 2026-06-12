@@ -147,6 +147,11 @@
 		DAFE2DDA268A521B00990986 /* String+Shortened.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFE2DD9268A521A00990986 /* String+Shortened.swift */; };
 		DAFE2DE9268A9B1B00990986 /* HistoryItemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFE2DE8268A9B1B00990986 /* HistoryItemTests.swift */; };
 		DAFEF0B8249D7DEE006029E8 /* KeyboardShortcuts.Name+Shortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAFEF0B7249D7DEE006029E8 /* KeyboardShortcuts.Name+Shortcuts.swift */; };
+		AASY000200000000000B0001 /* SyncBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AASY000100000000000A0001 /* SyncBridge.swift */; };
+		AASY000200000000000B0002 /* SyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AASY000100000000000A0002 /* SyncModels.swift */; };
+		AASY000200000000000B0003 /* SyncSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AASY000100000000000A0003 /* SyncSettingsPane.swift */; };
+		AASY000200000000000B0004 /* DeviceFilterIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = AASY000100000000000A0004 /* DeviceFilterIcon.swift */; };
+		AASY000200000000000B0005 /* SyncSettings.strings in Resources */ = {isa = PBXBuildFile; fileRef = AASY000100000000000A0007 /* SyncSettings.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -559,6 +564,13 @@
 		DAFE2DD9268A521A00990986 /* String+Shortened.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Shortened.swift"; sourceTree = "<group>"; };
 		DAFE2DE8268A9B1B00990986 /* HistoryItemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItemTests.swift; sourceTree = "<group>"; };
 		DAFEF0B7249D7DEE006029E8 /* KeyboardShortcuts.Name+Shortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "KeyboardShortcuts.Name+Shortcuts.swift"; sourceTree = "<group>"; };
+		AASY000100000000000A0001 /* SyncBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncBridge.swift; sourceTree = "<group>"; };
+		AASY000100000000000A0002 /* SyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncModels.swift; sourceTree = "<group>"; };
+		AASY000100000000000A0003 /* SyncSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsPane.swift; sourceTree = "<group>"; };
+		AASY000100000000000A0004 /* DeviceFilterIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceFilterIcon.swift; sourceTree = "<group>"; };
+		AASY000100000000000A0005 /* maccy_sync.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = maccy_sync.h; sourceTree = "<group>"; };
+		AASY000100000000000A0006 /* Maccy-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Maccy-Bridging-Header.h"; sourceTree = "<group>"; };
+		AASY000100000000000A0008 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/SyncSettings.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -666,6 +678,8 @@
 				DA689FAE2C1CD3B00009B887 /* StorageSettings.strings */,
 				DAA365CD2C4BF9DD00A394F8 /* PinsSettingsPane.swift */,
 				DAA365CF2C4C147400A394F8 /* PinsSettings.strings */,
+				AASY000100000000000A0003 /* SyncSettingsPane.swift */,
+				AASY000100000000000A0007 /* SyncSettings.strings */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -705,6 +719,7 @@
 				2F9B42F02F1A4999006548E5 /* ToolbarView.swift */,
 				DAA072D02C4089D3006DDFD2 /* VisualEffectView.swift */,
 				DA555F112CF155A2009608BD /* WrappingTextView.swift */,
+				AASY000100000000000A0004 /* DeviceFilterIcon.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -806,15 +821,35 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		AASY000100000000000A0009 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				AASY000100000000000A0001 /* SyncBridge.swift */,
+				AASY000100000000000A0002 /* SyncModels.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		AASY000100000000000A000A /* Include */ = {
+			isa = PBXGroup;
+			children = (
+				AASY000100000000000A0005 /* maccy_sync.h */,
+				AASY000100000000000A0006 /* Maccy-Bridging-Header.h */,
+			);
+			path = Include;
+			sourceTree = "<group>";
+		};
 		DAEE38451E3DBEB100DD2966 /* Maccy */ = {
 			isa = PBXGroup;
 			children = (
 				2F0EC7802E773F1D003E2EA9 /* PasteStack.swift */,
 				2FBB7A252B5FECBB00C65BBE /* Extensions */,
+				AASY000100000000000A000A /* Include */,
 				DA68F91F28BD819E007E2F25 /* Intents */,
 				DA05B50F2C234C1C006980FE /* Models */,
 				DA3BCB902C3EEC1000B01BC1 /* Observables */,
 				DA181178247D150B00066D55 /* Settings */,
+				AASY000100000000000A0009 /* Sync */,
 				DA21AD3C249E85BD003E7C98 /* Sounds */,
 				DA19690C2C3EEF9300258481 /* Views */,
 				DAAEB195219694AE00A7883C /* About.swift */,
@@ -1045,6 +1080,7 @@
 				DA5E62802C39E53F00F4C710 /* PreviewItemView.strings in Resources */,
 				DA009932256411F90030E697 /* README.md in Resources */,
 				DA9C3C4A2C20D4B40056795D /* IgnoreSettings.strings in Resources */,
+				AASY000200000000000B0005 /* SyncSettings.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1184,6 +1220,10 @@
 				DA7A753E26A52F0F00DC16EF /* NSImage+Names.swift in Sources */,
 				2F0EC7852E774083003E2EA9 /* PasteStackView.swift in Sources */,
 				DA20FA782B082E1A00056DD5 /* NSSound+Named.swift in Sources */,
+				AASY000200000000000B0001 /* SyncBridge.swift in Sources */,
+				AASY000200000000000B0002 /* SyncModels.swift in Sources */,
+				AASY000200000000000B0003 /* SyncSettingsPane.swift in Sources */,
+				AASY000200000000000B0004 /* DeviceFilterIcon.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1507,6 +1547,14 @@
 			name = GeneralSettings.strings;
 			sourceTree = "<group>";
 		};
+		AASY000100000000000A0007 /* SyncSettings.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AASY000100000000000A0008 /* en */,
+			);
+			name = SyncSettings.strings;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -1750,17 +1798,34 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Maccy/Include",
+				);
 				INFOPLIST_FILE = Maccy/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/maccy-sync/target/release",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.6.1;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lmaccy_sync",
+					"-framework",
+					Security,
+					"-framework",
+					SystemConfiguration,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
@@ -1785,17 +1850,34 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Maccy/Include",
+				);
 				INFOPLIST_FILE = Maccy/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/maccy-sync/target/release",
+				);
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.6.1;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lmaccy_sync",
+					"-framework",
+					Security,
+					"-framework",
+					SystemConfiguration,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
