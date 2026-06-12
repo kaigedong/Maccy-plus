@@ -16,6 +16,7 @@ class AppState: Sendable {
   var footer: Footer
   var navigator: NavigationManager
   var preview: SlideoutController
+  var syncDevices: [PairedDeviceInfo] = PairedDeviceInfo.all
 
   var searchVisible: Bool {
     if !Defaults[.showSearch] { return false }
@@ -123,6 +124,16 @@ class AppState: Sendable {
             toolbarIcon: NSImage.externaldrive!
           ) {
             StorageSettingsPane()
+          },
+          Settings.Pane(
+            identifier: Settings.PaneIdentifier(rawValue: "sync"),
+            title: NSLocalizedString("Title", tableName: "SyncSettings", comment: ""),
+            toolbarIcon: NSImage(
+              systemSymbolName: "arrow.triangle.2.circlepath",
+              accessibilityDescription: nil
+            )!
+          ) {
+            SyncSettingsPane()
           },
           Settings.Pane(
             identifier: Settings.PaneIdentifier.appearance,

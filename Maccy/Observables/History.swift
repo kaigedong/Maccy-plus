@@ -44,6 +44,15 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     }
   }
 
+  var excludedDevices: Set<String> = [] {
+    didSet {
+      throttler.throttle { [self] in
+        updateItems(search.search(string: searchQuery, within: filteredItems()))
+        AppState.shared.popup.needsResize = true
+      }
+    }
+  }
+
   var sourceApps: [(bundleId: String, image: ApplicationImage)] {
     var seen = Set<String>()
     var result: [(bundleId: String, image: ApplicationImage)] = []
@@ -232,6 +241,11 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
       limitHistorySize(to: Defaults[.size] - 1)
     }
 
+    if Defaults[.syncEnabled] {
+      item.syncTimestamp = Date.now
+      SyncBridge.shared.broadcastNewItem(item)
+    }
+
     sessionLog[Clipboard.shared.changeCount] = item
 
     var itemDecorator: HistoryItemDecorator
@@ -329,6 +343,10 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   @MainActor
   func delete(_ item: HistoryItemDecorator?) {
     guard let item else { return }
+
+    if Defaults[.syncEnabled] {
+      SyncBridge.shared.broadcastDeletion(item.item.syncID)
+    }
 
     cleanup(item)
     withLogging("Removing history item") {
@@ -553,6 +571,10 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     guard let item else { return }
 
     item.togglePin()
+    item.item.syncTimestamp = Date.now
+    if Defaults[.syncEnabled] {
+      SyncBridge.shared.broadcastUpdate(item.item)
+    }
 
     let sortedItems = sorter.sort(all.map(\.item))
     if let currentIndex = all.firstIndex(of: item),
@@ -588,14 +610,19 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   }
 
   private func filteredItems() -> [HistoryItemDecorator] {
-    if excludedApps.isEmpty { return all }
+    if excludedApps.isEmpty && excludedDevices.isEmpty { return all }
     return all.filter { item in
       let bundleId = item.item.application ?? ""
       if bundleId.isEmpty {
-        // Items without a known app belong to the "unknown" group
-        return !excludedApps.contains("")
+        if excludedApps.contains("") { return false }
+      } else if excludedApps.contains(bundleId) {
+        return false
       }
-      return !excludedApps.contains(bundleId)
+      if let syncSource = item.item.syncSource,
+         excludedDevices.contains(syncSource) {
+        return false
+      }
+      return true
     }
   }
 

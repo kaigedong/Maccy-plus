@@ -1,4 +1,5 @@
 import SwiftUI
+import Defaults
 
 struct AppFilterBar: View {
   @Environment(AppState.self) private var appState
@@ -7,8 +8,12 @@ struct AppFilterBar: View {
     appState.history.sourceApps
   }
 
+  private var pairedDevices: [PairedDeviceInfo] {
+    appState.syncDevices
+  }
+
   var body: some View {
-    if !apps.isEmpty {
+    if !apps.isEmpty || !pairedDevices.isEmpty {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 6) {
           ForEach(apps, id: \.bundleId) { app in
@@ -21,6 +26,25 @@ struct AppFilterBar: View {
                 appState.history.excludedApps.remove(app.bundleId)
               } else {
                 appState.history.excludedApps.insert(app.bundleId)
+              }
+            }
+          }
+
+          if !apps.isEmpty && !pairedDevices.isEmpty {
+            Rectangle()
+              .fill(Color.primary.opacity(0.15))
+              .frame(width: 1, height: 16)
+          }
+
+          ForEach(pairedDevices) { device in
+            DeviceFilterIcon(
+              device: device,
+              isExcluded: appState.history.excludedDevices.contains(device.peerID)
+            ) {
+              if appState.history.excludedDevices.contains(device.peerID) {
+                appState.history.excludedDevices.remove(device.peerID)
+              } else {
+                appState.history.excludedDevices.insert(device.peerID)
               }
             }
           }

@@ -66,6 +66,11 @@ class HistoryItem {
   var pin: String?
   var title = ""
 
+  var syncID: UUID = UUID()
+  var syncTimestamp: Date = Date.now
+  var syncSource: String?
+  var syncDeleted: Bool = false
+
   @Relationship(deleteRule: .cascade, inverse: \HistoryItemContent.item)
   var contents: [HistoryItemContent] = []
 
