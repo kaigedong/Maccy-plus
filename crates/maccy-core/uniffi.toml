@@ -1,0 +1,5 @@
+[bindings.kotlin]
+package_name = "com.kaigedong.maccy"
+
+[bindings.swift]
+module_name = "MaccyCore"

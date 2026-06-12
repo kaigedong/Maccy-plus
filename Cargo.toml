@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/maccy-core",
+    "crates/maccy-sync",
+]
+resolver = "2"

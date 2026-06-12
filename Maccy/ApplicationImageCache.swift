@@ -1,3 +1,5 @@
+import MaccyCore
+
 class ApplicationImageCache {
   static let shared = ApplicationImageCache()
 
@@ -6,8 +8,8 @@ class ApplicationImageCache {
   private let fallback = ApplicationImage(bundleIdentifier: nil)
   private var cache: [String: ApplicationImage] = [:]
 
-  func getImage(item: HistoryItem) -> ApplicationImage {
-    guard let bundleIdentifier = bundleIdentifier(for: item) else {
+  func getImage(application: String?) -> ApplicationImage {
+    guard let bundleIdentifier = application else {
       return fallback
     }
 
@@ -19,17 +21,5 @@ class ApplicationImageCache {
     cache[bundleIdentifier] = image
 
     return image
-  }
-
-  private func bundleIdentifier(for item: HistoryItem) -> String? {
-    if item.universalClipboard {
-      return universalClipboardIdentifier
-    }
-
-    if let bundleIdentifier = item.application {
-      return bundleIdentifier
-    }
-
-    return nil
   }
 }

@@ -61,7 +61,7 @@ struct StorageSettingsPane: View {
   @Default(.sortBy) private var sortBy
 
   @State private var viewModel = ViewModel()
-  @State private var storageSize = Storage.shared.size
+  @State private var storageSize = ""
 
   private let sizeFormatter: NumberFormatter = {
     let formatter = NumberFormatter()
@@ -111,7 +111,7 @@ struct StorageSettingsPane: View {
             .foregroundStyle(.gray)
             .help(Text("CurrentSizeTooltip", tableName: "StorageSettings"))
             .onAppear {
-              storageSize = Storage.shared.size
+              updateStorageSize()
             }
         }
         .opacity(isUnlimitedHistory ? 0.5 : 1.0)
@@ -129,9 +129,11 @@ struct StorageSettingsPane: View {
       }
     }
   }
-}
 
-#Preview {
-  StorageSettingsPane()
-    .environment(\.locale, .init(identifier: "en"))
+  private func updateStorageSize() {
+    let dbPath = History.shared.core.storageSizeBytes(History.databasePath)
+    let formatter = ByteCountFormatter()
+    formatter.countStyle = .file
+    storageSize = formatter.string(fromByteCount: dbPath)
+  }
 }

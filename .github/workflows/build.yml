@@ -44,16 +44,25 @@ jobs:
           echo "build_num=$BUILD_NUM" >> "$GITHUB_OUTPUT"
 
       - name: Install Rust toolchain
-        if: contains(fromJSON('["feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
+        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Rust sync engine
-        if: contains(fromJSON('["feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
+      - name: Build Rust core
+        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
         run: |
-          cd maccy-sync
           cargo build --release
-          echo "=== Built static library ==="
-          ls -lh target/release/libmaccy_sync.a
+          echo "=== Built libraries ==="
+          ls -lh target/release/libmaccy_core.a target/release/libmaccy_sync.a
+
+      - name: Generate UniFFI Swift bindings
+        if: contains(fromJSON('["master", "feat/p2p-sync"]'), github.head_ref || (startsWith(github.ref, 'refs/heads/') && github.ref_name) || '')
+        run: |
+          cargo run --release --bin uniffi-bindgen --package maccy-core generate \
+            --library target/release/libmaccy_core.dylib \
+            --language swift \
+            --out-dir Maccy/Generated
+          echo "=== Generated Swift bindings ==="
+          ls -lh Maccy/Generated/
 
       - name: Build
         run: |

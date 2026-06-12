@@ -149,7 +149,6 @@ class AppState: Sendable {
           ) {
             PinsSettingsPane()
               .environment(self)
-              .modelContainer(Storage.shared.container)
           },
           Settings.Pane(
             identifier: Settings.PaneIdentifier.ignore,

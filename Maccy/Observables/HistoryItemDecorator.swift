@@ -3,6 +3,7 @@ import Defaults
 import Foundation
 import Observation
 import Sauce
+import MaccyCore
 
 @Observable
 class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
@@ -28,7 +29,9 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
   var editingText: String = ""
 
   var application: String? {
-    if item.universalClipboard {
+    let universalClipboardTypes = ["com.apple.UIKit.pboardName"]
+    let hasUniversal = item.contents.contains(where: { universalClipboardTypes.contains($0.contentType) })
+    if hasUniversal {
       return "iCloud"
     }
 
@@ -41,7 +44,7 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
     return url.deletingPathExtension().lastPathComponent
   }
 
-  var hasImage: Bool { item.image != nil }
+  var hasImage: Bool { imageData != nil }
 
   var previewImageGenerationTask: Task<(), Error>?
   var thumbnailImageGenerationTask: Task<(), Error>?
@@ -49,42 +52,44 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
   var thumbnailImage: NSImage?
   var applicationImage: ApplicationImage
 
-  // 10k characters seems to be more than enough on large displays
-  var text: String { item.previewableText.shortened(to: 10_000) }
+  var text: String { Clipboard.shared.getPreviewableText(from: item).shortened(to: 10_000) }
 
   var isPinned: Bool { item.pin != nil }
   var isUnpinned: Bool { item.pin == nil }
 
   func hash(into hasher: inout Hasher) {
-    // We need to hash title and attributedTitle, so SwiftUI knows it needs to update the view if they chage
     hasher.combine(id)
     hasher.combine(title)
     hasher.combine(attributedTitle)
   }
 
-  private(set) var item: HistoryItem
+  var item: ClipboardItem
 
-  init(_ item: HistoryItem, shortcuts: [KeyShortcut] = []) {
+  // Computed AppKit properties derived from ClipboardItem contents
+  var imageData: Data? {
+    let imageTypes = [NSPasteboard.PasteboardType.tiff, .png, .jpeg, .heic].map(\.rawValue)
+    guard let content = item.contents.first(where: { imageTypes.contains($0.contentType) }),
+          let value = content.value else { return nil }
+    return Data(value)
+  }
+
+  var image: NSImage? {
+    guard let data = imageData else { return nil }
+    return NSImage(data: data)
+  }
+
+  init(_ item: ClipboardItem, shortcuts: [KeyShortcut] = []) {
     self.item = item
     self.shortcuts = shortcuts
     self.title = item.title
-    self.applicationImage = ApplicationImageCache.shared.getImage(item: item)
-
-    synchronizeItemPin()
-    synchronizeItemTitle()
+    self.applicationImage = ApplicationImageCache.shared.getImage(application: item.application)
   }
 
   @MainActor
   func ensureThumbnailImage() {
-    guard item.image != nil else {
-      return
-    }
-    guard thumbnailImage == nil else {
-      return
-    }
-    guard thumbnailImageGenerationTask == nil else {
-      return
-    }
+    guard image != nil else { return }
+    guard thumbnailImage == nil else { return }
+    guard thumbnailImageGenerationTask == nil else { return }
     thumbnailImageGenerationTask = Task { [weak self] in
       self?.generateThumbnailImage()
     }
@@ -92,15 +97,9 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
 
   @MainActor
   func ensurePreviewImage() {
-    guard item.image != nil else {
-      return
-    }
-    guard previewImage == nil else {
-      return
-    }
-    guard previewImageGenerationTask == nil else {
-      return
-    }
+    guard image != nil else { return }
+    guard previewImage == nil else { return }
+    guard previewImageGenerationTask == nil else { return }
     previewImageGenerationTask = Task { [weak self] in
       self?.generatePreviewImage()
     }
@@ -128,17 +127,13 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
 
   @MainActor
   private func generateThumbnailImage() {
-    guard let image = item.image else {
-      return
-    }
+    guard let image else { return }
     thumbnailImage = image.resized(to: HistoryItemDecorator.thumbnailImageSize)
   }
 
   @MainActor
   private func generatePreviewImage() {
-    guard let image = item.image else {
-      return
-    }
+    guard let image else { return }
     previewImage = image.resized(to: HistoryItemDecorator.previewImageSize)
   }
 
@@ -148,7 +143,7 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
     generateThumbnailImage()
   }
 
-  func highlight(_ query: String, _ ranges: [Range<String.Index>]) {
+  func highlight(_ query: String, _ ranges: [MatchRange]) {
     guard !query.isEmpty, !title.isEmpty else {
       attributedTitle = nil
       return
@@ -156,56 +151,23 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
 
     var attributedString = AttributedString(title.shortened(to: 500))
     for range in ranges {
-      if let lowerBound = AttributedString.Index(range.lowerBound, within: attributedString),
-         let upperBound = AttributedString.Index(range.upperBound, within: attributedString) {
+      let lower = attributedString.index(attributedString.startIndex, offsetByCharacters: Int(range.start))
+      let upper = attributedString.index(attributedString.startIndex, offsetByCharacters: Int(range.end))
+      if lower < upper && upper <= attributedString.endIndex {
         switch Defaults[.highlightMatch] {
         case .bold:
-          attributedString[lowerBound..<upperBound].font = .bold(.body)()
+          attributedString[lower..<upper].font = .bold(.body)()
         case .italic:
-          attributedString[lowerBound..<upperBound].font = .italic(.body)()
+          attributedString[lower..<upper].font = .italic(.body)()
         case .underline:
-          attributedString[lowerBound..<upperBound].underlineStyle = .single
+          attributedString[lower..<upper].underlineStyle = .single
         default:
-          attributedString[lowerBound..<upperBound].backgroundColor = .findHighlightColor
-          attributedString[lowerBound..<upperBound].foregroundColor = .black
+          attributedString[lower..<upper].backgroundColor = .findHighlightColor
+          attributedString[lower..<upper].foregroundColor = .black
         }
       }
     }
 
     attributedTitle = attributedString
-  }
-
-  @MainActor
-  func togglePin() {
-    if item.pin != nil {
-      item.pin = nil
-    } else {
-      let pin = HistoryItem.randomAvailablePin
-      item.pin = pin
-    }
-  }
-
-  private func synchronizeItemPin() {
-    _ = withObservationTracking {
-      item.pin
-    } onChange: {
-      DispatchQueue.main.async {
-        if let pin = self.item.pin {
-          self.shortcuts = KeyShortcut.create(character: pin)
-        }
-        self.synchronizeItemPin()
-      }
-    }
-  }
-
-  private func synchronizeItemTitle() {
-    _ = withObservationTracking {
-      item.title
-    } onChange: {
-      DispatchQueue.main.async {
-        self.title = self.item.title
-        self.synchronizeItemTitle()
-      }
-    }
   }
 }
