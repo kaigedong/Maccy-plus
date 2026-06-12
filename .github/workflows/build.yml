@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - master
+      - feat/p2p-sync
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 jobs:

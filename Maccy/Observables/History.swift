@@ -47,10 +47,14 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   var sourceApps: [(bundleId: String, image: ApplicationImage)] {
     var seen = Set<String>()
     var result: [(bundleId: String, image: ApplicationImage)] = []
+    var hasUnknown = false
     for item in all {
-      if let bundleId = item.item.application, !seen.contains(bundleId) {
+      if let bundleId = item.item.application, !bundleId.isEmpty, !seen.contains(bundleId) {
         seen.insert(bundleId)
         result.append((bundleId: bundleId, image: item.applicationImage))
+      } else if (item.item.application == nil || item.item.application?.isEmpty == true) && !hasUnknown {
+        hasUnknown = true
+        result.append((bundleId: "", image: item.applicationImage))
       }
     }
     return result
@@ -586,7 +590,11 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
   private func filteredItems() -> [HistoryItemDecorator] {
     if excludedApps.isEmpty { return all }
     return all.filter { item in
-      guard let bundleId = item.item.application else { return true }
+      let bundleId = item.item.application ?? ""
+      if bundleId.isEmpty {
+        // Items without a known app belong to the "unknown" group
+        return !excludedApps.contains("")
+      }
       return !excludedApps.contains(bundleId)
     }
   }
