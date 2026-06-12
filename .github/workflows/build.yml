@@ -26,6 +26,9 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
 
+      - name: Install xcodeproj gem
+        run: gem install xcodeproj
+
       - name: Determine version
         id: version
         run: |
@@ -60,6 +63,66 @@ jobs:
             --out-dir Maccy/Generated
           echo "=== Generated Swift bindings ==="
           ls -lh Maccy/Generated/
+
+      - name: Prepare UniFFI sources for Xcode
+        run: |
+          # Copy generated Swift binding into the Maccy target source tree
+          cp Maccy/Generated/MaccyCore.swift Maccy/MaccyCore.swift
+          # Create a module module map that Xcode can find via SWIFT_INCLUDE_PATH
+          mkdir -p Maccy/Generated
+          cat > Maccy/Generated/module.modulemap << 'EOF'
+          module MaccyCore {
+              header "MaccyCoreFFI.h"
+              export *
+          }
+          EOF
+          cp Maccy/Generated/MaccyCoreFFI.h Maccy/Generated/
+          echo "=== Prepared UniFFI sources ==="
+          ls -la Maccy/MaccyCore.swift Maccy/Generated/
+
+      - name: Patch Xcode project to include MaccyCore
+        run: |
+          # Use ruby to add the generated Swift file and header search path to the Xcode project
+          ruby -e '
+            require "xcodeproj"
+
+            project = Xcodeproj::Project.open("Maccy.xcodeproj")
+            target = project.targets.find { |t| t.name == "Maccy" }
+            abort "Target Maccy not found" unless target
+
+            source_build_phase = target.source_build_phase
+
+            # Add MaccyCore.swift if not already present
+            unless source_build_phase.files.any? { |f| f.file_ref && f.file_ref.path == "MaccyCore.swift" }
+              group = project.main_group.find_subpath("Maccy", true)
+              file_ref = group.new_file("MaccyCore.swift")
+              source_build_phase.add_file_reference(file_ref)
+              puts "Added MaccyCore.swift to Maccy target"
+            end
+
+            # Add header search path for the module map
+            config = target.build_configurations.first
+            existing = config.build_settings["HEADER_SEARCH_PATHS"] || ["$(inherited)"]
+            existing = [existing] unless existing.is_a?(Array)
+            unless existing.include?("Maccy/Generated")
+              existing << "Maccy/Generated"
+              config.build_settings["HEADER_SEARCH_PATHS"] = existing
+              puts "Added Maccy/Generated to HEADER_SEARCH_PATHS"
+            end
+
+            # Add library search path for Rust static lib
+            existing_lib = config.build_settings["LIBRARY_SEARCH_PATHS"] || ["$(inherited)"]
+            existing_lib = [existing_lib] unless existing_lib.is_a?(Array)
+            rust_path = File.expand_path("target/release")
+            unless existing_lib.include?(rust_path)
+              existing_lib << rust_path
+              config.build_settings["LIBRARY_SEARCH_PATHS"] = existing_lib
+              puts "Added #{rust_path} to LIBRARY_SEARCH_PATHS"
+            end
+
+            project.save
+            puts "Xcode project patched successfully"
+          '
 
       - name: Build
         run: |
