@@ -1,5 +1,6 @@
 import SwiftUI
 import Defaults
+import Settings
 
 struct SyncSettingsPane: View {
   @Default(.syncEnabled) private var syncEnabled
