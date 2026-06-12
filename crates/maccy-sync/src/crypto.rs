@@ -1,16 +1,14 @@
+use hmac::KeyInit;
 use sha2::{Digest, Sha256};
 use x25519_dalek::{PublicKey, StaticSecret};
 
 pub fn generate_identity() -> (StaticSecret, PublicKey) {
-    let secret = StaticSecret::random_from_rng(rand::rngs::OsRng);
+    let secret = StaticSecret::random();
     let public = PublicKey::from(&secret);
     (secret, public)
 }
 
-pub fn derive_shared_secret(
-    our_secret: &StaticSecret,
-    their_public: &PublicKey,
-) -> [u8; 32] {
+pub fn derive_shared_secret(our_secret: &StaticSecret, their_public: &PublicKey) -> [u8; 32] {
     let shared = our_secret.diffie_hellman(their_public);
     *shared.as_bytes()
 }

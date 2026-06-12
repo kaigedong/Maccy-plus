@@ -1,8 +1,8 @@
 [package]
 name = "maccy-core"
-version = "0.1.0"
-edition = "2021"
 description = "Cross-platform core for Maccy clipboard manager"
+edition.workspace = true
+version = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
@@ -10,7 +10,7 @@ name = "maccy_core"
 
 [dependencies]
 uniffi = { version = "0.31", features = ["cli"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -22,7 +22,7 @@ log = "0.4"
 maccy-sync = { path = "../maccy-sync" }
 base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
-libp2p = { version = "0.54", features = ["ed25519"] }
+libp2p = { version = "0.56", features = ["ed25519"] }
 
 [build-dependencies]
 uniffi = { version = "0.31", features = ["build"] }
