@@ -15,6 +15,22 @@ struct SyncSettingsPane: View {
   @State private var pairingPin = ""
 
   var body: some View {
+    mainContent
+      .onReceive(NotificationCenter.default.publisher(for: .syncPeerDiscovered)) { notification in
+        handlePeerDiscovered(notification)
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .syncPeerLost)) { notification in
+        handlePeerLost(notification)
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .syncPairingRequest)) { notification in
+        handlePairingRequest(notification)
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .syncPairingComplete)) { _ in
+        pairedDevices = PairedDeviceInfo.all
+      }
+  }
+
+  private var mainContent: some View {
     Settings.Container(contentWidth: 450) {
       enableSection
       deviceNameSection
@@ -27,31 +43,31 @@ struct SyncSettingsPane: View {
     .sheet(isPresented: $showPairingDialog) {
       pairingSheet
     }
-    .onReceive(NotificationCenter.default.publisher(for: .syncPeerDiscovered)) { notification in
-      if let peerID = notification.userInfo?["peerID"] as? String,
-         let name = notification.userInfo?["displayName"] as? String {
-        if !discoveredPeers.contains(where: { $0.peerID == peerID }) {
-          discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
-        }
+  }
+
+  private func handlePeerDiscovered(_ notification: NotificationCenter.Publisher.Output) {
+    if let peerID = notification.userInfo?["peerID"] as? String,
+       let name = notification.userInfo?["displayName"] as? String {
+      if !discoveredPeers.contains(where: { $0.peerID == peerID }) {
+        discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .syncPeerLost)) { notification in
-      if let peerID = notification.userInfo?["peerID"] as? String {
-        discoveredPeers.removeAll { $0.peerID == peerID }
-      }
+  }
+
+  private func handlePeerLost(_ notification: NotificationCenter.Publisher.Output) {
+    if let peerID = notification.userInfo?["peerID"] as? String {
+      discoveredPeers.removeAll { $0.peerID == peerID }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .syncPairingRequest)) { notification in
-      if let peerID = notification.userInfo?["peerID"] as? String,
-         let name = notification.userInfo?["displayName"] as? String,
-         let pin = notification.userInfo?["pin"] as? String {
-        pairingPeerID = peerID
-        pairingDisplayName = name
-        pairingPin = pin
-        showPairingDialog = true
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .syncPairingComplete)) { _ in
-      pairedDevices = PairedDeviceInfo.all
+  }
+
+  private func handlePairingRequest(_ notification: NotificationCenter.Publisher.Output) {
+    if let peerID = notification.userInfo?["peerID"] as? String,
+       let name = notification.userInfo?["displayName"] as? String,
+       let pin = notification.userInfo?["pin"] as? String {
+      pairingPeerID = peerID
+      pairingDisplayName = name
+      pairingPin = pin
+      showPairingDialog = true
     }
   }
 
