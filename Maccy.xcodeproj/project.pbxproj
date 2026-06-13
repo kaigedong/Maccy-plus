@@ -1825,7 +1825,8 @@
 					Security,
 					"-framework",
 					SystemConfiguration,
-					"-lmaccy_core",
+					"-force_load",
+					"$(PROJECT_DIR)/target/release/libmaccy_core.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1879,7 +1880,8 @@
 					Security,
 					"-framework",
 					SystemConfiguration,
-					"-lmaccy_core",
+					"-force_load",
+					"$(PROJECT_DIR)/target/release/libmaccy_core.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
