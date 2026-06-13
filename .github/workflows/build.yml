@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - feat/p2p-sync
+      - refactor/rust-shared-core
     tags:
       - 'v*'
   pull_request:
@@ -25,9 +26,6 @@ jobs:
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
-
-      - name: Install xcodeproj gem
-        run: gem install xcodeproj
 
       - name: Determine version
         id: version
@@ -52,7 +50,6 @@ jobs:
       - name: Build Rust core
         run: |
           cargo build --release
-          echo "=== Built libraries ==="
           ls -lh target/release/libmaccy_core.a target/release/libmaccy_sync.a
 
       - name: Generate UniFFI Swift bindings
@@ -61,65 +58,73 @@ jobs:
             --library target/release/libmaccy_core.dylib \
             --language swift \
             --out-dir Maccy/Generated
-          echo "=== Generated Swift bindings ==="
-          ls -lh Maccy/Generated/
-
-      - name: Prepare UniFFI sources for Xcode
-        run: |
-          # Copy generated Swift binding into the Maccy target source tree
           cp Maccy/Generated/MaccyCore.swift Maccy/MaccyCore.swift
-          # Create a modulemap that Xcode can find
+          ls -lh Maccy/Generated/ Maccy/MaccyCore.swift
+
+      - name: Patch Xcode project
+        run: |
           cat > Maccy/Generated/module.modulemap << 'EOF'
-          module MaccyCore {
+          module MaccyCoreFFI {
               header "MaccyCoreFFI.h"
               export *
+              use "Darwin"
+              use "_Builtin_stdbool"
+              use "_Builtin_stdint"
           }
           EOF
-          echo "=== Prepared UniFFI sources ==="
-          ls -la Maccy/MaccyCore.swift Maccy/Generated/
 
-      - name: Patch Xcode project to include MaccyCore
-        run: |
-          # Use ruby to add the generated Swift file and header search path to the Xcode project
           ruby -e '
             require "xcodeproj"
-
             project = Xcodeproj::Project.open("Maccy.xcodeproj")
             target = project.targets.find { |t| t.name == "Maccy" }
-            abort "Target Maccy not found" unless target
+            abort "Target not found" unless target
 
-            source_build_phase = target.source_build_phase
-
-            # Add MaccyCore.swift if not already present
-            unless source_build_phase.files.any? { |f| f.file_ref && f.file_ref.path == "MaccyCore.swift" }
+            # Add MaccyCore.swift to sources
+            phase = target.source_build_phase
+            unless phase.files.any? { |f| f.file_ref && f.file_ref.path == "MaccyCore.swift" }
               group = project.main_group.find_subpath("Maccy", true)
-              file_ref = group.new_file("MaccyCore.swift")
-              source_build_phase.add_file_reference(file_ref)
-              puts "Added MaccyCore.swift to Maccy target"
+              phase.add_file_reference(group.new_file("MaccyCore.swift"))
             end
 
-            # Add header search path for the module map
-            config = target.build_configurations.first
-            existing = config.build_settings["HEADER_SEARCH_PATHS"] || ["$(inherited)"]
-            existing = [existing] unless existing.is_a?(Array)
-            unless existing.include?("Maccy/Generated")
-              existing << "Maccy/Generated"
-              config.build_settings["HEADER_SEARCH_PATHS"] = existing
-              puts "Added Maccy/Generated to HEADER_SEARCH_PATHS"
-            end
+            # Patch ALL build configurations
+            target.build_configurations.each do |cfg|
+              # Swift include path for modulemap
+              paths = cfg.build_settings["SWIFT_INCLUDE_PATHS"] || ["$(inherited)"]
+              paths = [paths] unless paths.is_a?(Array)
+              unless paths.include?("$(SRCROOT)/Maccy/Generated")
+                paths << "$(SRCROOT)/Maccy/Generated"
+                cfg.build_settings["SWIFT_INCLUDE_PATHS"] = paths
+              end
 
-            # Add library search path for Rust static lib
-            existing_lib = config.build_settings["LIBRARY_SEARCH_PATHS"] || ["$(inherited)"]
-            existing_lib = [existing_lib] unless existing_lib.is_a?(Array)
-            rust_path = File.expand_path("target/release")
-            unless existing_lib.include?(rust_path)
-              existing_lib << rust_path
-              config.build_settings["LIBRARY_SEARCH_PATHS"] = existing_lib
-              puts "Added #{rust_path} to LIBRARY_SEARCH_PATHS"
+              # Header search path
+              hdrs = cfg.build_settings["HEADER_SEARCH_PATHS"] || ["$(inherited)"]
+              hdrs = [hdrs] unless hdrs.is_a?(Array)
+              unless hdrs.include?("Maccy/Generated")
+                hdrs << "Maccy/Generated"
+                cfg.build_settings["HEADER_SEARCH_PATHS"] = hdrs
+              end
+
+              # Library search path for Rust static libs
+              libs = cfg.build_settings["LIBRARY_SEARCH_PATHS"] || ["$(inherited)"]
+              libs = [libs] unless libs.is_a?(Array)
+              unless libs.include?("$(PROJECT_DIR)/target/release")
+                libs << "$(PROJECT_DIR)/target/release"
+                cfg.build_settings["LIBRARY_SEARCH_PATHS"] = libs
+              end
+
+              # Linker flags for both Rust libs
+              flags = cfg.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"]
+              flags = [flags] unless flags.is_a?(Array)
+              ["-lmaccy_core", "-lmaccy_sync"].each do |lib|
+                unless flags.include?(lib)
+                  flags << lib
+                end
+              end
+              cfg.build_settings["OTHER_LDFLAGS"] = flags
             end
 
             project.save
-            puts "Xcode project patched successfully"
+            puts "Patched all configurations (Debug + Release)"
           '
 
       - name: Build
@@ -137,34 +142,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Verify Binary
-        run: |
-          APP="build/Build/Products/Release/Maccy.app"
-          BINARY="$APP/Contents/MacOS/Maccy"
-
-          echo "=== Binary Info ==="
-          file "$BINARY"
-
-          echo "=== Architecture ==="
-          lipo -info "$BINARY" 2>/dev/null || echo "Single architecture binary"
-
-          echo "=== Launch Test ==="
-          xattr -cr "$APP" 2>/dev/null || true
-          open "$APP"
-          sleep 5
-          if pgrep -x "Maccy" > /dev/null; then
-            echo "✅ Maccy launched successfully!"
-            killall Maccy 2>/dev/null || true
-          else
-            echo "⚠️ Maccy process not found (may be expected for menu bar apps)"
-          fi
-
       - name: Package
         run: |
           cd build/Build/Products/Release
           zip -r Maccy.app.zip Maccy.app
 
-      # ── Beta: upload artifact + create/update pre-release ──
       - name: Upload Artifact (beta)
         if: steps.version.outputs.channel == 'beta'
         uses: actions/upload-artifact@v4
@@ -172,52 +154,18 @@ jobs:
           name: Maccy-latest
           path: build/Build/Products/Release/Maccy.app.zip
 
-      - name: Generate beta appcast
-        if: steps.version.outputs.channel == 'beta'
-        run: |
-          DATE=$(date -u +"%a, %d %b %Y %H:%M:%S +0000")
-          cat > appcast-beta.xml << APPCAST
-          <?xml version="1.0" encoding="utf-8"?>
-          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
-            <channel>
-              <title>MaccyPlus Beta</title>
-              <link>https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/appcast-beta.xml</link>
-              <description>Most recent beta changes with links to updates.</description>
-              <language>en</language>
-              <item>
-                <title>MaccyPlus ${{ steps.version.outputs.version }} (${{ steps.version.outputs.build_num }})</title>
-                <description><![CDATA[Beta build from latest master branch (${{ github.sha }}).]]></description>
-                <pubDate>${DATE}</pubDate>
-                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-                <enclosure
-                  url="https://github.com/kaigedong/Maccy-plus/releases/download/latest-beta/Maccy.app.zip"
-                  sparkle:version="${{ steps.version.outputs.build_num }}"
-                  sparkle:shortVersionString="${{ steps.version.outputs.version }}"
-                  length="0"
-                  type="application/octet-stream"
-                />
-              </item>
-            </channel>
-          </rss>
-          APPCAST
-
       - name: Publish Beta Release
         if: steps.version.outputs.channel == 'beta'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete existing latest-beta release + tag if present
           gh release delete latest-beta --yes --cleanup-tag 2>/dev/null || true
-
-          # Create new pre-release
           gh release create latest-beta \
             build/Build/Products/Release/Maccy.app.zip \
-            appcast-beta.xml \
             --title "MaccyPlus Beta (${{ steps.version.outputs.version }})" \
-            --notes "Automated beta build from master (${{ github.sha }})." \
+            --notes "Automated beta build (${{ github.sha }})." \
             --prerelease
 
-      # ── Stable: create release on tag ──
       - name: Publish Stable Release
         if: steps.version.outputs.channel == 'stable'
         uses: softprops/action-gh-release@v2
