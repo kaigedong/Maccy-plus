@@ -19,28 +19,33 @@ class SyncBridge {
 
     let deviceName = Defaults[.syncDeviceName]
     let deviceID = Defaults[.syncDeviceID]
+    NSLog("[Sync] start: name=\(deviceName)")
 
-    NSLog("[Sync] start: name=\(deviceName) id=\(deviceID)")
     guard let handle = maccy_sync_create(deviceName, deviceID) else {
-      NSLog("[Sync] start: maccy_sync_create failed")
+      NSLog("[Sync] start: create failed")
       return
     }
     syncHandle = handle
 
-    registerCallbacks()
+    // Register single unified callback — read C string immediately
+    maccy_sync_on_event(handle) { eventJSON in
+      let json = String(cString: eventJSON!)
+      DispatchQueue.main.async {
+        SyncBridge.shared.handleEvent(json)
+      }
+    }
 
     let result = maccy_sync_start(handle)
     if result != MACCY_SYNC_OK {
-      NSLog("[Sync] start: maccy_sync_start failed with \(result)")
+      NSLog("[Sync] start: failed with \(result)")
       maccy_sync_destroy(handle)
       syncHandle = nil
       return
     }
 
-    NSLog("[Sync] start: starting discovery")
     _ = maccy_sync_start_discovery(handle)
     isStarted = true
-    NSLog("[Sync] start: fully started")
+    NSLog("[Sync] started")
   }
 
   func stop() {
@@ -52,56 +57,12 @@ class SyncBridge {
     isStarted = false
   }
 
-  func broadcastNewItem(_ item: HistoryItem) {
-    guard isStarted, let handle = syncHandle else { return }
-    guard let json = serializeItem(item) else { return }
-    json.withCString { ptr in
-      _ = maccy_sync_broadcast_item(handle, ptr)
-    }
-  }
+  // ── Thin wrappers — all logic is in Rust ────────────────────────
 
-  func broadcastDeletion(_ syncID: UUID) {
+  func addPeerAddress(_ address: String) {
     guard isStarted, let handle = syncHandle else { return }
-    syncID.uuidString.withCString { ptr in
-      _ = maccy_sync_broadcast_deletion(handle, ptr)
-    }
-  }
-
-  func broadcastUpdate(_ item: HistoryItem) {
-    guard isStarted, let handle = syncHandle else { return }
-    guard let json = serializeItem(item) else { return }
-    json.withCString { ptr in
-      _ = maccy_sync_broadcast_update(handle, ptr)
-    }
-  }
-
-  func requestPairing(peerID: String) {
-    guard isStarted, let handle = syncHandle else { return }
-    peerID.withCString { ptr in
-      _ = maccy_sync_request_pairing(handle, ptr)
-    }
-  }
-
-  func acceptPairing(peerID: String, pin: String) {
-    guard isStarted, let handle = syncHandle else { return }
-    peerID.withCString { pid in
-      pin.withCString { p in
-        _ = maccy_sync_accept_pairing(handle, pid, p)
-      }
-    }
-  }
-
-  func rejectPairing(peerID: String) {
-    guard isStarted, let handle = syncHandle else { return }
-    peerID.withCString { ptr in
-      _ = maccy_sync_reject_pairing(handle, ptr)
-    }
-  }
-
-  func unpair(peerID: String) {
-    guard isStarted, let handle = syncHandle else { return }
-    peerID.withCString { ptr in
-      _ = maccy_sync_unpair(handle, ptr)
+    address.withCString { ptr in
+      _ = maccy_sync_add_peer_address(handle, "", ptr)
     }
   }
 
@@ -111,140 +72,102 @@ class SyncBridge {
     _ = maccy_sync_start_discovery(handle)
   }
 
-  func addPeerAddress(address: String) {
-    guard isStarted, let handle = syncHandle else {
-      NSLog("[Sync] addPeerAddress: not started")
-      return
-    }
-    let parts = address.split(separator: ":")
-    guard parts.count >= 2, let _ = UInt16(parts.last ?? "") else {
-      NSLog("[Sync] addPeerAddress: invalid address format: \(address)")
-      return
-    }
-    let host = parts.dropLast().joined(separator: ":")
-    let port = parts.last!
-    let multiaddr = "/ip4/\(host)/tcp/\(port)"
-    NSLog("[Sync] addPeerAddress: dialing \(multiaddr)")
-    multiaddr.withCString { addrPtr in
-      _ = maccy_sync_add_peer_address(handle, "", addrPtr)
+  func broadcastNewItem(_ item: HistoryItem) {
+    guard isStarted, let handle = syncHandle else { return }
+    guard let json = serializeItem(item) else { return }
+    json.withCString { ptr in _ = maccy_sync_broadcast_item(handle, ptr) }
+  }
+
+  func broadcastDeletion(_ syncID: UUID) {
+    guard isStarted, let handle = syncHandle else { return }
+    syncID.uuidString.withCString { ptr in _ = maccy_sync_broadcast_deletion(handle, ptr) }
+  }
+
+  func broadcastUpdate(_ item: HistoryItem) {
+    guard isStarted, let handle = syncHandle else { return }
+    guard let json = serializeItem(item) else { return }
+    json.withCString { ptr in _ = maccy_sync_broadcast_update(handle, ptr) }
+  }
+
+  func requestPairing(peerID: String) {
+    guard isStarted, let handle = syncHandle else { return }
+    peerID.withCString { ptr in _ = maccy_sync_request_pairing(handle, ptr) }
+  }
+
+  func acceptPairing(peerID: String, pin: String) {
+    guard isStarted, let handle = syncHandle else { return }
+    peerID.withCString { pid in pin.withCString { p in _ = maccy_sync_accept_pairing(handle, pid, p) } }
+  }
+
+  func rejectPairing(peerID: String) {
+    guard isStarted, let handle = syncHandle else { return }
+    peerID.withCString { ptr in _ = maccy_sync_reject_pairing(handle, ptr) }
+  }
+
+  func unpair(peerID: String) {
+    guard isStarted, let handle = syncHandle else { return }
+    peerID.withCString { ptr in _ = maccy_sync_unpair(handle, ptr) }
+  }
+
+  // ── Event handling — parse JSON from Rust ───────────────────────
+
+  private func handleEvent(_ json: String) {
+    guard let data = json.data(using: .utf8),
+          let evt = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let type = evt["type"] as? String else { return }
+
+    switch type {
+    case "peer_discovered":
+      if let peer = evt["peer"] as? [String: Any] {
+        NotificationCenter.default.post(name: .syncPeerDiscovered, object: nil, userInfo: peer)
+      }
+    case "peer_lost":
+      if let peerID = evt["peer_id"] as? String {
+        NotificationCenter.default.post(name: .syncPeerLost, object: nil, userInfo: ["peerID": peerID])
+      }
+    case "pairing_request":
+      NotificationCenter.default.post(name: .syncPairingRequest, object: nil, userInfo: [
+        "peerID": evt["peer_id"] as? String ?? "",
+        "displayName": evt["display_name"] as? String ?? "",
+        "pin": evt["pin"] as? String ?? "",
+      ])
+    case "pairing_complete":
+      NotificationCenter.default.post(name: .syncPairingComplete, object: nil, userInfo: [
+        "peerID": evt["peer_id"] as? String ?? "",
+        "success": evt["success"] as? Bool ?? false,
+      ])
+    case "item_received":
+      if let itemJSON = evt["item_json"] as? String {
+        NotificationCenter.default.post(name: .syncItemReceived, object: nil, userInfo: ["itemJSON": itemJSON])
+      }
+    case "item_deleted":
+      if let itemID = evt["item_id"] as? String {
+        NotificationCenter.default.post(name: .syncItemDeleted, object: nil, userInfo: ["itemID": itemID])
+      }
+    case "item_updated":
+      if let itemJSON = evt["item_json"] as? String {
+        NotificationCenter.default.post(name: .syncItemUpdated, object: nil, userInfo: ["itemJSON": itemJSON])
+      }
+    case "error":
+      let msg = evt["message"] as? String ?? "Unknown error"
+      NSLog("[Sync] error: \(msg)")
+      NotificationCenter.default.post(name: .syncError, object: nil, userInfo: [
+        "code": evt["code"] as? Int ?? 0,
+        "message": msg,
+      ])
+    case "listening":
+      NSLog("[Sync] listening on \(evt["address"] as? String ?? "?")")
+    default:
+      break
     }
   }
 
-  func getPairedPeersJSON() -> String {
-    guard isStarted, let handle = syncHandle else { return "[]" }
-    guard let cStr = maccy_sync_get_paired_peers(handle) else { return "[]" }
-    defer { maccy_sync_free_string(UnsafeMutablePointer(mutating: cStr)) }
-    return String(cString: cStr)
-  }
-
-  private func registerCallbacks() {
-    guard let handle = syncHandle else { return }
-
-    maccy_sync_on_peer_discovered(handle) { peerID, displayName, addresses in
-      let pid = String(cString: peerID!)
-      let name = String(cString: displayName!)
-      let addrs = String(cString: addresses!)
-      DispatchQueue.main.async {
-        NSLog("[Sync] peer discovered: \(name) (\(pid)) addresses=\(addrs)")
-        NotificationCenter.default.post(
-          name: .syncPeerDiscovered,
-          object: nil,
-          userInfo: ["peerID": pid, "displayName": name, "addresses": addrs]
-        )
-      }
-    }
-
-    maccy_sync_on_peer_lost(handle) { peerID in
-      let pid = String(cString: peerID!)
-      DispatchQueue.main.async {
-        NSLog("[Sync] peer lost: \(pid)")
-        NotificationCenter.default.post(
-          name: .syncPeerLost,
-          object: nil,
-          userInfo: ["peerID": pid]
-        )
-      }
-    }
-
-    maccy_sync_on_pairing_request(handle) { peerID, displayName, pin in
-      let pid = String(cString: peerID!)
-      let name = String(cString: displayName!)
-      let p = String(cString: pin!)
-      DispatchQueue.main.async {
-        NSLog("[Sync] pairing request from \(name) pin=\(p)")
-        NotificationCenter.default.post(
-          name: .syncPairingRequest,
-          object: nil,
-          userInfo: ["peerID": pid, "displayName": name, "pin": p]
-        )
-      }
-    }
-
-    maccy_sync_on_pairing_complete(handle) { peerID, success in
-      let pid = String(cString: peerID!)
-      DispatchQueue.main.async {
-        NotificationCenter.default.post(
-          name: .syncPairingComplete,
-          object: nil,
-          userInfo: ["peerID": pid, "success": success]
-        )
-      }
-    }
-
-    maccy_sync_on_sync_item_received(handle) { itemJSON in
-      let json = String(cString: itemJSON!)
-      DispatchQueue.main.async {
-        NotificationCenter.default.post(
-          name: .syncItemReceived,
-          object: nil,
-          userInfo: ["itemJSON": json]
-        )
-      }
-    }
-
-    maccy_sync_on_sync_item_deleted(handle) { itemID in
-      let id = String(cString: itemID!)
-      DispatchQueue.main.async {
-        NotificationCenter.default.post(
-          name: .syncItemDeleted,
-          object: nil,
-          userInfo: ["itemID": id]
-        )
-      }
-    }
-
-    maccy_sync_on_sync_item_updated(handle) { itemJSON in
-      let json = String(cString: itemJSON!)
-      DispatchQueue.main.async {
-        NotificationCenter.default.post(
-          name: .syncItemUpdated,
-          object: nil,
-          userInfo: ["itemJSON": json]
-        )
-      }
-    }
-
-    maccy_sync_on_error(handle) { code, message in
-      let msg = String(cString: message!)
-      DispatchQueue.main.async {
-        NSLog("[Sync] Error (code \(code)): \(msg)")
-        NotificationCenter.default.post(
-          name: .syncError,
-          object: nil,
-          userInfo: ["code": code, "message": msg]
-        )
-      }
-    }
-  }
+  // ── Serialization (temporary — will move to Rust later) ─────────
 
   private func serializeItem(_ item: HistoryItem) -> String? {
     let contents = item.contents.map { content in
-      SyncItemContent(
-        type: content.type,
-        value: content.value?.base64EncodedString()
-      )
+      SyncItemContent(type: content.type, value: content.value?.base64EncodedString())
     }
-
     let syncItem = SyncItem(
       id: item.syncID.uuidString,
       application: item.application,
@@ -257,9 +180,7 @@ class SyncBridge {
       syncTimestamp: ISO8601DateFormatter().string(from: item.syncTimestamp),
       syncSource: Defaults[.syncDeviceID]
     )
-
-    let encoder = JSONEncoder()
-    return try? String(data: encoder.encode(syncItem), encoding: .utf8)
+    return try? String(data: JSONEncoder().encode(syncItem), encoding: .utf8)
   }
 }
 

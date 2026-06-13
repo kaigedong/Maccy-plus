@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use base64::Engine;
-use maccy_sync::{NetworkManager, SharedState, SyncCommand, SyncState};
+use maccy_sync::{NetworkManager, SharedState, SyncCommand, SyncEvent, SyncState};
+use serde::Deserialize;
 
 use crate::model::{ClipboardContent, ClipboardItem, CoreError};
 use crate::platform::ClipboardObserver;
@@ -24,34 +25,36 @@ impl SyncEngine {
         })?;
         let state = Arc::new(std::sync::Mutex::new(sync_state));
 
-        // Register callbacks that forward to the observer
+        // Register the single unified event callback
         let obs = observer.clone();
-        state.lock().unwrap().on_item_received.lock().replace(Box::new(move |json| {
-            if let Ok(item) = Self::deserialize_item(&json) {
-                obs.on_item_received(item);
+        state.lock().unwrap().on_event.lock().replace(Box::new(move |json: &str| {
+            if let Ok(event) = serde_json::from_str::<SyncEvent>(json) {
+                match event {
+                    SyncEvent::ItemReceived { item_json } => {
+                        if let Ok(item) = Self::deserialize_item(&item_json) {
+                            obs.on_item_received(item);
+                        }
+                    }
+                    SyncEvent::ItemDeleted { item_id } => {
+                        obs.on_item_deleted(item_id);
+                    }
+                    SyncEvent::ItemUpdated { item_json } => {
+                        if let Ok(item) = Self::deserialize_item(&item_json) {
+                            obs.on_item_updated(item);
+                        }
+                    }
+                    SyncEvent::PeerDiscovered { peer } => {
+                        obs.on_peer_discovered(peer.peer_id, peer.display_name);
+                    }
+                    SyncEvent::PeerLost { peer_id } => {
+                        obs.on_peer_lost(peer_id);
+                    }
+                    SyncEvent::Error { code, message } => {
+                        log::error!("Sync error ({}): {}", code, message);
+                    }
+                    _ => {}
+                }
             }
-        }));
-
-        let obs = observer.clone();
-        state.lock().unwrap().on_item_deleted.lock().replace(Box::new(move |id| {
-            obs.on_item_deleted(id);
-        }));
-
-        let obs = observer.clone();
-        state.lock().unwrap().on_item_updated.lock().replace(Box::new(move |json| {
-            if let Ok(item) = Self::deserialize_item(&json) {
-                obs.on_item_updated(item);
-            }
-        }));
-
-        let obs = observer.clone();
-        state.lock().unwrap().on_peer_discovered.lock().replace(Box::new(move |peer| {
-            obs.on_peer_discovered(peer.peer_id, peer.display_name);
-        }));
-
-        let obs = observer.clone();
-        state.lock().unwrap().on_peer_lost.lock().replace(Box::new(move |peer_id| {
-            obs.on_peer_lost(peer_id);
         }));
 
         Ok(SyncEngine { state, observer })
@@ -60,8 +63,6 @@ impl SyncEngine {
     pub fn start(&self) -> Result<(), CoreError> {
         let local_key = libp2p::identity::Keypair::generate_ed25519();
         let (command_tx, command_rx) = tokio::sync::mpsc::unbounded_channel();
-
-        let _ = command_tx.send(SyncCommand::StartListening);
 
         // Spawn the network manager in a background thread with its own tokio runtime
         let state = self.state.clone();
@@ -77,13 +78,10 @@ impl SyncEngine {
             rt.block_on(mgr.run());
         });
 
-        // Replace the state's command channel with the real one
-        // by updating through the mutex
+        // Store the command sender
         {
             let mut locked = self.state.lock().unwrap();
-            // We can't replace command_tx directly since it's not pub mut,
-            // but we'll use the one from SyncState for now
-            let _ = locked.command_tx.send(SyncCommand::StartListening);
+            locked.command_tx = command_tx;
         }
 
         Ok(())
@@ -104,9 +102,7 @@ impl SyncEngine {
 
     pub fn broadcast_deletion(&self, item_id: &str) -> Result<(), CoreError> {
         let state = self.state.lock().unwrap();
-        let _ = state
-            .command_tx
-            .send(SyncCommand::BroadcastDeletion { item_id: item_id.to_string() });
+        let _ = state.command_tx.send(SyncCommand::BroadcastDeletion { item_id: item_id.to_string() });
         Ok(())
     }
 
@@ -119,17 +115,13 @@ impl SyncEngine {
 
     pub fn request_pairing(&self, peer_id: &str) -> Result<(), CoreError> {
         let state = self.state.lock().unwrap();
-        let _ = state.command_tx.send(SyncCommand::RequestPairing {
-            peer_id: peer_id.to_string(),
-        });
+        let _ = state.command_tx.send(SyncCommand::RequestPairing { peer_id: peer_id.to_string() });
         Ok(())
     }
 
     pub fn unpair(&self, peer_id: &str) -> Result<(), CoreError> {
         let state = self.state.lock().unwrap();
-        let _ = state
-            .command_tx
-            .send(SyncCommand::Unpair { peer_id: peer_id.to_string() });
+        let _ = state.command_tx.send(SyncCommand::Unpair { peer_id: peer_id.to_string() });
         Ok(())
     }
 
@@ -178,11 +170,7 @@ impl SyncEngine {
                 })
                 .collect(),
             sync_timestamp: Self::parse_timestamp(&sync_item.sync_timestamp),
-            sync_source: if sync_item.sync_source.is_empty() {
-                None
-            } else {
-                Some(sync_item.sync_source)
-            },
+            sync_source: if sync_item.sync_source.is_empty() { None } else { Some(sync_item.sync_source) },
             sync_deleted: false,
         })
     }

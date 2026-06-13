@@ -40,7 +40,7 @@ impl NetworkManager {
         Self::build(command_rx, state, local_key, LISTEN_PORT)
     }
 
-    /// Create with a custom listen port (for testing)
+    /// Create with a custom listen port (for testing).
     pub fn new_with_port(
         command_rx: mpsc::UnboundedReceiver<SyncCommand>,
         state: SharedState,
@@ -154,6 +154,18 @@ impl NetworkManager {
         }
     }
 
+    fn state_emit(&self, event: SyncEvent) {
+        let state = self.state.lock().unwrap();
+        state.emit(event);
+    }
+
+    fn emit_error(&self, code: ErrorCode, msg: String) {
+        let state = self.state.lock().unwrap();
+        state.emit_error(code, msg);
+    }
+
+    // ── Swarm events ──────────────────────────────────────────────
+
     async fn handle_swarm_event(&mut self, event: SwarmEvent<MaccyBehaviourEvent>) {
         match event {
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
@@ -165,14 +177,14 @@ impl NetworkManager {
                         is_connected: false,
                     };
                     self.discovered_peers.insert(peer_id, info.clone());
-                    self.emit_peer_discovered(info);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: info });
                     let _ = self.swarm.dial(peer_id);
                 }
             }
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Expired(peers))) => {
                 for (peer_id, _) in peers {
                     if let Some(info) = self.discovered_peers.remove(&peer_id) {
-                        self.emit_peer_lost(info.peer_id);
+                        self.state_emit(SyncEvent::PeerLost { peer_id: info.peer_id });
                     }
                 }
             }
@@ -188,6 +200,7 @@ impl NetworkManager {
                 log::info!("Identified {} as {}", peer_id, device_name);
                 let observed_addr = info.observed_addr.to_string();
                 let listen_addrs: Vec<String> = info.listen_addrs.iter().map(|a| a.to_string()).collect();
+
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.display_name = device_name;
                     if !listen_addrs.is_empty() {
@@ -196,7 +209,7 @@ impl NetworkManager {
                         peer_info.addresses = vec![observed_addr];
                     }
                     let updated = peer_info.clone();
-                    self.emit_peer_discovered(updated);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: updated });
                 } else {
                     let peer_info = PeerInfo {
                         peer_id: peer_id.to_string(),
@@ -205,7 +218,7 @@ impl NetworkManager {
                         is_connected: true,
                     };
                     self.discovered_peers.insert(peer_id, peer_info.clone());
-                    self.emit_peer_discovered(peer_info);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: peer_info });
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
@@ -213,9 +226,8 @@ impl NetworkManager {
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.is_connected = true;
                     let info = peer_info.clone();
-                    self.emit_peer_discovered(info);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: info });
                 } else {
-                    // Manually dialed peer - create a new entry
                     let info = PeerInfo {
                         peer_id: peer_id.to_string(),
                         display_name: peer_id.to_string(),
@@ -223,7 +235,7 @@ impl NetworkManager {
                         is_connected: true,
                     };
                     self.discovered_peers.insert(peer_id, info.clone());
-                    self.emit_peer_discovered(info);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: info });
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
@@ -231,7 +243,7 @@ impl NetworkManager {
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.is_connected = false;
                     let info = peer_info.clone();
-                    self.emit_peer_discovered(info);
+                    self.state_emit(SyncEvent::PeerDiscovered { peer: info });
                 }
             }
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Gossipsub(
@@ -239,17 +251,20 @@ impl NetworkManager {
             )) => {
                 let topic = message.topic.as_str();
                 if topic == PAIRING_TOPIC {
-                    if let Ok(pairing_msg) = serde_json::from_slice::<PairingMessage>(&message.data)
-                    {
+                    if let Ok(pairing_msg) = serde_json::from_slice::<PairingMessage>(&message.data) {
                         self.handle_pairing_message(propagation_source, pairing_msg).await;
                     }
                 } else if topic == TOPIC_NAME {
                     if self.paired_peers.contains_key(&propagation_source) {
                         if let Ok(sync_msg) = serde_json::from_slice::<SyncMessage>(&message.data) {
-                            self.handle_sync_message(sync_msg).await;
+                            self.handle_sync_message(sync_msg);
                         }
                     }
                 }
+            }
+            SwarmEvent::NewListenAddr { address, .. } => {
+                log::info!("Listening on {}", address);
+                self.state_emit(SyncEvent::Listening { address: address.to_string() });
             }
             SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
                 log::error!("Outgoing connection error: {:?} ({:?})", peer_id, error);
@@ -258,9 +273,6 @@ impl NetworkManager {
             SwarmEvent::IncomingConnectionError { error, .. } => {
                 log::error!("Incoming connection error: {:?}", error);
             }
-            SwarmEvent::NewListenAddr { address, .. } => {
-                log::info!("Listening on {}", address);
-            }
             SwarmEvent::ListenerError { error, .. } => {
                 log::error!("Listener error: {:?}", error);
             }
@@ -268,16 +280,18 @@ impl NetworkManager {
         }
     }
 
-    async fn handle_sync_message(&self, msg: SyncMessage) {
+    // ── Sync / pairing message handlers ───────────────────────────
+
+    fn handle_sync_message(&self, msg: SyncMessage) {
         match msg {
             SyncMessage::ItemAdded { item_json } => {
-                self.emit_item_received(item_json);
+                self.state_emit(SyncEvent::ItemReceived { item_json });
             }
             SyncMessage::ItemDeleted { id, .. } => {
-                self.emit_item_deleted(id);
+                self.state_emit(SyncEvent::ItemDeleted { item_id: id });
             }
             SyncMessage::ItemUpdated { item_json } => {
-                self.emit_item_updated(item_json);
+                self.state_emit(SyncEvent::ItemUpdated { item_json });
             }
             SyncMessage::Heartbeat { .. } => {}
         }
@@ -285,31 +299,34 @@ impl NetworkManager {
 
     async fn handle_pairing_message(&mut self, peer: PeerId, msg: PairingMessage) {
         if let PairingMessage::Request { device_name, .. } = msg {
-            self.emit_pairing_request(peer.to_string(), device_name, "000000".to_string());
+            self.state_emit(SyncEvent::PairingRequest {
+                peer_id: peer.to_string(),
+                display_name: device_name,
+                pin: "000000".to_string(),
+            });
         }
     }
+
+    // ── Command handlers ──────────────────────────────────────────
 
     async fn handle_command(&mut self, command: SyncCommand) {
         match command {
             SyncCommand::BroadcastItem { item_json } => {
-                let msg = SyncMessage::ItemAdded {
-                    item_json: item_json.clone(),
-                };
-                self.broadcast_sync_message(msg).await;
+                let msg = SyncMessage::ItemAdded { item_json };
+                self.broadcast_sync_message(msg);
             }
             SyncCommand::BroadcastDeletion { item_id } => {
                 let msg = SyncMessage::ItemDeleted {
                     id: item_id,
                     timestamp: chrono::Utc::now().to_rfc3339(),
                 };
-                self.broadcast_sync_message(msg).await;
+                self.broadcast_sync_message(msg);
             }
             SyncCommand::BroadcastUpdate { item_json } => {
                 let msg = SyncMessage::ItemUpdated { item_json };
-                self.broadcast_sync_message(msg).await;
+                self.broadcast_sync_message(msg);
             }
-            SyncCommand::StartDiscovery => {}
-            SyncCommand::StopDiscovery => {}
+            SyncCommand::StartDiscovery | SyncCommand::StopDiscovery => {}
             SyncCommand::RequestPairing { peer_id } => {
                 if let Ok(peer) = peer_id.parse::<PeerId>() {
                     let (device_name, device_id) = {
@@ -329,21 +346,25 @@ impl NetworkManager {
                     self.paired_peers.insert(peer, vec![]);
                 }
             }
-            SyncCommand::AcceptPairing { .. } => {}
-            SyncCommand::RejectPairing { .. } => {}
-            SyncCommand::AddPeerAddress { peer_id: _, address } => {
-                if let Ok(addr) = address.parse::<libp2p::Multiaddr>() {
+            SyncCommand::AcceptPairing { .. } | SyncCommand::RejectPairing { .. } => {}
+            SyncCommand::AddPeerAddress { address } => {
+                // Accept both "IP:Port" and "/ip4/.../tcp/..." formats
+                let multiaddr = if address.starts_with('/') {
+                    address.clone()
+                } else {
+                    parse_host_port_to_multiaddr(&address)
+                };
+                log::info!("Dialing {} (from {})", multiaddr, address);
+                if let Ok(addr) = multiaddr.parse::<libp2p::Multiaddr>() {
                     match self.swarm.dial(addr.clone()) {
-                        Ok(()) => {
-                            log::info!("Dialing {}", addr);
-                        }
+                        Ok(()) => log::info!("Dialing {}", addr),
                         Err(e) => {
                             log::error!("Failed to dial {}: {:?}", addr, e);
                             self.emit_error(ErrorCode::Network, format!("Failed to dial {}: {:?}", addr, e));
                         }
                     }
                 } else {
-                    log::error!("Invalid multiaddr: {}", address);
+                    log::error!("Invalid multiaddr: {}", multiaddr);
                     self.emit_error(ErrorCode::InvalidArg, format!("Invalid address: {}", address));
                 }
             }
@@ -356,45 +377,30 @@ impl NetworkManager {
         }
     }
 
-    async fn broadcast_sync_message(&mut self, msg: SyncMessage) {
+    fn broadcast_sync_message(&mut self, msg: SyncMessage) {
         if let Ok(data) = serde_json::to_vec(&msg) {
             let topic = IdentTopic::new(TOPIC_NAME);
             let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
         }
     }
+}
 
-    fn emit_peer_discovered(&self, info: PeerInfo) {
-        let state = self.state.lock().unwrap();
-        state.emit_peer_discovered(info);
+/// Parse "10.0.0.1:31774" or "[::1]:31774" into "/ip4/10.0.0.1/tcp/31774"
+fn parse_host_port_to_multiaddr(input: &str) -> String {
+    let input = input.trim();
+    // IPv6 in brackets: [::1]:31774
+    if let Some(rest) = input.strip_prefix('[') {
+        if let Some(bracket_end) = rest.find("]:") {
+            let host = &rest[..bracket_end];
+            let port = &rest[bracket_end + 2..];
+            return format!("/ip6/{}/tcp/{}", host, port);
+        }
     }
-
-    fn emit_peer_lost(&self, peer_id: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_peer_lost(peer_id);
+    // IPv4: 10.0.0.1:31774
+    if let Some(colon) = input.rfind(':') {
+        let host = &input[..colon];
+        let port = &input[colon + 1..];
+        return format!("/ip4/{}/tcp/{}", host, port);
     }
-
-    fn emit_pairing_request(&self, peer_id: String, display_name: String, pin: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_pairing_request(peer_id, display_name, pin);
-    }
-
-    fn emit_item_received(&self, json: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_item_received(json);
-    }
-
-    fn emit_item_deleted(&self, id: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_item_deleted(id);
-    }
-
-    fn emit_item_updated(&self, json: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_item_updated(json);
-    }
-
-    fn emit_error(&self, code: ErrorCode, msg: String) {
-        let state = self.state.lock().unwrap();
-        state.emit_error(code, msg);
-    }
+    input.to_string()
 }

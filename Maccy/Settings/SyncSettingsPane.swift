@@ -109,7 +109,7 @@ struct SyncSettingsPane: View {
       TextField("IP:Port", text: $manualAddress)
         .frame(width: 200)
       Button("Connect") {
-        SyncBridge.shared.addPeerAddress(address: manualAddress)
+        SyncBridge.shared.addPeerAddress(manualAddress)
         connectionStatus = "Connecting..."
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
           if connectionStatus == "Connecting..." {
@@ -231,8 +231,8 @@ struct SyncSettingsPane: View {
   }
 
   private func handlePeerDiscovered(_ notification: NotificationCenter.Publisher.Output) {
-    guard let peerID = notification.userInfo?["peerID"] as? String,
-          let name = notification.userInfo?["displayName"] as? String else { return }
+    guard let peerID = notification.userInfo?["peer_id"] as? String,
+          let name = notification.userInfo?["display_name"] as? String else { return }
     if !discoveredPeers.contains(where: { $0.peerID == peerID }) {
       discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
     }

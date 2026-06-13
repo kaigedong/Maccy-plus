@@ -2,10 +2,8 @@ use std::time::Duration;
 use std::sync::{Arc, Mutex};
 
 use maccy_sync::state::{SharedState, SyncCommand, SyncState};
-use maccy_sync::types::PeerInfo;
 
 /// Build a NetworkManager and run it on a dedicated thread (same as FFI does).
-/// Returns a command sender for sending commands.
 fn spawn_node(
     device_name: &str,
     device_id: &str,
@@ -15,22 +13,12 @@ fn spawn_node(
     let state = SyncState::new(device_name, device_id).unwrap();
     let shared: SharedState = Arc::new(std::sync::Mutex::new(state));
 
-    // Register callbacks that capture events
+    // Register the unified event callback
     {
         let mut guard = shared.lock().unwrap();
         let ev = events.clone();
-        *guard.on_peer_discovered.lock() = Some(Box::new(move |info: PeerInfo| {
-            ev.lock().unwrap().push(
-                format!("peer_discovered: {} ({}) connected={}", info.display_name, info.peer_id, info.is_connected)
-            );
-        }));
-        let ev = events.clone();
-        *guard.on_peer_lost.lock() = Some(Box::new(move |peer_id: String| {
-            ev.lock().unwrap().push(format!("peer_lost: {}", peer_id));
-        }));
-        let ev = events.clone();
-        *guard.on_error.lock() = Some(Box::new(move |(code, msg): (i32, String)| {
-            ev.lock().unwrap().push(format!("error({}): {}", code, msg));
+        *guard.on_event.lock() = Some(Box::new(move |json: &str| {
+            ev.lock().unwrap().push(json.to_string());
         }));
     }
 
@@ -75,18 +63,13 @@ fn test_manual_dial_two_nodes() {
 
     let events: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
-    // Node A on port 31774
     let cmd_tx_a = spawn_node("NodeA", "device-a", 31774, events.clone());
-    // Node B on port 31775
     let cmd_tx_b = spawn_node("NodeB", "device-b", 31775, events.clone());
 
-    // Wait for both to start listening
     std::thread::sleep(Duration::from_secs(2));
 
-    // Dial from A to B
     println!("\n--- Dialing NodeB at /ip4/127.0.0.1/tcp/31775 ---");
     let _ = cmd_tx_a.send(SyncCommand::AddPeerAddress {
-        peer_id: String::new(),
         address: "/ip4/127.0.0.1/tcp/31775".to_string(),
     });
 
@@ -97,38 +80,41 @@ fn test_manual_dial_two_nodes() {
     let errors: Vec<_> = evts.iter().filter(|e| e.contains("error")).cloned().collect();
 
     println!("has_discovered={}, errors={}", discovered, errors.len());
-    for e in &errors {
-        eprintln!("  ERROR: {}", e);
-    }
+    for e in &errors { eprintln!("  ERROR: {}", e); }
 
     assert!(discovered, "Should discover peer after manual dial. Errors: {:?}", errors);
 
-    // Cleanup
     let _ = cmd_tx_a.send(SyncCommand::Shutdown);
     let _ = cmd_tx_b.send(SyncCommand::Shutdown);
 }
 
-/// Test: mDNS auto-discovery between two nodes on localhost
+/// Test: "IP:Port" format is parsed correctly
 #[test]
-fn test_mdns_discovery_two_nodes() {
+fn test_manual_dial_ip_port_format() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .try_init();
 
     let events: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
-    // Node A on port 31774
     let cmd_tx_a = spawn_node("NodeA", "device-a", 31774, events.clone());
-    // Node B on port 31775
     let cmd_tx_b = spawn_node("NodeB", "device-b", 31775, events.clone());
 
-    wait_and_report(events.clone(), "mDNS discovery", 15);
+    std::thread::sleep(Duration::from_secs(2));
+
+    // Use plain "IP:Port" format — Rust should parse it
+    println!("\n--- Dialing NodeB with 127.0.0.1:31775 ---");
+    let _ = cmd_tx_a.send(SyncCommand::AddPeerAddress {
+        address: "127.0.0.1:31775".to_string(),
+    });
+
+    wait_and_report(events.clone(), "IP:Port format dial", 10);
 
     let evts = events.lock().unwrap();
-    let discovered = evts.iter().filter(|e| e.contains("peer_discovered")).count();
-    println!("mDNS discovery count: {}", discovered);
+    let discovered = evts.iter().any(|e| e.contains("peer_discovered"));
 
-    // Cleanup
+    assert!(discovered, "Should discover peer with IP:Port format");
+
     let _ = cmd_tx_a.send(SyncCommand::Shutdown);
     let _ = cmd_tx_b.send(SyncCommand::Shutdown);
 }

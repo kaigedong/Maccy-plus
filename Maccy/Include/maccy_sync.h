@@ -10,6 +10,10 @@ extern "C" {
 
 typedef struct MaccySync MaccySync;
 
+/// Single unified callback — receives JSON-serialized SyncEvent.
+typedef void (*MaccyEventCallback)(const char* event_json);
+
+/// Legacy callbacks (kept for backward compat, now no-ops).
 typedef void (*MaccyPeerDiscoveredCallback)(const char* peer_id, const char* display_name, const char* addresses);
 typedef void (*MaccyPeerLostCallback)(const char* peer_id);
 typedef void (*MaccyPairingRequestCallback)(const char* peer_id, const char* display_name, const char* pin);
@@ -32,6 +36,10 @@ void maccy_sync_destroy(MaccySync* sync);
 int32_t maccy_sync_start(MaccySync* sync);
 int32_t maccy_sync_stop(MaccySync* sync);
 
+/// Register the single unified event callback.
+void maccy_sync_on_event(MaccySync* sync, MaccyEventCallback cb);
+
+/// Legacy callbacks (no-ops, kept for ABI compat).
 void maccy_sync_on_peer_discovered(MaccySync* sync, MaccyPeerDiscoveredCallback cb);
 void maccy_sync_on_peer_lost(MaccySync* sync, MaccyPeerLostCallback cb);
 void maccy_sync_on_pairing_request(MaccySync* sync, MaccyPairingRequestCallback cb);

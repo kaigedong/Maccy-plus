@@ -71,6 +71,31 @@ pub enum BulkSyncMessage {
     Response { items_json: String },
 }
 
+/// Unified event sent from Rust to platform shell via a single callback.
+/// All events are JSON-serialized and dispatched to the UI.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum SyncEvent {
+    #[serde(rename = "peer_discovered")]
+    PeerDiscovered { peer: PeerInfo },
+    #[serde(rename = "peer_lost")]
+    PeerLost { peer_id: String },
+    #[serde(rename = "pairing_request")]
+    PairingRequest { peer_id: String, display_name: String, pin: String },
+    #[serde(rename = "pairing_complete")]
+    PairingComplete { peer_id: String, success: bool },
+    #[serde(rename = "item_received")]
+    ItemReceived { item_json: String },
+    #[serde(rename = "item_deleted")]
+    ItemDeleted { item_id: String },
+    #[serde(rename = "item_updated")]
+    ItemUpdated { item_json: String },
+    #[serde(rename = "error")]
+    Error { code: i32, message: String },
+    #[serde(rename = "listening")]
+    Listening { address: String },
+}
+
 /// Gossipsub topic name.
 pub const TOPIC_NAME: &str = "maccy-sync-v1";
 
