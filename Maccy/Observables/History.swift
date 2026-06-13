@@ -70,6 +70,9 @@ class History: ItemsContainer {
         result.append((bundleId: "", image: item.applicationImage))
       }
     }
+    if result.isEmpty && !all.isEmpty {
+      NSLog("[sourceApps] all=\(all.count) but result is empty — all items have application=nil?")
+    }
     return result
   }
 

@@ -221,6 +221,9 @@ class Clipboard {
       syncDeleted: false
     )
     clipboardItem.title = generateTitle(for: clipboardItem)
+    if clipboardItem.application == nil || clipboardItem.application?.isEmpty == true {
+      NSLog("[Clipboard] new item has nil/empty application — sourceApp.bundleIdentifier=\(sourceApp?.bundleIdentifier ?? "nil") frontmostApp=\(String(describing: sourceApp?.localizedName))")
+    }
 
     var shouldAppend = false
     let now = Date.now

@@ -13,6 +13,7 @@ struct AppFilterBar: View {
   }
 
   var body: some View {
+    let _ = { NSLog("[AppFilterBar] apps=\(apps.count) pairedDevices=\(pairedDevices.count) all=\(appState.history.all.count)") }()
     if !apps.isEmpty || !pairedDevices.isEmpty {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 6) {
