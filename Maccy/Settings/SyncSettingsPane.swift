@@ -231,8 +231,9 @@ struct SyncSettingsPane: View {
   }
 
   private func handlePeerDiscovered(_ notification: NotificationCenter.Publisher.Output) {
-    guard let peerID = notification.userInfo?["peer_id"] as? String,
-          let name = notification.userInfo?["display_name"] as? String else { return }
+    guard let peerID = notification.userInfo?["peerID"] as? String,
+          let name = notification.userInfo?["displayName"] as? String else { return }
+    SyncBridge.shared.recordPeerName(peerID, name)
     if !discoveredPeers.contains(where: { $0.peerID == peerID }) {
       discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
     }
@@ -247,6 +248,7 @@ struct SyncSettingsPane: View {
     guard let peerID = notification.userInfo?["peerID"] as? String,
           let name = notification.userInfo?["displayName"] as? String,
           let pin = notification.userInfo?["pin"] as? String else { return }
+    SyncBridge.shared.recordPeerName(peerID, name)
     pairingPeerID = peerID
     pairingDisplayName = name
     pairingPin = pin

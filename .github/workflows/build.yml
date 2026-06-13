@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build MaccyPlus
+  build-macos:
+    name: Build MaccyPlus (macOS)
     runs-on: macos-15
     permissions:
       contents: write
@@ -112,13 +112,7 @@ jobs:
                 cfg.build_settings["LIBRARY_SEARCH_PATHS"] = libs
               end
 
-              # Ensure maccy_sync is linked (maccy_core uses -force_load in project)
-              flags = cfg.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"]
-              flags = [flags] unless flags.is_a?(Array)
-              unless flags.include?("-lmaccy_sync")
-                flags << "-lmaccy_sync"
-              end
-              cfg.build_settings["OTHER_LDFLAGS"] = flags
+              # maccy_sync is now merged into maccy_core — no separate linking needed
             end
 
             project.save
@@ -149,7 +143,7 @@ jobs:
         if: steps.version.outputs.channel == 'beta'
         uses: actions/upload-artifact@v4
         with:
-          name: Maccy-latest
+          name: Maccy-macOS
           path: build/Build/Products/Release/Maccy.app.zip
 
       - name: Publish Beta Release
@@ -172,3 +166,67 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    name: Build MaccyPlus (Android)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 ndk;27.0.12077973'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Install Linux build deps
+        run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build
+
+      - name: Build Rust for Android (arm64-v8a)
+        run: |
+          cargo ndk \
+            -t arm64-v8a \
+            -o android/app/src/main/jniLibs \
+            build --release \
+            --package maccy-core
+
+      - name: Generate UniFFI Kotlin bindings
+        run: |
+          cargo run --release \
+            --bin uniffi-bindgen \
+            --package maccy-core \
+            generate \
+            --library target/aarch64-linux-android/release/libmaccy_core.so \
+            --language kotlin \
+            --out-dir android/app/src/main/java
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Maccy-Android
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
