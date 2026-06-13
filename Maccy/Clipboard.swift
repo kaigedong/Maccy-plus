@@ -5,7 +5,7 @@ import Sauce
 class Clipboard {
   static let shared = Clipboard()
 
-  typealias OnNewCopyHook = (HistoryItem, Bool) -> Void
+  typealias OnNewCopyHook = (ClipboardItem, Bool) -> Void
 
   private var onNewCopyHooks: [OnNewCopyHook] = []
   var changeCount: Int
@@ -75,7 +75,7 @@ class Clipboard {
   }
 
   @MainActor
-  func copy(_ item: HistoryItem?, removeFormatting: Bool = false) {
+  func copy(_ item: ClipboardItem?, removeFormatting: Bool = false) {
     guard let item else { return }
 
     pasteboard.clearContents()
@@ -86,18 +86,17 @@ class Clipboard {
     }
 
     for content in contents {
-      guard content.type != NSPasteboard.PasteboardType.fileURL.rawValue else { continue }
-      pasteboard.setData(content.value, forType: NSPasteboard.PasteboardType(content.type))
+      guard content.contentType != NSPasteboard.PasteboardType.fileURL.rawValue else { continue }
+      if let value = content.value {
+        pasteboard.setData(value, forType: NSPasteboard.PasteboardType(content.contentType))
+      }
     }
 
-    // Use writeObjects for file URLs so that multiple files that are copied actually work.
-    // Only do this for file URLs because it causes an issue with some other data types (like formatted text)
-    // where the item is pasted more than once.
-    let fileURLItems: [NSPasteboardItem] = contents.compactMap { item in
-      guard item.type == NSPasteboard.PasteboardType.fileURL.rawValue else { return nil }
-      guard let value = item.value else { return nil }
+    let fileURLItems: [NSPasteboardItem] = contents.compactMap { content in
+      guard content.contentType == NSPasteboard.PasteboardType.fileURL.rawValue else { return nil }
+      guard let value = content.value else { return nil }
       let pasteItem = NSPasteboardItem()
-      pasteItem.setData(value, forType: NSPasteboard.PasteboardType(item.type))
+      pasteItem.setData(value, forType: NSPasteboard.PasteboardType(content.contentType))
       return pasteItem
     }
     pasteboard.writeObjects(fileURLItems)
@@ -112,24 +111,17 @@ class Clipboard {
     }
   }
 
-  // Based on https://github.com/Clipy/Clipy/blob/develop/Clipy/Sources/Services/PasteService.swift.
   func paste() {
     Accessibility.check()
 
-    // Add flag that left/right modifier key has been pressed.
-    // See https://github.com/TermiT/Flycut/pull/18 for details.
     let cmdFlag = CGEventFlags(rawValue: UInt64(KeyChord.pasteKeyModifiers.rawValue) | 0x000008)
     var vCode = Sauce.shared.keyCode(for: KeyChord.pasteKey)
 
-    // Force QWERTY keycode when keyboard layout switches to
-    // QWERTY upon pressing ⌘ key (e.g. "Dvorak - QWERTY ⌘").
-    // See https://github.com/p0deje/Maccy/issues/482 for details.
     if KeyboardLayout.current.commandSwitchesToQWERTY && cmdFlag.contains(.maskCommand) {
       vCode = KeyChord.pasteKey.QWERTYKeyCode
     }
 
     let source = CGEventSource(stateID: .combinedSessionState)
-    // Disable local keyboard events while pasting
     source?.setLocalEventsFilterDuringSuppressionState([.permitLocalMouseEvents, .permitSystemDefinedEvents],
                                                        state: .eventSuppressionStateSuppressionInterval)
 
@@ -151,7 +143,7 @@ class Clipboard {
 
   @objc
   @MainActor
-  func checkForChangesInPasteboard() { // swiftlint:disable:this cyclomatic_complexity
+  func checkForChangesInPasteboard() {
     guard pasteboard.changeCount != changeCount else {
       return
     }
@@ -161,8 +153,6 @@ class Clipboard {
     let changeCountDelta = changeCount - previousChangeCount
 
     if pasteboard.pasteboardItems?.contains(where: { $0.types.contains(.fromMaccy) }) != true {
-      // External copy occurred. Stop the current paste stack.
-      // Maybe queue it into the paste stack? Configurable behaviour?
       AppState.shared.history.interruptPasteStack()
     }
 
@@ -175,9 +165,6 @@ class Clipboard {
       return
     }
 
-    // Reading types on NSPasteboard gives all the available
-    // types - even the ones that are not present on the NSPasteboardItem.
-    // See https://github.com/p0deje/Maccy/issues/241.
     if shouldIgnore(Set(pasteboard.types ?? [])) {
       return
     }
@@ -186,11 +173,7 @@ class Clipboard {
       return
     }
 
-    // Some applications (BBEdit, Edge) add 2 items to pasteboard when copying
-    // so it's better to merge all data into a single record.
-    // - https://github.com/p0deje/Maccy/issues/78
-    // - https://github.com/p0deje/Maccy/issues/472
-    var contents = [HistoryItemContent]()
+    var contents = [ClipboardContent]()
     pasteboard.pasteboardItems?.forEach({ item in
       var types = Set(item.types)
       if types.contains(.string) && isEmptyString(item) && !richText(item) {
@@ -206,15 +189,14 @@ class Clipboard {
         .filter { !$0.rawValue.starts(with: dynamicTypePrefix) }
         .filter { !$0.rawValue.starts(with: microsoftSourcePrefix) }
 
-      // Avoid reading Microsoft Word links from bookmarks and cross-references.
-      // https://github.com/p0deje/Maccy/issues/613
-      // https://github.com/p0deje/Maccy/issues/770
       if types.isSuperset(of: [.microsoftLinkSource, .microsoftObjectLink]) {
         types = types.subtracting([.microsoftLinkSource, .microsoftObjectLink, .pdf])
       }
 
       types.forEach { type in
-        contents.append(HistoryItemContent(type: type.rawValue, value: item.data(forType: type)))
+        if let data = item.data(forType: type) {
+          contents.append(ClipboardContent(contentType: type.rawValue, value: data))
+        }
       }
     })
 
@@ -222,21 +204,27 @@ class Clipboard {
       return
     }
 
-    let historyItem = HistoryItem(contents: contents)
-
-    if #unavailable(macOS 15.0) {
-      // On macOS 14 the history item needs to be inserted into storage directly after creating it.
-      try? History.shared.insertIntoStorage(historyItem)
-    }
-
-    historyItem.application = sourceApp?.bundleIdentifier
-      ?? contents.first(where: { $0.type == NSPasteboard.PasteboardType.source.rawValue })?.value
-      .flatMap { String(data: $0, encoding: .utf8) }
-    historyItem.title = historyItem.generateTitle()
+    let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+    var clipboardItem = ClipboardItem(
+      id: UUID().uuidString,
+      application: sourceApp?.bundleIdentifier
+        ?? contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.source.rawValue })?.value
+          .flatMap { String(data: Data($0), encoding: .utf8) },
+      firstCopiedAt: nowMs,
+      lastCopiedAt: nowMs,
+      numberOfCopies: 1,
+      pin: nil,
+      title: "",
+      contents: contents,
+      syncTimestamp: nowMs,
+      syncSource: nil,
+      syncDeleted: false
+    )
+    clipboardItem.title = generateTitle(for: clipboardItem)
 
     var shouldAppend = false
     let now = Date.now
-    let currentContent = historyItem.text
+    let currentContent = getText(from: clipboardItem)
 
     if Defaults[.appendModeEnabled] {
       if changeCountDelta == 2 {
@@ -258,8 +246,88 @@ class Clipboard {
       lastClipboardContent = currentContent
     }
 
-    onNewCopyHooks.forEach({ $0(historyItem, shouldAppend) })
+    onNewCopyHooks.forEach({ $0(clipboardItem, shouldAppend) })
   }
+
+  // MARK: - Title Generation (stays in Swift for AppKit/Vision dependencies)
+
+  func generateTitle(for item: ClipboardItem) -> String {
+    guard getImageData(from: item) == nil else {
+      return "" // Image title will be set later via OCR
+    }
+
+    var title = getPreviewableText(from: item).shortened(to: 1_000)
+
+    if Defaults[.showSpecialSymbols] {
+      if let range = title.range(of: "^ +", options: .regularExpression) {
+        title = title.replacingOccurrences(of: " ", with: "·", range: range)
+      }
+      if let range = title.range(of: " +$", options: .regularExpression) {
+        title = title.replacingOccurrences(of: " ", with: "·", range: range)
+      }
+      title = title
+        .replacingOccurrences(of: "\n", with: "⏎")
+        .replacingOccurrences(of: "\t", with: "⇥")
+    } else {
+      title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    return title
+  }
+
+  // MARK: - Content Helpers
+
+  func getText(from item: ClipboardItem) -> String? {
+    guard let content = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.string.rawValue }),
+          let value = content.value else { return nil }
+    return String(data: value, encoding: .utf8)
+  }
+
+  func getImageData(from item: ClipboardItem) -> Data? {
+    let imageTypes = [NSPasteboard.PasteboardType.tiff, .png, .jpeg, .heic].map(\.rawValue)
+    guard let content = item.contents.first(where: { imageTypes.contains($0.contentType) }),
+          let value = content.value else { return nil }
+    return value
+  }
+
+  func getPreviewableText(from item: ClipboardItem) -> String {
+    let fileURLType = NSPasteboard.PasteboardType.fileURL.rawValue
+    let fileURLContents = item.contents.filter { $0.contentType == fileURLType }
+    if !fileURLContents.isEmpty {
+      let urls = fileURLContents.compactMap { content -> String? in
+        guard let value = content.value else { return nil }
+        let url = URL(dataRepresentation: value, relativeTo: nil, isAbsolute: true)
+        return url?.absoluteString.removingPercentEncoding
+      }
+      if !urls.isEmpty { return urls.joined(separator: "\n") }
+    }
+
+    if let text = getText(from: item), !text.isEmpty {
+      return text
+    }
+
+    if let rtfContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.rtf.rawValue }),
+       let value = rtfContent.value,
+       let attributed = NSAttributedString(rtf: value, documentAttributes: nil),
+       !attributed.string.isEmpty {
+      return attributed.string
+    }
+
+    if let htmlContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.html.rawValue }),
+       let value = htmlContent.value,
+       let attributed = NSAttributedString(html: value, documentAttributes: nil),
+       !attributed.string.isEmpty {
+      return attributed.string
+    }
+
+    return item.title
+  }
+
+  func isFromMaccy(_ item: ClipboardItem) -> Bool {
+    item.contents.contains(where: { $0.contentType == NSPasteboard.PasteboardType.fromMaccy.rawValue })
+  }
+
+  // MARK: - Private Helpers
 
   private func shouldIgnore(_ types: Set<NSPasteboard.PasteboardType>) -> Bool {
     let ignoredTypes = self.ignoredTypes
@@ -317,9 +385,6 @@ class Clipboard {
     return false
   }
 
-  // Some applications requires window be unfocused and focused back to sync the clipboard.
-  // - Chrome Remote Desktop (https://github.com/p0deje/Maccy/issues/948)
-  // - Netbeans (https://github.com/p0deje/Maccy/issues/879)
   private func sync() {
     guard let app = sourceApp,
           app.bundleURL?.lastPathComponent == "Chrome Remote Desktop.app" ||
@@ -331,18 +396,14 @@ class Clipboard {
     NSApp.hide(self)
   }
 
-  private func clearFormatting(_ contents: [HistoryItemContent]) -> [HistoryItemContent] {
-    var newContents: [HistoryItemContent] = contents
-    let stringContents = contents.filter { NSPasteboard.PasteboardType($0.type) == .string }
+  private func clearFormatting(_ contents: [ClipboardContent]) -> [ClipboardContent] {
+    var newContents: [ClipboardContent] = contents
+    let stringContents = contents.filter { $0.contentType == NSPasteboard.PasteboardType.string.rawValue }
 
-    // If there is no string representation of data,
-    // behave like we didn't have to remove formatting.
     if !stringContents.isEmpty {
       newContents = stringContents
 
-      // Preserve file URLs.
-      // https://github.com/p0deje/Maccy/issues/962
-      let fileURLContents = contents.filter { NSPasteboard.PasteboardType($0.type) == .fileURL }
+      let fileURLContents = contents.filter { $0.contentType == NSPasteboard.PasteboardType.fileURL.rawValue }
       if !fileURLContents.isEmpty {
         newContents += fileURLContents
       }

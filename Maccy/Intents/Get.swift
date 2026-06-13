@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import AppIntents
 
 struct Get: AppIntent, CustomIntentMigratedAppIntent {
@@ -32,7 +33,7 @@ struct Get: AppIntent, CustomIntentMigratedAppIntent {
   }
 
   func perform() async throws -> some IntentResult & ReturnsValue<HistoryItemAppEntity> {
-    var item: HistoryItem?
+    var item: ClipboardItem?
     if selected {
       item = AppState.shared.navigator.selection.first?.item
     } else {
@@ -47,24 +48,28 @@ struct Get: AppIntent, CustomIntentMigratedAppIntent {
     }
 
     let intentItem = HistoryItemAppEntity()
-    intentItem.text = item.text
+    intentItem.text = Clipboard.shared.getText(from: item)
 
-    if let html = item.htmlData {
-      intentItem.html = String(data: html, encoding: .utf8)
+    if let htmlContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.html.rawValue }),
+       let value = htmlContent.value {
+      intentItem.html = String(data: Data(value), encoding: .utf8)
     }
 
-    if let fileURL = item.fileURLs.first {
-      intentItem.file = fileURL
+    if let fileContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.fileURL.rawValue }),
+       let value = fileContent.value,
+       let url = URL(dataRepresentation: Data(value), relativeTo: nil, isAbsolute: true) {
+      intentItem.file = url
     }
 
-    if let imageData = item.imageData {
+    if let imageData = Clipboard.shared.getImageData(from: item) {
       let file = URL.documentsDirectory.appending(path: "image.png")
       try imageData.write(to: file, options: [.atomic, .completeFileProtection])
       intentItem.image = file
     }
 
-    if let rtf = item.rtfData {
-      intentItem.richText = String(data: rtf, encoding: .utf8)
+    if let rtfContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.rtf.rawValue }),
+       let value = rtfContent.value {
+      intentItem.richText = String(data: Data(value), encoding: .utf8)
     }
 
     return .result(value: intentItem)
