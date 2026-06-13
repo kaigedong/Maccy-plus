@@ -118,7 +118,14 @@ class SyncBridge {
 
     switch type {
     case "peer_discovered":
-      if let peer = evt["peer"] as? [String: Any] {
+      if let peer = evt["peer"] as? [String: Any],
+         let name = peer["display_name"] as? String,
+         !name.isEmpty {
+        let connected = peer["is_connected"] as? Bool ?? false
+        if connected {
+          NotificationCenter.default.post(name: NSNotification.Name("showSyncSettings"), object: nil)
+          Notifier.notify(body: "\(name) connected", sound: .knock)
+        }
         NotificationCenter.default.post(name: .syncPeerDiscovered, object: nil, userInfo: peer)
       }
     case "peer_lost":

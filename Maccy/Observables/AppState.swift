@@ -171,6 +171,22 @@ class AppState: Sendable {
     settingsWindowController?.window?.orderFrontRegardless()
   }
 
+  @MainActor
+  func openPreferencesToSync() {
+    openPreferences()
+    // Select the sync tab
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      if let toolbar = self.settingsWindowController?.window?.toolbar {
+        for item in toolbar.items {
+          if item.itemIdentifier.rawValue == "sync" {
+            toolbar.selectedItemIdentifier = item.itemIdentifier
+            break
+          }
+        }
+      }
+    }
+  }
+
   func quit() {
     NSApp.terminate(self)
   }
