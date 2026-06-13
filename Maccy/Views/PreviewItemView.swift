@@ -14,7 +14,7 @@ struct PreviewItemView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       if item.hasImage {
-        AsyncView<NSImage?, _, _> {
+        AsyncView {
           return await item.asyncGetPreviewImage()
         } content: { image in
           if let image = image {
@@ -72,7 +72,7 @@ struct PreviewItemView: View {
         }
       }
 
-      if item.hasImage, let image = item.item.image {
+      if item.hasImage, let image = item.image {
         HStack(spacing: 3) {
           Text("Dimensions", tableName: "PreviewItemView")
           Text("\(Int(image.pixelSize.width))×\(Int(image.pixelSize.height))")
@@ -81,14 +81,14 @@ struct PreviewItemView: View {
 
       HStack(spacing: 3) {
         Text("FirstCopyTime", tableName: "PreviewItemView")
-        Text(item.item.firstCopiedAt, style: .date)
-        Text(item.item.firstCopiedAt, style: .time)
+        Text(Date(timeIntervalSince1970: Double(item.item.firstCopiedAt) / 1000), style: .date)
+        Text(Date(timeIntervalSince1970: Double(item.item.firstCopiedAt) / 1000), style: .time)
       }
 
       HStack(spacing: 3) {
         Text("LastCopyTime", tableName: "PreviewItemView")
-        Text(item.item.lastCopiedAt, style: .date)
-        Text(item.item.lastCopiedAt, style: .time)
+        Text(Date(timeIntervalSince1970: Double(item.item.lastCopiedAt) / 1000), style: .date)
+        Text(Date(timeIntervalSince1970: Double(item.item.lastCopiedAt) / 1000), style: .time)
       }
 
       HStack(spacing: 3) {

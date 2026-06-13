@@ -5,7 +5,6 @@ import Logging
 import Observation
 import Sauce
 import Settings
-import MaccyCore
 
 @Observable
 class History: ItemsContainer {
@@ -139,7 +138,7 @@ class History: ItemsContainer {
     }
   }
 
-  private static var databasePath: String {
+  static var databasePath: String {
     let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
     let dir = appSupport.appendingPathComponent("Maccy").path
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
@@ -182,7 +181,7 @@ class History: ItemsContainer {
 
         if let existingText = Clipboard.shared.getText(from: topItem), let newText = Clipboard.shared.getText(from: item) {
           let combinedText = existingText + "\n" + newText
-          let combinedData = Array(combinedText.data(using: .utf8) ?? Data())
+          let combinedData = combinedText.data(using: .utf8)
 
           var updatedContents = topItem.contents
           if let stringIdx = updatedContents.firstIndex(where: { $0.contentType == NSPasteboard.PasteboardType.string.rawValue }) {
@@ -375,7 +374,7 @@ class History: ItemsContainer {
   func addNew() -> HistoryItemDecorator {
     let emptyContent = ClipboardContent(
       contentType: NSPasteboard.PasteboardType.string.rawValue,
-      value: Array("".data(using: .utf8) ?? Data())
+      value: "".data(using: .utf8)
     )
     let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
     var clipboardItem = ClipboardItem(
@@ -582,7 +581,7 @@ class History: ItemsContainer {
     all = sorted.compactMap { itemMap[$0.id] }
   }
 
-  private func mapSearchMode(_ mode: Search.Mode) -> MaccyCore.SearchMode {
+  private func mapSearchMode(_ mode: Search.Mode) -> SearchMode {
     switch mode {
     case .exact: return .exact
     case .fuzzy: return .fuzzy
@@ -591,7 +590,7 @@ class History: ItemsContainer {
     }
   }
 
-  private func mapSortBy(_ by: Sorter.By) -> MaccyCore.SortBy {
+  private func mapSortBy(_ by: Sorter.By) -> SortBy {
     switch by {
     case .lastCopiedAt: return .lastCopiedAt
     case .firstCopiedAt: return .firstCopiedAt

@@ -1,12 +1,11 @@
 import SwiftUI
 import Defaults
-import MaccyCore
 
 struct PinsSettingsPane: View {
   @Environment(AppState.self) private var appState
 
   @State private var availablePins: [String] = []
-  @State private var selection: String?
+  @State private var selection: HistoryItemDecorator.ID?
 
   private var pinnedItems: [HistoryItemDecorator] {
     appState.history.pinnedItems
@@ -37,7 +36,7 @@ struct PinsSettingsPane: View {
       }
       .onDeleteCommand {
         guard let selection else { return }
-        if let item = appState.history.items.first(where: { $0.item.id == selection }) {
+        if let item = appState.history.items.first(where: { $0.id == selection }) {
           appState.history.delete(item)
         }
       }

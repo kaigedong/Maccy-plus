@@ -131,7 +131,7 @@ struct StorageSettingsPane: View {
   }
 
   private func updateStorageSize() {
-    let dbPath = History.shared.core.storageSizeBytes(History.databasePath)
+    let dbPath = History.shared.core.storageSizeBytes(dbPath: History.databasePath)
     let formatter = ByteCountFormatter()
     formatter.countStyle = .file
     storageSize = formatter.string(fromByteCount: dbPath)

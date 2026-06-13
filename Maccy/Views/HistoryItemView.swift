@@ -134,7 +134,7 @@ struct HistoryItemView: View {
       Text(String(localized: "delete_alert_comment", table: "Localizable"))
     }
     .contextMenu {
-      if item.item.text != nil {
+      if !item.item.title.isEmpty {
         Button {
           appState.history.startEditing(item)
         } label: {

@@ -3,7 +3,6 @@ import Defaults
 import Foundation
 import Observation
 import Sauce
-import MaccyCore
 
 @Observable
 class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {

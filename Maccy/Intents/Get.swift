@@ -1,6 +1,6 @@
 import Foundation
+import AppKit
 import AppIntents
-import MaccyCore
 
 struct Get: AppIntent, CustomIntentMigratedAppIntent {
   static let intentClassName = "GetIntent"

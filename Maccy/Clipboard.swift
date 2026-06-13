@@ -1,7 +1,6 @@
 import AppKit
 import Defaults
 import Sauce
-import MaccyCore
 
 class Clipboard {
   static let shared = Clipboard()
@@ -89,7 +88,7 @@ class Clipboard {
     for content in contents {
       guard content.contentType != NSPasteboard.PasteboardType.fileURL.rawValue else { continue }
       if let value = content.value {
-        pasteboard.setData(Data(value), forType: NSPasteboard.PasteboardType(content.contentType))
+        pasteboard.setData(value, forType: NSPasteboard.PasteboardType(content.contentType))
       }
     }
 
@@ -97,7 +96,7 @@ class Clipboard {
       guard content.contentType == NSPasteboard.PasteboardType.fileURL.rawValue else { return nil }
       guard let value = content.value else { return nil }
       let pasteItem = NSPasteboardItem()
-      pasteItem.setData(Data(value), forType: NSPasteboard.PasteboardType(content.contentType))
+      pasteItem.setData(value, forType: NSPasteboard.PasteboardType(content.contentType))
       return pasteItem
     }
     pasteboard.writeObjects(fileURLItems)
@@ -196,7 +195,7 @@ class Clipboard {
 
       types.forEach { type in
         if let data = item.data(forType: type) {
-          contents.append(ClipboardContent(contentType: type.rawValue, value: Array(data)))
+          contents.append(ClipboardContent(contentType: type.rawValue, value: data))
         }
       }
     })
@@ -281,14 +280,14 @@ class Clipboard {
   func getText(from item: ClipboardItem) -> String? {
     guard let content = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.string.rawValue }),
           let value = content.value else { return nil }
-    return String(data: Data(value), encoding: .utf8)
+    return String(data: value, encoding: .utf8)
   }
 
   func getImageData(from item: ClipboardItem) -> Data? {
     let imageTypes = [NSPasteboard.PasteboardType.tiff, .png, .jpeg, .heic].map(\.rawValue)
     guard let content = item.contents.first(where: { imageTypes.contains($0.contentType) }),
           let value = content.value else { return nil }
-    return Data(value)
+    return value
   }
 
   func getPreviewableText(from item: ClipboardItem) -> String {
@@ -297,7 +296,7 @@ class Clipboard {
     if !fileURLContents.isEmpty {
       let urls = fileURLContents.compactMap { content -> String? in
         guard let value = content.value else { return nil }
-        let url = URL(dataRepresentation: Data(value), relativeTo: nil, isAbsolute: true)
+        let url = URL(dataRepresentation: value, relativeTo: nil, isAbsolute: true)
         return url?.absoluteString.removingPercentEncoding
       }
       if !urls.isEmpty { return urls.joined(separator: "\n") }
@@ -309,14 +308,14 @@ class Clipboard {
 
     if let rtfContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.rtf.rawValue }),
        let value = rtfContent.value,
-       let attributed = NSAttributedString(rtf: Data(value), documentAttributes: nil),
+       let attributed = NSAttributedString(rtf: value, documentAttributes: nil),
        !attributed.string.isEmpty {
       return attributed.string
     }
 
     if let htmlContent = item.contents.first(where: { $0.contentType == NSPasteboard.PasteboardType.html.rawValue }),
        let value = htmlContent.value,
-       let attributed = NSAttributedString(html: Data(value), documentAttributes: nil),
+       let attributed = NSAttributedString(html: value, documentAttributes: nil),
        !attributed.string.isEmpty {
       return attributed.string
     }
