@@ -50,13 +50,7 @@ pub enum PairingMessage {
         device_id: String,
         public_key: Vec<u8>,
     },
-    Challenge {
-        session_id: String,
-        pin: String,
-        device_name: String,
-        public_key: Vec<u8>,
-    },
-    Confirm {
+    Accept {
         session_id: String,
     },
     Reject {
