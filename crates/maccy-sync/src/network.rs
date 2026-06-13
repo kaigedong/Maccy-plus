@@ -28,6 +28,7 @@ pub struct NetworkManager {
     state: SharedState,
     discovered_peers: HashMap<PeerId, PeerInfo>,
     paired_peers: HashMap<PeerId, Vec<u8>>,
+    listen_port: u16,
 }
 
 impl NetworkManager {
@@ -35,6 +36,25 @@ impl NetworkManager {
         command_rx: mpsc::UnboundedReceiver<SyncCommand>,
         state: SharedState,
         local_key: Keypair,
+    ) -> Result<Self, ErrorCode> {
+        Self::build(command_rx, state, local_key, LISTEN_PORT)
+    }
+
+    /// Create with a custom listen port (for testing)
+    pub fn new_with_port(
+        command_rx: mpsc::UnboundedReceiver<SyncCommand>,
+        state: SharedState,
+        local_key: Keypair,
+        port: u16,
+    ) -> Result<Self, ErrorCode> {
+        Self::build(command_rx, state, local_key, port)
+    }
+
+    fn build(
+        command_rx: mpsc::UnboundedReceiver<SyncCommand>,
+        state: SharedState,
+        local_key: Keypair,
+        listen_port: u16,
     ) -> Result<Self, ErrorCode> {
         let local_peer_id = PeerId::from(local_key.public());
 
@@ -101,6 +121,7 @@ impl NetworkManager {
             state,
             discovered_peers: HashMap::new(),
             paired_peers: HashMap::new(),
+            listen_port,
         })
     }
 
@@ -112,7 +133,7 @@ impl NetworkManager {
         let _ = self.swarm.behaviour_mut().gossipsub.subscribe(&pairing_topic);
 
         let listen_addr: libp2p::Multiaddr =
-            format!("/ip4/0.0.0.0/tcp/{LISTEN_PORT}").parse().unwrap();
+            format!("/ip4/0.0.0.0/tcp/{}", self.listen_port).parse().unwrap();
         if self.swarm.listen_on(listen_addr).is_err() {
             self.emit_error(ErrorCode::Network, "Failed to listen on port".into());
             return;

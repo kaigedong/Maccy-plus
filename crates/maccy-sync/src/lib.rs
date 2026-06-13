@@ -1,7 +1,7 @@
 mod crypto;
 mod error;
 mod ffi;
-mod network;
+pub mod network;
 pub mod state;
 pub mod types;
 
