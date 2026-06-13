@@ -5,6 +5,7 @@ import Settings
 struct SyncSettingsPane: View {
   @Default(.syncEnabled) private var syncEnabled
   @Default(.syncDeviceName) private var syncDeviceName
+  @Default(.syncDiscoverable) private var syncDiscoverable
   @State private var discoveredPeers: [DiscoveredPeer] = []
   @State private var pairedDevices: [PairedDeviceInfo] = PairedDeviceInfo.all
   @State private var editingDevice: PairedDeviceInfo?
@@ -14,6 +15,7 @@ struct SyncSettingsPane: View {
   @State private var pairingPeerID = ""
   @State private var pairingDisplayName = ""
   @State private var pairingPin = ""
+  @State private var manualAddress = ""
 
   var body: some View {
     Settings.Container(contentWidth: 450) {
@@ -24,6 +26,12 @@ struct SyncSettingsPane: View {
         .onChange(of: syncEnabled) { _, newValue in
           if newValue { SyncBridge.shared.start() } else { SyncBridge.shared.stop() }
         }
+        Toggle(isOn: $syncDiscoverable) {
+          Text("Allow Discovery")
+        }
+        Text("When enabled, other devices on the same network can find this device automatically via mDNS.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
 
       Settings.Section(label: { Text("This Device") }) {
@@ -77,11 +85,15 @@ struct SyncSettingsPane: View {
     }
 
     HStack {
-      TextField("IP:Port", text: .constant(""))
-        .frame(width: 150)
-      Button("Connect") {}
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+      TextField("IP:Port (e.g. 10.147.20.205:31774)", text: $manualAddress)
+        .frame(width: 200)
+      Button("Connect") {
+        SyncBridge.shared.addPeerAddress(address: manualAddress)
+        manualAddress = ""
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.small)
+      .disabled(manualAddress.isEmpty)
     }
   }
 

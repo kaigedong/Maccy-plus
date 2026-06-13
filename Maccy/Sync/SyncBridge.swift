@@ -98,6 +98,18 @@ class SyncBridge {
     }
   }
 
+  func addPeerAddress(address: String) {
+    guard isStarted, let handle = syncHandle else { return }
+    let parts = address.split(separator: ":")
+    guard parts.count >= 2, let _ = UInt16(parts.last ?? "") else { return }
+    let host = parts.dropLast().joined(separator: ":")
+    let port = parts.last! 
+    let multiaddr = "/ip4/\(host)/tcp/\(port)"
+    multiaddr.withCString { addrPtr in
+      _ = maccy_sync_add_peer_address(handle, "", addrPtr)
+    }
+  }
+
   func getPairedPeersJSON() -> String {
     guard isStarted, let handle = syncHandle else { return "[]" }
     guard let cStr = maccy_sync_get_paired_peers(handle) else { return "[]" }

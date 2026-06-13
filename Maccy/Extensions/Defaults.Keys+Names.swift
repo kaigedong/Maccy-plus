@@ -66,4 +66,5 @@ extension Defaults.Keys {
   static let syncEnabled = Key<Bool>("syncEnabled", default: false)
   static let syncDeviceName = Key<String>("syncDeviceName", default: Host.current().localizedName ?? "Mac")
   static let syncDeviceID = Key<String>("syncDeviceID", default: UUID().uuidString)
+  static let syncDiscoverable = Key<Bool>("syncDiscoverable", default: true)
 }

@@ -39,8 +39,8 @@ impl NetworkManager {
         let local_peer_id = PeerId::from(local_key.public());
 
         let mdns_config = mdns::Config {
-            query_interval: Duration::from_secs(30),
-            ttl: Duration::from_secs(60),
+            query_interval: Duration::from_secs(5),
+            ttl: Duration::from_secs(120),
             ..mdns::Config::default()
         };
         let mdns_behaviour = mdns::tokio::Behaviour::new(mdns_config, local_peer_id)
@@ -262,6 +262,11 @@ impl NetworkManager {
             }
             SyncCommand::AcceptPairing { .. } => {}
             SyncCommand::RejectPairing { .. } => {}
+            SyncCommand::AddPeerAddress { peer_id, address } => {
+                if let Ok(addr) = address.parse::<libp2p::Multiaddr>() {
+                    let _ = self.swarm.dial(addr);
+                }
+            }
             SyncCommand::Unpair { peer_id } => {
                 if let Ok(peer) = peer_id.parse::<PeerId>() {
                     self.paired_peers.remove(&peer);
