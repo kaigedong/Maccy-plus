@@ -1,7 +1,6 @@
 import AppKit
 import Defaults
 import Foundation
-import MaccyCore
 
 /// macOS implementation of the `ClipboardObserver` protocol from Rust.
 /// Receives sync events and routes them to the UI layer.
