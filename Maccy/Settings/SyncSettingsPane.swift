@@ -39,15 +39,27 @@ struct SyncSettingsPane: View {
           .frame(width: 200)
       }
 
-      Settings.Section(
-        bottomDivider: true,
-        label: { Text("Discovered Devices") }
-      ) {
-        discoveredDevicesContent
-      }
-
       Settings.Section(label: { Text("Paired Devices") }) {
         pairedDevicesContent
+      }
+
+      Settings.Section(
+        bottomDivider: true,
+        label: {
+          HStack(spacing: 6) {
+            Text("Discovered Devices")
+            Button {
+              SyncBridge.shared.refreshDiscovery()
+              discoveredPeers.removeAll()
+            } label: {
+              Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+          }
+        }
+      ) {
+        discoveredDevicesContent
       }
     }
     .sheet(item: $editingDevice) { device in editDeviceSheet(device) }
@@ -69,7 +81,7 @@ struct SyncSettingsPane: View {
   @ViewBuilder
   private var discoveredDevicesContent: some View {
     if discoveredPeers.isEmpty {
-      Text("Scanning for devices...")
+      Text("No devices found.")
         .foregroundStyle(.secondary)
         .controlSize(.small)
     } else {
@@ -84,8 +96,10 @@ struct SyncSettingsPane: View {
       }
     }
 
+    Divider()
+
     HStack {
-      TextField("IP:Port (e.g. 10.147.20.205:31774)", text: $manualAddress)
+      TextField("IP:Port", text: $manualAddress)
         .frame(width: 200)
       Button("Connect") {
         SyncBridge.shared.addPeerAddress(address: manualAddress)

@@ -98,6 +98,12 @@ class SyncBridge {
     }
   }
 
+  func refreshDiscovery() {
+    guard isStarted, let handle = syncHandle else { return }
+    _ = maccy_sync_stop_discovery(handle)
+    _ = maccy_sync_start_discovery(handle)
+  }
+
   func addPeerAddress(address: String) {
     guard isStarted, let handle = syncHandle else { return }
     let parts = address.split(separator: ":")
