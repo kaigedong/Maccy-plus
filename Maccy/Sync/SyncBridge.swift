@@ -8,6 +8,8 @@ class SyncBridge {
 
   private var syncHandle: OpaquePointer?
   private var isStarted = false
+  /// Cache peer_id → display_name from peer_discovered events for saving on pairing_complete
+  private var peerDisplayNames: [String: String] = [:]
 
   private init() {}
 
@@ -119,8 +121,10 @@ class SyncBridge {
     switch type {
     case "peer_discovered":
       if let peer = evt["peer"] as? [String: Any],
+         let peerID = peer["peer_id"] as? String,
          let name = peer["display_name"] as? String,
          !name.isEmpty {
+        peerDisplayNames[peerID] = name
         let connected = peer["is_connected"] as? Bool ?? false
         if connected {
           NotificationCenter.default.post(name: NSNotification.Name("showSyncSettings"), object: nil)
@@ -139,9 +143,29 @@ class SyncBridge {
         "pin": evt["pin"] as? String ?? "",
       ])
     case "pairing_complete":
+      let peerID = evt["peer_id"] as? String ?? ""
+      let success = evt["success"] as? Bool ?? false
+      if success, !peerID.isEmpty {
+        let displayName = peerDisplayNames[peerID] ?? peerID
+        let newDevice = PairedDeviceInfo(
+          peerID: peerID,
+          nickname: displayName,
+          icon: "💻",
+          connectedAt: Date(),
+          isConnected: true
+        )
+        var devices = PairedDeviceInfo.all
+        if let idx = devices.firstIndex(where: { $0.peerID == peerID }) {
+          devices[idx].nickname = displayName
+          devices[idx].isConnected = true
+        } else {
+          devices.append(newDevice)
+        }
+        PairedDeviceInfo.all = devices
+      }
       NotificationCenter.default.post(name: .syncPairingComplete, object: nil, userInfo: [
-        "peerID": evt["peer_id"] as? String ?? "",
-        "success": evt["success"] as? Bool ?? false,
+        "peerID": peerID,
+        "success": success,
       ])
     case "item_received":
       if let itemJSON = evt["item_json"] as? String {

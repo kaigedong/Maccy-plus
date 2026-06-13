@@ -141,6 +141,9 @@ impl NetworkManager {
             return;
         }
 
+        // Auto-scan local subnet for peers (works even without mDNS multicast)
+        self.scan_local_subnet();
+
         loop {
             tokio::select! {
                 event = self.swarm.select_next_some() => {
