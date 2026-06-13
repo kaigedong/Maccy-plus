@@ -112,13 +112,11 @@ jobs:
                 cfg.build_settings["LIBRARY_SEARCH_PATHS"] = libs
               end
 
-              # Linker flags for both Rust libs
+              # Ensure maccy_sync is linked (maccy_core uses -force_load in project)
               flags = cfg.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"]
               flags = [flags] unless flags.is_a?(Array)
-              ["-lmaccy_core", "-lmaccy_sync"].each do |lib|
-                unless flags.include?(lib)
-                  flags << lib
-                end
+              unless flags.include?("-lmaccy_sync")
+                flags << "-lmaccy_sync"
               end
               cfg.build_settings["OTHER_LDFLAGS"] = flags
             end
