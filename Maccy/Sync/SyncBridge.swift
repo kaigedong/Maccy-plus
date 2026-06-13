@@ -188,6 +188,11 @@ class SyncBridge {
   func broadcastUpdate(_ item: ClipboardItem) {
     AppState.shared.history.core.syncBroadcastUpdate(item: item)
   }
+
+  func refreshDiscovery() {
+    AppState.shared.history.core.syncStopDiscovery()
+    AppState.shared.history.core.syncStartDiscovery()
+  }
 }
 
 extension Notification.Name {

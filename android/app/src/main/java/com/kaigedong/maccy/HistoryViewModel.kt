@@ -244,21 +244,30 @@ data class PairingRequest(
     val pin: String
 )
 
-// ── ClipboardObserver Kotlin implementation ──────────────────────
-// Note: When UniFFI generates the Kotlin bindings, ClipboardObserver will be
-// an interface. This class implements it. Until then, we use a callback wrapper.
+// ── ClipboardObserver UniFFI implementation ──────────────────────
+// After UniFFI generates the ClipboardObserverInterface, this class implements it.
+// If the generated name differs, search/replace "ClipboardObserverInterface" below.
 
 class MaccyClipboardObserver(
-    val onItemReceived: (ClipboardItem) -> Unit,
-    val onItemDeleted: (String) -> Unit,
-    val onItemUpdated: (ClipboardItem) -> Unit,
-    val onPeerDiscovered: (String, String, List<String>, Boolean) -> Unit,
-    val onPeerLost: (String) -> Unit,
-    val onPairingRequest: (String, String, String) -> Unit,
-    val onPairingComplete: (String, Boolean) -> Unit,
-    val onListening: (String) -> Unit,
-    val onError: (Int, String) -> Unit,
-) {
-    // TODO: After UniFFI regenerates bindings, make this implement ClipboardObserver interface
-    // and call the callbacks from the interface methods.
+    private val onItemReceivedCb: (ClipboardItem) -> Unit,
+    private val onItemDeletedCb: (String) -> Unit,
+    private val onItemUpdatedCb: (ClipboardItem) -> Unit,
+    private val onPeerDiscoveredCb: (String, String, List<String>, Boolean) -> Unit,
+    private val onPeerLostCb: (String) -> Unit,
+    private val onPairingRequestCb: (String, String, String) -> Unit,
+    private val onPairingCompleteCb: (String, Boolean) -> Unit,
+    private val onListeningCb: (String) -> Unit,
+    private val onErrorCb: (Int, String) -> Unit,
+) : ClipboardObserverInterface {
+    override fun onItemReceived(item: ClipboardItem) = onItemReceivedCb(item)
+    override fun onItemDeleted(itemId: String) = onItemDeletedCb(itemId)
+    override fun onItemUpdated(item: ClipboardItem) = onItemUpdatedCb(item)
+    override fun onPeerDiscovered(peerId: String, displayName: String, addresses: List<String>, isConnected: Boolean) =
+        onPeerDiscoveredCb(peerId, displayName, addresses, isConnected)
+    override fun onPeerLost(peerId: String) = onPeerLostCb(peerId)
+    override fun onPairingRequest(peerId: String, displayName: String, pin: String) =
+        onPairingRequestCb(peerId, displayName, pin)
+    override fun onPairingComplete(peerId: String, success: Boolean) = onPairingCompleteCb(peerId, success)
+    override fun onListening(address: String) = onListeningCb(address)
+    override fun onError(code: Int, message: String) = onErrorCb(code, message)
 }
