@@ -141,10 +141,10 @@ class SyncBridge {
     guard let handle = syncHandle else { return }
 
     maccy_sync_on_peer_discovered(handle) { peerID, displayName, addresses in
+      let pid = String(cString: peerID!)
+      let name = String(cString: displayName!)
+      let addrs = String(cString: addresses!)
       DispatchQueue.main.async {
-        let pid = String(cString: peerID!)
-        let name = String(cString: displayName!)
-        let addrs = String(cString: addresses!)
         NSLog("[Sync] peer discovered: \(name) (\(pid)) addresses=\(addrs)")
         NotificationCenter.default.post(
           name: .syncPeerDiscovered,
@@ -155,8 +155,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_peer_lost(handle) { peerID in
+      let pid = String(cString: peerID!)
       DispatchQueue.main.async {
-        let pid = String(cString: peerID!)
         NSLog("[Sync] peer lost: \(pid)")
         NotificationCenter.default.post(
           name: .syncPeerLost,
@@ -167,10 +167,10 @@ class SyncBridge {
     }
 
     maccy_sync_on_pairing_request(handle) { peerID, displayName, pin in
+      let pid = String(cString: peerID!)
+      let name = String(cString: displayName!)
+      let p = String(cString: pin!)
       DispatchQueue.main.async {
-        let pid = String(cString: peerID!)
-        let name = String(cString: displayName!)
-        let p = String(cString: pin!)
         NSLog("[Sync] pairing request from \(name) pin=\(p)")
         NotificationCenter.default.post(
           name: .syncPairingRequest,
@@ -181,8 +181,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_pairing_complete(handle) { peerID, success in
+      let pid = String(cString: peerID!)
       DispatchQueue.main.async {
-        let pid = String(cString: peerID!)
         NotificationCenter.default.post(
           name: .syncPairingComplete,
           object: nil,
@@ -192,8 +192,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_sync_item_received(handle) { itemJSON in
+      let json = String(cString: itemJSON!)
       DispatchQueue.main.async {
-        let json = String(cString: itemJSON!)
         NotificationCenter.default.post(
           name: .syncItemReceived,
           object: nil,
@@ -203,8 +203,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_sync_item_deleted(handle) { itemID in
+      let id = String(cString: itemID!)
       DispatchQueue.main.async {
-        let id = String(cString: itemID!)
         NotificationCenter.default.post(
           name: .syncItemDeleted,
           object: nil,
@@ -214,8 +214,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_sync_item_updated(handle) { itemJSON in
+      let json = String(cString: itemJSON!)
       DispatchQueue.main.async {
-        let json = String(cString: itemJSON!)
         NotificationCenter.default.post(
           name: .syncItemUpdated,
           object: nil,
@@ -225,8 +225,8 @@ class SyncBridge {
     }
 
     maccy_sync_on_error(handle) { code, message in
+      let msg = String(cString: message!)
       DispatchQueue.main.async {
-        let msg = String(cString: message!)
         NSLog("[Sync] Error (code \(code)): \(msg)")
         NotificationCenter.default.post(
           name: .syncError,

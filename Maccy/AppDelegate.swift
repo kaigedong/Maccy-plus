@@ -94,6 +94,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     migrateUserDefaults()
     disableUnusedGlobalHotkeys()
 
+    // Auto-start sync if enabled
+    if Defaults[.syncEnabled] {
+      SyncBridge.shared.start()
+    }
+
     panel = FloatingPanel(
       contentRect: NSRect(origin: .zero, size: Defaults[.windowSize]),
       identifier: Bundle.main.bundleIdentifier ?? "com.kaigedong.MaccyPlus",
