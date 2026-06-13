@@ -16,6 +16,7 @@ struct SyncSettingsPane: View {
   @State private var pairingDisplayName = ""
   @State private var pairingPin = ""
   @State private var manualAddress = ""
+  @State private var connectionStatus: String?
 
   var body: some View {
     Settings.Container(contentWidth: 450) {
@@ -76,6 +77,12 @@ struct SyncSettingsPane: View {
     .onReceive(NotificationCenter.default.publisher(for: .syncPairingComplete)) { _ in
       pairedDevices = PairedDeviceInfo.all
     }
+    .onReceive(NotificationCenter.default.publisher(for: .syncError)) { n in
+      if let msg = n.userInfo?["message"] as? String {
+        connectionStatus = msg
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { connectionStatus = nil }
+      }
+    }
   }
 
   @ViewBuilder
@@ -103,11 +110,22 @@ struct SyncSettingsPane: View {
         .frame(width: 200)
       Button("Connect") {
         SyncBridge.shared.addPeerAddress(address: manualAddress)
-        manualAddress = ""
+        connectionStatus = "Connecting..."
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+          if connectionStatus == "Connecting..." {
+            connectionStatus = nil
+          }
+        }
       }
       .buttonStyle(.bordered)
       .controlSize(.small)
       .disabled(manualAddress.isEmpty)
+    }
+
+    if let status = connectionStatus {
+      Text(status)
+        .font(.caption)
+        .foregroundStyle(status.contains("fail") || status.contains("error") ? .red : .secondary)
     }
   }
 

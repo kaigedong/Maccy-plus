@@ -164,18 +164,53 @@ impl NetworkManager {
                     .last()
                     .unwrap_or("Unknown")
                     .to_string();
+                log::info!("Identified {} as {}", peer_id, device_name);
+                let observed_addr = info.observed_addr.to_string();
+                let listen_addrs: Vec<String> = info.listen_addrs.iter().map(|a| a.to_string()).collect();
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.display_name = device_name;
+                    if !listen_addrs.is_empty() {
+                        peer_info.addresses = listen_addrs;
+                    } else if !observed_addr.is_empty() {
+                        peer_info.addresses = vec![observed_addr];
+                    }
+                    let updated = peer_info.clone();
+                    self.emit_peer_discovered(updated);
+                } else {
+                    let peer_info = PeerInfo {
+                        peer_id: peer_id.to_string(),
+                        display_name: device_name,
+                        addresses: if !listen_addrs.is_empty() { listen_addrs } else { vec![observed_addr] },
+                        is_connected: true,
+                    };
+                    self.discovered_peers.insert(peer_id, peer_info.clone());
+                    self.emit_peer_discovered(peer_info);
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                log::info!("Connection established with {}", peer_id);
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.is_connected = true;
+                    let info = peer_info.clone();
+                    self.emit_peer_discovered(info);
+                } else {
+                    // Manually dialed peer - create a new entry
+                    let info = PeerInfo {
+                        peer_id: peer_id.to_string(),
+                        display_name: peer_id.to_string(),
+                        addresses: vec![],
+                        is_connected: true,
+                    };
+                    self.discovered_peers.insert(peer_id, info.clone());
+                    self.emit_peer_discovered(info);
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                log::warn!("Connection closed with {}", peer_id);
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.is_connected = false;
+                    let info = peer_info.clone();
+                    self.emit_peer_discovered(info);
                 }
             }
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Gossipsub(
@@ -194,6 +229,19 @@ impl NetworkManager {
                         }
                     }
                 }
+            }
+            SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
+                log::error!("Outgoing connection error: {:?} ({:?})", peer_id, error);
+                self.emit_error(ErrorCode::Network, format!("Connection failed: {:?}", error));
+            }
+            SwarmEvent::IncomingConnectionError { error, .. } => {
+                log::error!("Incoming connection error: {:?}", error);
+            }
+            SwarmEvent::NewListenAddr { address, .. } => {
+                log::info!("Listening on {}", address);
+            }
+            SwarmEvent::ListenerError { error, .. } => {
+                log::error!("Listener error: {:?}", error);
             }
             _ => {}
         }
@@ -262,9 +310,20 @@ impl NetworkManager {
             }
             SyncCommand::AcceptPairing { .. } => {}
             SyncCommand::RejectPairing { .. } => {}
-            SyncCommand::AddPeerAddress { peer_id, address } => {
+            SyncCommand::AddPeerAddress { peer_id: _, address } => {
                 if let Ok(addr) = address.parse::<libp2p::Multiaddr>() {
-                    let _ = self.swarm.dial(addr);
+                    match self.swarm.dial(addr.clone()) {
+                        Ok(()) => {
+                            log::info!("Dialing {}", addr);
+                        }
+                        Err(e) => {
+                            log::error!("Failed to dial {}: {:?}", addr, e);
+                            self.emit_error(ErrorCode::Network, format!("Failed to dial {}: {:?}", addr, e));
+                        }
+                    }
+                } else {
+                    log::error!("Invalid multiaddr: {}", address);
+                    self.emit_error(ErrorCode::InvalidArg, format!("Invalid address: {}", address));
                 }
             }
             SyncCommand::Unpair { peer_id } => {

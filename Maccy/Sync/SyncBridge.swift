@@ -206,6 +206,18 @@ class SyncBridge {
         )
       }
     }
+
+    maccy_sync_on_error(handle) { code, message in
+      DispatchQueue.main.async {
+        let msg = String(cString: message!)
+        NSLog("[Sync] Error (code \(code)): \(msg)")
+        NotificationCenter.default.post(
+          name: .syncError,
+          object: nil,
+          userInfo: ["code": code, "message": msg]
+        )
+      }
+    }
   }
 
   private func serializeItem(_ item: HistoryItem) -> String? {
@@ -242,4 +254,5 @@ extension Notification.Name {
   static let syncItemReceived = Notification.Name("syncItemReceived")
   static let syncItemDeleted = Notification.Name("syncItemDeleted")
   static let syncItemUpdated = Notification.Name("syncItemUpdated")
+  static let syncError = Notification.Name("syncError")
 }
