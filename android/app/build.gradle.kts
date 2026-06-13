@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -56,30 +57,38 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
+    // JNI for Rust FFI
+    implementation("net.java.dev.jna:jna:5.16.0@aar")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// Build Rust and generate Kotlin bindings before compiling
-tasks.register<Exec>("buildRustCore") {
+// Build Rust for Android using cargo-ndk.
+// Requires: cargo install cargo-ndk, rustup target add aarch64-linux-android, Android NDK
+tasks.register<Exec>("buildRustCoreArm64") {
+    workingDir = file("../..")
     commandLine(
-        "cargo", "build", "--release",
-        "--target", "aarch64-linux-android",
-        "--package", "maccy-core",
-        "--manifest-path", file("../../Cargo.toml").absolutePath
+        "cargo", "ndk",
+        "-t", "arm64-v8a",
+        "-o", "android/app/src/main/jniLibs",
+        "build", "--release",
+        "--package", "maccy-core"
     )
-    onlyIf { !file("../../target/aarch64-linux-android/release/libmaccy_core.so").exists() }
 }
 
 tasks.register<Exec>("generateKotlinBindings") {
-    dependsOn("buildRustCore")
+    dependsOn("buildRustCoreArm64")
+    workingDir = file("../..")
+    val libPath = file("../../target/aarch64-linux-android/release/libmaccy_core.so").absolutePath
+    val outDir = file("src/main/java").absolutePath
     commandLine(
         "cargo", "run", "--release",
         "--bin", "uniffi-bindgen",
         "--package", "maccy-core",
         "generate",
-        "--library", file("../../target/aarchy64-linux-android/release/libmaccy_core.so").absolutePath,
+        "--library", libPath,
         "--language", "kotlin",
-        "--out-dir", file("src/main/java").absolutePath
+        "--out-dir", outDir
     )
 }
 

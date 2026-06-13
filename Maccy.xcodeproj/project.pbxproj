@@ -1820,7 +1820,6 @@
 				MARKETING_VERSION = 2.6.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lmaccy_sync",
 					"-framework",
 					Security,
 					"-framework",
@@ -1875,7 +1874,6 @@
 				MARKETING_VERSION = 2.6.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lmaccy_sync",
 					"-framework",
 					Security,
 					"-framework",
