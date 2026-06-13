@@ -84,9 +84,12 @@ pub extern "C" fn maccy_sync_stop(sync: *mut MaccySync) -> i32 {
         return ErrorCode::InvalidArg as i32;
     }
 
-    let state = unsafe { &*sync };
-    let guard = state.lock().unwrap();
-    let _ = guard.command_tx.send(SyncCommand::Shutdown);
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
+        let guard = state.lock().unwrap();
+        let _ = guard.command_tx.send(SyncCommand::Shutdown);
+    }
+    std::mem::forget(state);
     ErrorCode::Ok as i32
 }
 
@@ -99,7 +102,8 @@ pub extern "C" fn maccy_sync_on_peer_discovered(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_peer_discovered.lock() = Some(Box::new(move |info: crate::types::PeerInfo| {
         let peer_id = CString::new(info.peer_id).unwrap_or_default();
@@ -107,6 +111,8 @@ pub extern "C" fn maccy_sync_on_peer_discovered(
         let addrs = CString::new(info.addresses.join(",")).unwrap_or_default();
         cb(peer_id.as_ptr(), name.as_ptr(), addrs.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -118,12 +124,15 @@ pub extern "C" fn maccy_sync_on_peer_lost(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_peer_lost.lock() = Some(Box::new(move |peer_id: String| {
         let c_peer_id = CString::new(peer_id).unwrap_or_default();
         cb(c_peer_id.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -135,7 +144,8 @@ pub extern "C" fn maccy_sync_on_pairing_request(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_pairing_request.lock() = Some(Box::new(move |(peer_id, display_name, pin): (String, String, String)| {
         let c_peer_id = CString::new(peer_id).unwrap_or_default();
@@ -143,6 +153,8 @@ pub extern "C" fn maccy_sync_on_pairing_request(
         let c_pin = CString::new(pin).unwrap_or_default();
         cb(c_peer_id.as_ptr(), c_name.as_ptr(), c_pin.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -154,12 +166,15 @@ pub extern "C" fn maccy_sync_on_pairing_complete(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_pairing_complete.lock() = Some(Box::new(move |(peer_id, success): (String, bool)| {
         let c_peer_id = CString::new(peer_id).unwrap_or_default();
         cb(c_peer_id.as_ptr(), success);
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -171,12 +186,15 @@ pub extern "C" fn maccy_sync_on_sync_item_received(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_item_received.lock() = Some(Box::new(move |json: String| {
         let c_json = CString::new(json).unwrap_or_default();
         cb(c_json.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -188,12 +206,15 @@ pub extern "C" fn maccy_sync_on_sync_item_deleted(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_item_deleted.lock() = Some(Box::new(move |id: String| {
         let c_id = CString::new(id).unwrap_or_default();
         cb(c_id.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -205,12 +226,15 @@ pub extern "C" fn maccy_sync_on_sync_item_updated(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_item_updated.lock() = Some(Box::new(move |json: String| {
         let c_json = CString::new(json).unwrap_or_default();
         cb(c_json.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 #[unsafe(no_mangle)]
@@ -222,24 +246,31 @@ pub extern "C" fn maccy_sync_on_error(
         return;
     }
     let cb = cb.unwrap();
-    let state = unsafe { &*sync };
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    {
     let guard = state.lock().unwrap();
     *guard.on_error.lock() = Some(Box::new(move |(code, msg): (i32, String)| {
         let c_msg = CString::new(msg).unwrap_or_default();
         cb(code, c_msg.as_ptr());
     }));
+    }
+    std::mem::forget(state);
 }
 
 fn send_command(sync: *mut MaccySync, cmd: SyncCommand) -> i32 {
     if sync.is_null() {
         return ErrorCode::InvalidArg as i32;
     }
-    let state = unsafe { &*sync };
-    let guard = state.lock().unwrap();
-    match guard.command_tx.send(cmd) {
-        Ok(()) => ErrorCode::Ok as i32,
-        Err(_) => ErrorCode::NotRunning as i32,
-    }
+    let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
+    let result = {
+        let guard = state.lock().unwrap();
+        match guard.command_tx.send(cmd) {
+            Ok(()) => ErrorCode::Ok as i32,
+            Err(_) => ErrorCode::NotRunning as i32,
+        }
+    };
+    std::mem::forget(state);
+    result
 }
 
 #[unsafe(no_mangle)]
