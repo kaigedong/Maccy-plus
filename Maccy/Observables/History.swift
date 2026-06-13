@@ -577,7 +577,10 @@ class History: ItemsContainer {
   }
 
   private func reorderAll(matching sorted: [ClipboardItem]) {
-    let itemMap = Dictionary(uniqueKeysWithValues: all.map { ($0.item.id, $0) })
+    var itemMap: [String: HistoryItemDecorator] = [:]
+    for decorator in all {
+      itemMap[decorator.item.id] = decorator
+    }
     all = sorted.compactMap { itemMap[$0.id] }
   }
 
