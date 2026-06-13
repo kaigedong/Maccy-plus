@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString};
+use std::io::Write;
 use std::os::raw::c_char;
 use std::ptr;
 use std::sync::Arc;
@@ -6,6 +7,23 @@ use std::sync::Arc;
 use crate::error::ErrorCode;
 use crate::network::NetworkManager;
 use crate::state::{SharedState, SyncCommand, SyncState};
+
+struct StderrLogger;
+
+impl log::Log for StderrLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool { true }
+    fn log(&self, record: &log::Record) {
+        let _ = writeln!(std::io::stderr(), "[maccy-sync] {} - {}", record.level(), record.args());
+    }
+    fn flush(&self) { let _ = std::io::stderr().flush(); }
+}
+
+static LOGGER: StderrLogger = StderrLogger;
+
+fn ensure_logger() {
+    let _ = log::set_logger(&LOGGER);
+    log::set_max_level(log::LevelFilter::Debug);
+}
 
 pub type MaccySync = Arc<std::sync::Mutex<SyncState>>;
 
@@ -23,6 +41,9 @@ pub extern "C" fn maccy_sync_create(
 ) -> *mut MaccySync {
     let name = c_str_to_string(device_name).unwrap_or_default();
     let id = c_str_to_string(device_id).unwrap_or_default();
+
+    ensure_logger();
+    log::info!("maccy_sync_create: name={}, id={}", name, id);
 
     match SyncState::new(&name, &id) {
         Ok(state) => Arc::into_raw(Arc::new(std::sync::Mutex::new(state))) as *mut MaccySync,
@@ -75,6 +96,7 @@ pub extern "C" fn maccy_sync_start(sync: *mut MaccySync) -> i32 {
     });
 
     std::mem::forget(shared);
+    log::info!("maccy_sync_start: started successfully");
     ErrorCode::Ok as i32
 }
 
@@ -261,6 +283,7 @@ fn send_command(sync: *mut MaccySync, cmd: SyncCommand) -> i32 {
     if sync.is_null() {
         return ErrorCode::InvalidArg as i32;
     }
+    log::info!("send_command: {:?}", cmd);
     let state: SharedState = unsafe { Arc::from_raw(sync as *const std::sync::Mutex<SyncState>) };
     let result = {
         let guard = state.lock().unwrap();

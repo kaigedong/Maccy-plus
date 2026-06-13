@@ -20,20 +20,27 @@ class SyncBridge {
     let deviceName = Defaults[.syncDeviceName]
     let deviceID = Defaults[.syncDeviceID]
 
-    guard let handle = maccy_sync_create(deviceName, deviceID) else { return }
+    NSLog("[Sync] start: name=\(deviceName) id=\(deviceID)")
+    guard let handle = maccy_sync_create(deviceName, deviceID) else {
+      NSLog("[Sync] start: maccy_sync_create failed")
+      return
+    }
     syncHandle = handle
 
     registerCallbacks()
 
     let result = maccy_sync_start(handle)
     if result != MACCY_SYNC_OK {
+      NSLog("[Sync] start: maccy_sync_start failed with \(result)")
       maccy_sync_destroy(handle)
       syncHandle = nil
       return
     }
 
+    NSLog("[Sync] start: starting discovery")
     _ = maccy_sync_start_discovery(handle)
     isStarted = true
+    NSLog("[Sync] start: fully started")
   }
 
   func stop() {
@@ -105,12 +112,19 @@ class SyncBridge {
   }
 
   func addPeerAddress(address: String) {
-    guard isStarted, let handle = syncHandle else { return }
+    guard isStarted, let handle = syncHandle else {
+      NSLog("[Sync] addPeerAddress: not started")
+      return
+    }
     let parts = address.split(separator: ":")
-    guard parts.count >= 2, let _ = UInt16(parts.last ?? "") else { return }
+    guard parts.count >= 2, let _ = UInt16(parts.last ?? "") else {
+      NSLog("[Sync] addPeerAddress: invalid address format: \(address)")
+      return
+    }
     let host = parts.dropLast().joined(separator: ":")
-    let port = parts.last! 
+    let port = parts.last!
     let multiaddr = "/ip4/\(host)/tcp/\(port)"
+    NSLog("[Sync] addPeerAddress: dialing \(multiaddr)")
     multiaddr.withCString { addrPtr in
       _ = maccy_sync_add_peer_address(handle, "", addrPtr)
     }
@@ -131,6 +145,7 @@ class SyncBridge {
         let pid = String(cString: peerID!)
         let name = String(cString: displayName!)
         let addrs = String(cString: addresses!)
+        NSLog("[Sync] peer discovered: \(name) (\(pid)) addresses=\(addrs)")
         NotificationCenter.default.post(
           name: .syncPeerDiscovered,
           object: nil,
@@ -142,6 +157,7 @@ class SyncBridge {
     maccy_sync_on_peer_lost(handle) { peerID in
       DispatchQueue.main.async {
         let pid = String(cString: peerID!)
+        NSLog("[Sync] peer lost: \(pid)")
         NotificationCenter.default.post(
           name: .syncPeerLost,
           object: nil,
@@ -155,6 +171,7 @@ class SyncBridge {
         let pid = String(cString: peerID!)
         let name = String(cString: displayName!)
         let p = String(cString: pin!)
+        NSLog("[Sync] pairing request from \(name) pin=\(p)")
         NotificationCenter.default.post(
           name: .syncPairingRequest,
           object: nil,
