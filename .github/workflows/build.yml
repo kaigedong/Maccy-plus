@@ -1,5 +1,9 @@
 name: Build and Release
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master, feat/p2p-sync, refactor/rust-shared-core]
@@ -11,8 +15,6 @@ jobs:
   build-macos:
     name: Build MaccyPlus (macOS)
     runs-on: macos-15
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -36,14 +38,26 @@ jobs:
           echo "build_num=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
 
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+          cache-on-failure: true
       - run: bash scripts/build-rust-macos.sh
       - run: ruby scripts/patch-xcode.rb
 
       - name: Build
         run: |
           xcodebuild build \
-            -project Maccy.xcodeproj -scheme Maccy -configuration Release \
-            -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+            -project Maccy.xcodeproj \
+            -scheme Maccy \
+            -configuration Release \
+            -derivedDataPath build \
+            -parallelizeTargets \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_num }}" \
             CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
@@ -51,34 +65,14 @@ jobs:
       - name: Package
         run: cd build/Build/Products/Release && zip -r Maccy.app.zip Maccy.app
 
-      - if: steps.version.outputs.channel == 'beta'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: Maccy-macOS
           path: build/Build/Products/Release/Maccy.app.zip
 
-      - if: steps.version.outputs.channel == 'beta'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete latest-beta --yes --cleanup-tag 2>/dev/null || true
-          gh release create latest-beta build/Build/Products/Release/Maccy.app.zip \
-            --title "MaccyPlus Beta (${{ steps.version.outputs.version }})" \
-            --notes "Automated beta build ($GITHUB_SHA)." --prerelease
-
-      - if: steps.version.outputs.channel == 'stable'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/Build/Products/Release/Maccy.app.zip
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-android:
     name: Build MaccyPlus (Android)
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -93,9 +87,25 @@ jobs:
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
 
-      - run: cargo install cargo-ndk
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+          cache-on-failure: true
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
       - run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build
-      - run: bash scripts/build-rust-android.sh
+
+      - name: Build Rust Android
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            bash scripts/build-rust-android.sh all
+          else
+            bash scripts/build-rust-android.sh arm64
+          fi
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -106,19 +116,45 @@ jobs:
           name: Maccy-Android
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/p2p-sync'
-        uses: softprops/action-gh-release@v2
+  release:
+    name: Publish Release
+    if: github.event_name != 'pull_request'
+    needs: [build-macos, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          tag_name: latest-beta
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: Maccy-macOS
+      - uses: actions/download-artifact@v4
+        with:
+          name: Maccy-Android
 
-      - if: startsWith(github.ref, 'refs/tags/v')
+      - id: channel
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "type=stable" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=beta" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.channel.outputs.type == 'beta'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest-beta --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest-beta Maccy.app.zip app-debug.apk \
+            --title "MaccyPlus Beta" \
+            --notes "Automated beta build ($GITHUB_SHA)." \
+            --prerelease
+
+      - if: steps.channel.outputs.type == 'stable'
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            Maccy.app.zip
+            app-debug.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
