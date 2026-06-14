@@ -306,6 +306,20 @@ typedef void (*UniffiCallbackInterfaceClipboardObserverMethod8)(uint64_t, int32_
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD9
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD9
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod9)(uint64_t, RustBuffer, RustBuffer, int64_t, int32_t, int32_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD10
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD10
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod10)(uint64_t, RustBuffer, RustBuffer, int8_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER
 typedef struct UniffiVTableCallbackInterfaceClipboardObserver {
@@ -320,6 +334,8 @@ typedef struct UniffiVTableCallbackInterfaceClipboardObserver {
     UniffiCallbackInterfaceClipboardObserverMethod6 _Nonnull onPairingComplete;
     UniffiCallbackInterfaceClipboardObserverMethod7 _Nonnull onListening;
     UniffiCallbackInterfaceClipboardObserverMethod8 _Nonnull onError;
+    UniffiCallbackInterfaceClipboardObserverMethod9 _Nonnull onFileChunk;
+    UniffiCallbackInterfaceClipboardObserverMethod10 _Nonnull onFileDownloadComplete;
 } UniffiVTableCallbackInterfaceClipboardObserver;
 
 #endif
@@ -371,6 +387,11 @@ RustBuffer uniffi_maccy_core_fn_method_historymanager_load(uint64_t ptr, RustCal
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_MIGRATE_FROM_SWIFTDATA
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_MIGRATE_FROM_SWIFTDATA
 uint64_t uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(uint64_t ptr, RustBuffer swiftdata_path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REQUEST_FILE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REQUEST_FILE
+void uniffi_maccy_core_fn_method_historymanager_request_file(uint64_t ptr, RustBuffer peer_id, RustBuffer file_path, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SEARCH
@@ -516,6 +537,16 @@ void uniffi_maccy_core_fn_method_clipboardobserver_on_listening(uint64_t ptr, Ru
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_ERROR
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_ERROR
 void uniffi_maccy_core_fn_method_clipboardobserver_on_error(uint64_t ptr, int32_t code, RustBuffer message, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_FILE_CHUNK
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_FILE_CHUNK
+void uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(uint64_t ptr, RustBuffer request_id, RustBuffer file_name, int64_t file_size, int32_t chunk_index, int32_t total_chunks, RustBuffer data, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_FILE_DOWNLOAD_COMPLETE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_FILE_DOWNLOAD_COMPLETE
+void uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(uint64_t ptr, RustBuffer request_id, RustBuffer file_path, int8_t success, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_MACCY_CORE_RUSTBUFFER_ALLOC
@@ -820,6 +851,12 @@ uint16_t uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REQUEST_FILE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REQUEST_FILE
+uint16_t uniffi_maccy_core_checksum_method_historymanager_request_file(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SEARCH
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SEARCH
 uint16_t uniffi_maccy_core_checksum_method_historymanager_search(void
@@ -973,6 +1010,18 @@ uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_listening(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_ERROR
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_ERROR
 uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_error(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_FILE_CHUNK
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_FILE_CHUNK
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_FILE_DOWNLOAD_COMPLETE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_FILE_DOWNLOAD_COMPLETE
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete(void
     
 );
 #endif

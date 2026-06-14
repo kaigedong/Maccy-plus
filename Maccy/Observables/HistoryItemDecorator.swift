@@ -56,6 +56,24 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
   var isPinned: Bool { item.pin != nil }
   var isUnpinned: Bool { item.pin == nil }
 
+  /// True if this is a file reference (copied from Finder).
+  var isFile: Bool {
+    item.contents.contains { $0.contentType == NSPasteboard.PasteboardType.fileURL.rawValue }
+  }
+
+  /// File name extracted from the file URL, if this is a file item.
+  var fileName: String? {
+    guard isFile else { return nil }
+    return item.contents
+      .first { $0.contentType == NSPasteboard.PasteboardType.fileURL.rawValue }
+      .flatMap { $0.value }
+      .flatMap { URL(dataRepresentation: Data($0), relativeTo: nil, isAbsolute: true) }
+      .map { $0.lastPathComponent.removingPercentEncoding ?? $0.lastPathComponent }
+  }
+
+  /// True if this item came from a remote device (sync).
+  var isRemote: Bool { item.syncSource != nil && !item.syncSource!.isEmpty }
+
   func hash(into hasher: inout Hasher) {
     hasher.combine(id)
     hasher.combine(title)

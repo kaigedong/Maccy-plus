@@ -640,7 +640,13 @@ internal interface UniffiCallbackInterfaceClipboardObserverMethod7 : com.sun.jna
 internal interface UniffiCallbackInterfaceClipboardObserverMethod8 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`code`: Int,`message`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
-@Structure.FieldOrder("uniffiFree", "uniffiClone", "onItemReceived", "onItemDeleted", "onItemUpdated", "onPeerDiscovered", "onPeerLost", "onPairingRequest", "onPairingComplete", "onListening", "onError")
+internal interface UniffiCallbackInterfaceClipboardObserverMethod9 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`requestId`: RustBuffer.ByValue,`fileName`: RustBuffer.ByValue,`fileSize`: Long,`chunkIndex`: Int,`totalChunks`: Int,`data`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceClipboardObserverMethod10 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`requestId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`success`: Byte,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "onItemReceived", "onItemDeleted", "onItemUpdated", "onPeerDiscovered", "onPeerLost", "onPairingRequest", "onPairingComplete", "onListening", "onError", "onFileChunk", "onFileDownloadComplete")
 internal open class UniffiVTableCallbackInterfaceClipboardObserver(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
     @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
@@ -653,6 +659,8 @@ internal open class UniffiVTableCallbackInterfaceClipboardObserver(
     @JvmField internal var `onPairingComplete`: UniffiCallbackInterfaceClipboardObserverMethod6? = null,
     @JvmField internal var `onListening`: UniffiCallbackInterfaceClipboardObserverMethod7? = null,
     @JvmField internal var `onError`: UniffiCallbackInterfaceClipboardObserverMethod8? = null,
+    @JvmField internal var `onFileChunk`: UniffiCallbackInterfaceClipboardObserverMethod9? = null,
+    @JvmField internal var `onFileDownloadComplete`: UniffiCallbackInterfaceClipboardObserverMethod10? = null,
 ) : Structure() {
     class UniffiByValue(
         `uniffiFree`: UniffiCallbackInterfaceFree? = null,
@@ -666,7 +674,9 @@ internal open class UniffiVTableCallbackInterfaceClipboardObserver(
         `onPairingComplete`: UniffiCallbackInterfaceClipboardObserverMethod6? = null,
         `onListening`: UniffiCallbackInterfaceClipboardObserverMethod7? = null,
         `onError`: UniffiCallbackInterfaceClipboardObserverMethod8? = null,
-    ): UniffiVTableCallbackInterfaceClipboardObserver(`uniffiFree`,`uniffiClone`,`onItemReceived`,`onItemDeleted`,`onItemUpdated`,`onPeerDiscovered`,`onPeerLost`,`onPairingRequest`,`onPairingComplete`,`onListening`,`onError`,), Structure.ByValue
+        `onFileChunk`: UniffiCallbackInterfaceClipboardObserverMethod9? = null,
+        `onFileDownloadComplete`: UniffiCallbackInterfaceClipboardObserverMethod10? = null,
+    ): UniffiVTableCallbackInterfaceClipboardObserver(`uniffiFree`,`uniffiClone`,`onItemReceived`,`onItemDeleted`,`onItemUpdated`,`onPeerDiscovered`,`onPeerLost`,`onPairingRequest`,`onPairingComplete`,`onListening`,`onError`,`onFileChunk`,`onFileDownloadComplete`,), Structure.ByValue
 
    internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceClipboardObserver) {
         `uniffiFree` = other.`uniffiFree`
@@ -680,6 +690,8 @@ internal open class UniffiVTableCallbackInterfaceClipboardObserver(
         `onPairingComplete` = other.`onPairingComplete`
         `onListening` = other.`onListening`
         `onError` = other.`onError`
+        `onFileChunk` = other.`onFileChunk`
+        `onFileDownloadComplete` = other.`onFileDownloadComplete`
     }
 
 }
@@ -719,6 +731,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_maccy_core_checksum_method_historymanager_load(
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata(
+    ): Short
+    external fun uniffi_maccy_core_checksum_method_historymanager_request_file(
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_search(
     ): Short
@@ -772,6 +786,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_maccy_core_checksum_method_clipboardobserver_on_error(
     ): Short
+    external fun uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk(
+    ): Short
+    external fun uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete(
+    ): Short
     external fun uniffi_maccy_core_checksum_constructor_historymanager_new(
     ): Short
     external fun ffi_maccy_core_uniffi_contract_version(
@@ -813,6 +831,8 @@ external fun uniffi_maccy_core_fn_method_historymanager_load(`ptr`: Long,uniffi_
 ): RustBuffer.ByValue
 external fun uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(`ptr`: Long,`swiftdataPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Long
+external fun uniffi_maccy_core_fn_method_historymanager_request_file(`ptr`: Long,`peerId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_search(`ptr`: Long,`query`: RustBuffer.ByValue,`items`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 external fun uniffi_maccy_core_fn_method_historymanager_sort(`ptr`: Long,`items`: RustBuffer.ByValue,`sortBy`: RustBuffer.ByValue,`pinToTop`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -870,6 +890,10 @@ external fun uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_complete(`
 external fun uniffi_maccy_core_fn_method_clipboardobserver_on_listening(`ptr`: Long,`address`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_maccy_core_fn_method_clipboardobserver_on_error(`ptr`: Long,`code`: Int,`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(`ptr`: Long,`requestId`: RustBuffer.ByValue,`fileName`: RustBuffer.ByValue,`fileSize`: Long,`chunkIndex`: Int,`totalChunks`: Int,`data`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(`ptr`: Long,`requestId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`success`: Byte,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun ffi_maccy_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1011,6 +1035,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_search() != 8895.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1087,6 +1114,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_clipboardobserver_on_error() != 6485.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk() != 45171.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete() != 27812.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_constructor_historymanager_new() != 54344.toShort()) {
@@ -1618,6 +1651,16 @@ public interface ClipboardObserver {
      */
     fun `onError`(`code`: kotlin.Int, `message`: kotlin.String)
     
+    /**
+     * A file chunk was received (append to local temp file).
+     */
+    fun `onFileChunk`(`requestId`: kotlin.String, `fileName`: kotlin.String, `fileSize`: kotlin.Long, `chunkIndex`: kotlin.Int, `totalChunks`: kotlin.Int, `data`: kotlin.ByteArray)
+    
+    /**
+     * File download completed (or failed).
+     */
+    fun `onFileDownloadComplete`(`requestId`: kotlin.String, `filePath`: kotlin.String, `success`: kotlin.Boolean)
+    
     companion object
 }
 
@@ -1857,6 +1900,36 @@ open class ClipboardObserverImpl: Disposable, AutoCloseable, ClipboardObserver
     
 
     
+    /**
+     * A file chunk was received (append to local temp file).
+     */override fun `onFileChunk`(`requestId`: kotlin.String, `fileName`: kotlin.String, `fileSize`: kotlin.Long, `chunkIndex`: kotlin.Int, `totalChunks`: kotlin.Int, `data`: kotlin.ByteArray)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(
+        it,
+        FfiConverterString.lower(`requestId`),FfiConverterString.lower(`fileName`),FfiConverterLong.lower(`fileSize`),FfiConverterInt.lower(`chunkIndex`),FfiConverterInt.lower(`totalChunks`),FfiConverterByteArray.lower(`data`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * File download completed (or failed).
+     */override fun `onFileDownloadComplete`(`requestId`: kotlin.String, `filePath`: kotlin.String, `success`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(
+        it,
+        FfiConverterString.lower(`requestId`),FfiConverterString.lower(`filePath`),FfiConverterBoolean.lower(`success`),_status)
+}
+    }
+    
+    
+
+    
 
     
 
@@ -1989,6 +2062,37 @@ internal object uniffiCallbackInterfaceClipboardObserver {
             uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
         }
     }
+    internal object `onFileChunk`: UniffiCallbackInterfaceClipboardObserverMethod9 {
+        override fun callback(`uniffiHandle`: Long,`requestId`: RustBuffer.ByValue,`fileName`: RustBuffer.ByValue,`fileSize`: Long,`chunkIndex`: Int,`totalChunks`: Int,`data`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeClipboardObserver.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onFileChunk`(
+                    FfiConverterString.lift(`requestId`),
+                    FfiConverterString.lift(`fileName`),
+                    FfiConverterLong.lift(`fileSize`),
+                    FfiConverterInt.lift(`chunkIndex`),
+                    FfiConverterInt.lift(`totalChunks`),
+                    FfiConverterByteArray.lift(`data`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `onFileDownloadComplete`: UniffiCallbackInterfaceClipboardObserverMethod10 {
+        override fun callback(`uniffiHandle`: Long,`requestId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`success`: Byte,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeClipboardObserver.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onFileDownloadComplete`(
+                    FfiConverterString.lift(`requestId`),
+                    FfiConverterString.lift(`filePath`),
+                    FfiConverterBoolean.lift(`success`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
 
     internal object uniffiFree: UniffiCallbackInterfaceFree {
         override fun callback(handle: Long) {
@@ -2014,6 +2118,8 @@ internal object uniffiCallbackInterfaceClipboardObserver {
         `onPairingComplete`,
         `onListening`,
         `onError`,
+        `onFileChunk`,
+        `onFileDownloadComplete`,
     )
 
     // Registers the foreign callback with the Rust side.
@@ -2182,6 +2288,11 @@ public interface HistoryManagerInterface {
     fun `load`(): List<ClipboardItem>
     
     fun `migrateFromSwiftdata`(`swiftdataPath`: kotlin.String): kotlin.ULong
+    
+    /**
+     * Request a file download from a peer.
+     */
+    fun `requestFile`(`peerId`: kotlin.String, `filePath`: kotlin.String)
     
     fun `search`(`query`: kotlin.String, `items`: List<ClipboardItem>, `mode`: SearchMode): List<SearchResult>
     
@@ -2444,6 +2555,21 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Request a file download from a peer.
+     */override fun `requestFile`(`peerId`: kotlin.String, `filePath`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_historymanager_request_file(
+        it,
+        FfiConverterString.lower(`peerId`),FfiConverterString.lower(`filePath`),_status)
+}
+    }
+    
     
 
     override fun `search`(`query`: kotlin.String, `items`: List<ClipboardItem>, `mode`: SearchMode): List<SearchResult> {

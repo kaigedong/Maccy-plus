@@ -62,5 +62,7 @@ pub enum SyncCommand {
     BroadcastUpdate { item_json: String },
     AddPeerAddress { address: String },
     Unpair { peer_id: String },
+    /// Send a file chunk to a peer.
+    SendFileChunk { peer_id: String, request_id: String, file_path: String, offset: u64 },
     Shutdown,
 }

@@ -101,6 +101,21 @@ class MaccySyncObserver: ClipboardObserver {
       ])
     }
   }
+
+  func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data) {
+    FileDownloadManager.shared.receiveChunk(
+      requestId: requestId,
+      fileName: fileName,
+      fileSize: fileSize,
+      chunkIndex: chunkIndex,
+      totalChunks: totalChunks,
+      data: data
+    )
+  }
+
+  func onFileDownloadComplete(requestId: String, filePath: String, success: Bool) {
+    FileDownloadManager.shared.complete(requestId: requestId, filePath: filePath, success: success)
+  }
 }
 
 @MainActor
@@ -188,6 +203,10 @@ class SyncBridge {
     AppState.shared.history.core.syncBroadcastUpdate(item: item)
   }
 
+  func requestFile(peerId: String, filePath: String) {
+    AppState.shared.history.core.requestFile(peerId: peerId, filePath: filePath)
+  }
+
   func refreshDiscovery() {
     AppState.shared.history.core.syncStopDiscovery()
     AppState.shared.history.core.syncStartDiscovery()
@@ -203,4 +222,45 @@ extension Notification.Name {
   static let syncItemDeleted = Notification.Name("syncItemDeleted")
   static let syncItemUpdated = Notification.Name("syncItemUpdated")
   static let syncError = Notification.Name("syncError")
+  static let fileDownloadComplete = Notification.Name("fileDownloadComplete")
+}
+
+/// Assembles file chunks received via P2P and saves to ~/Downloads.
+class FileDownloadManager {
+  static let shared = FileDownloadManager()
+  private var downloads: [String: FileDownload] = [:]
+
+  struct FileDownload {
+    let requestId: String
+    let fileName: String
+    let totalSize: Int64
+    var data = Data()
+  }
+
+  func receiveChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data) {
+    if downloads[requestId] == nil {
+      downloads[requestId] = FileDownload(requestId: requestId, fileName: fileName, totalSize: fileSize)
+    }
+    downloads[requestId]?.data.append(data)
+  }
+
+  func complete(requestId: String, filePath: String, success: Bool) {
+    guard success, let dl = downloads.removeValue(forKey: requestId) else {
+      downloads.removeValue(forKey: requestId)
+      return
+    }
+    let url = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent("Downloads")
+      .appendingPathComponent(dl.fileName)
+    try? dl.data.write(to: url)
+    NSLog("[FileTransfer] downloaded \(dl.fileName) (\(dl.data.count) bytes)")
+    DispatchQueue.main.async {
+      NotificationCenter.default.post(name: .fileDownloadComplete, object: nil, userInfo: [
+        "fileName": dl.fileName,
+        "path": url.path,
+        "size": dl.data.count,
+      ])
+      Notifier.notify(body: "Downloaded \(dl.fileName)", sound: .knock)
+    }
+  }
 }
