@@ -79,6 +79,8 @@ fun SyncSettingsScreen(
         )
     }
 
+    val paired by viewModel.pairedPeers.collectAsState()
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -162,8 +164,7 @@ fun SyncSettingsScreen(
                         },
                 )
             }
-            val connected = peers.filter { it.isConnected }
-            if (connected.isEmpty()) {
+            if (paired.isEmpty()) {
                 item {
                     Text(
                         "No paired devices",
@@ -172,7 +173,7 @@ fun SyncSettingsScreen(
                     )
                 }
             } else {
-                items(connected, key = { it.peerId }) { peer ->
+                items(paired, key = { it.peerId }) { peer ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors =

@@ -374,11 +374,12 @@ impl NetworkManager {
                     return;
                 }
                 self.seen_pairing_sessions.insert(session_id);
+                let pin = format!("{:06}", rand::random::<u32>() % 1_000_000);
                 log::info!("Pairing request from {} ({})", device_name, peer);
                 self.state_emit(SyncEvent::PairingRequest {
                     peer_id: peer.to_string(),
                     display_name: device_name,
-                    pin: "000000".to_string(),
+                    pin,
                 });
             }
             PairingMessage::Accept { .. } => {

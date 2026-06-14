@@ -23,6 +23,9 @@ class HistoryViewModel : ViewModel() {
     private val _peers = MutableStateFlow<List<DiscoveredPeer>>(emptyList())
     val peers: StateFlow<List<DiscoveredPeer>> = _peers
 
+    private val _pairedPeers = MutableStateFlow<List<DiscoveredPeer>>(emptyList())
+    val pairedPeers: StateFlow<List<DiscoveredPeer>> = _pairedPeers
+
     private val _pairingRequest = MutableStateFlow<PairingRequest?>(null)
     val pairingRequest: StateFlow<PairingRequest?> = _pairingRequest
 
@@ -53,6 +56,7 @@ class HistoryViewModel : ViewModel() {
     ) {
         val core = this.core ?: return
         val id = deviceId ?: getOrCreateDeviceId(appContext!!)
+        loadPairedPeers()
         syncObserver =
             MaccyClipboardObserver(
                 onItemReceivedCb = { item ->
@@ -110,6 +114,7 @@ class HistoryViewModel : ViewModel() {
                     if (success) {
                         val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
                         core?.savePairedPeer(peerId, name)
+                        loadPairedPeers()
                     }
                     _pairingRequest.value = null
                 },
@@ -155,6 +160,22 @@ class HistoryViewModel : ViewModel() {
         LogManager.d("Sync", "Discovery refreshed")
     }
 
+    fun loadPairedPeers() {
+        val jsonList = core?.getPairedPeers() ?: emptyList()
+        _pairedPeers.value =
+            jsonList.mapNotNull { json ->
+                try {
+                    val obj = org.json.JSONObject(json)
+                    val peerId = obj.getString("peerId")
+                    val name = obj.getString("displayName")
+                    val connected = _peers.value.any { it.peerId == peerId && it.isConnected }
+                    DiscoveredPeer(peerId, name, emptyList(), connected)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+    }
+
     fun requestPairing(peerId: String) {
         core?.syncRequestPairing(peerId)
         LogManager.i("Sync", "Pairing requested with $peerId")
@@ -176,6 +197,7 @@ class HistoryViewModel : ViewModel() {
     fun unpair(peerId: String) {
         core?.syncUnpair(peerId)
         core?.removePairedPeer(peerId)
+        loadPairedPeers()
         LogManager.i("Sync", "Unpaired: $peerId")
         _peers.value = _peers.value.filter { it.peerId != peerId }
     }
