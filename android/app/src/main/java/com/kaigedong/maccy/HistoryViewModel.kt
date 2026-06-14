@@ -11,6 +11,7 @@ import java.io.File
 class HistoryViewModel : ViewModel() {
     private var core: HistoryManager? = null
     private var syncObserver: ClipboardObserver? = null
+    private var appContext: Context? = null
 
     private val _items = MutableStateFlow<List<ClipboardItem>>(emptyList())
     val items: StateFlow<List<ClipboardItem>> = _items
@@ -18,7 +19,7 @@ class HistoryViewModel : ViewModel() {
     private val _searchResults = MutableStateFlow<List<SearchResult>>(emptyList())
     val searchResults: StateFlow<List<SearchResult>> = _searchResults
 
-    // Sync state
+    // Sync state — discovered peers are ephemeral, paired peers are in Rust
     private val _peers = MutableStateFlow<List<DiscoveredPeer>>(emptyList())
     val peers: StateFlow<List<DiscoveredPeer>> = _peers
 
@@ -28,7 +29,11 @@ class HistoryViewModel : ViewModel() {
     private val _syncError = MutableStateFlow<String?>(null)
     val syncError: StateFlow<String?> = _syncError
 
+    private val _syncEnabled = MutableStateFlow(false)
+    val syncEnabled: StateFlow<Boolean> = _syncEnabled
+
     fun initialize(context: Context) {
+        appContext = context.applicationContext
         val dbPath = File(context.filesDir, "maccy.db").absolutePath
         LogManager.i("History", "Opening database at $dbPath")
         try {
@@ -42,8 +47,9 @@ class HistoryViewModel : ViewModel() {
 
     // ── Sync ─────────────────────────────────────────────────────
 
-    fun startSync(deviceName: String, deviceId: String) {
+    fun startSync(deviceName: String, deviceId: String? = null) {
         val core = this.core ?: return
+        val id = deviceId ?: getOrCreateDeviceId(appContext!!)
         syncObserver = MaccyClipboardObserver(
             onItemReceivedCb = { item ->
                 LogManager.i("Sync", "Received item: ${item.title.take(80)}")
@@ -75,7 +81,8 @@ class HistoryViewModel : ViewModel() {
             onPeerDiscoveredCb = { peerId, displayName, addresses, isConnected ->
                 LogManager.i("Sync", "Peer: $displayName (connected=$isConnected)")
                 val list = _peers.value.toMutableList()
-                list.removeAll { it.peerId == peerId }
+                // Deduplicate by display name — replace old entry with same name
+                list.removeAll { it.displayName == displayName }
                 list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected))
                 _peers.value = list
             },
@@ -88,6 +95,10 @@ class HistoryViewModel : ViewModel() {
             },
             onPairingCompleteCb = { peerId, success ->
                 LogManager.i("Sync", "Pairing complete: peer=$peerId success=$success")
+                if (success) {
+                    val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
+                    core?.savePairedPeer(peerId, name)
+                }
                 _pairingRequest.value = null
             },
             onListeningCb = { address ->
@@ -108,7 +119,8 @@ class HistoryViewModel : ViewModel() {
         )
 
         try {
-            core.startSync(deviceName, deviceId, syncObserver!!)
+            core.startSync(deviceName, id, syncObserver!!)
+            _syncEnabled.value = true
             LogManager.i("Sync", "Sync started (via HistoryManager)")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to start sync", e)
@@ -118,6 +130,7 @@ class HistoryViewModel : ViewModel() {
     fun stopSync() {
         try {
             core?.stopSync()
+            _syncEnabled.value = false
             LogManager.i("Sync", "Sync stopped")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to stop sync", e)
@@ -142,7 +155,9 @@ class HistoryViewModel : ViewModel() {
 
     fun unpair(peerId: String) {
         core?.syncUnpair(peerId)
+        core?.removePairedPeer(peerId)
         LogManager.i("Sync", "Unpaired: $peerId")
+        _peers.value = _peers.value.filter { it.peerId != peerId }
     }
 
     fun requestFile(peerId: String, filePath: String) {
@@ -238,6 +253,22 @@ class HistoryViewModel : ViewModel() {
         stopSync()
         LogManager.i("History", "ViewModel cleared")
         core = null
+    }
+
+    companion object {
+        private const val PREFS_NAME = "maccy_sync"
+        private const val KEY_DEVICE_ID = "device_id"
+
+        fun getOrCreateDeviceId(context: Context): String {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            var id = prefs.getString(KEY_DEVICE_ID, null)
+            if (id == null) {
+                id = java.util.UUID.randomUUID().toString()
+                prefs.edit().putString(KEY_DEVICE_ID, id).apply()
+                LogManager.i("Sync", "Created persistent device ID: $id")
+            }
+            return id
+        }
     }
 }
 

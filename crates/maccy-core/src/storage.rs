@@ -82,6 +82,48 @@ impl Storage {
                 })?;
         }
 
+        if current_version < 2 {
+            self.conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS sync_pairs (
+                    peer_id TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL
+                );
+                INSERT INTO schema_version (version) VALUES (2);",
+            ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        }
+
+        Ok(())
+    }
+
+    // ── Sync pairs ────────────────────────────────────────────
+
+    pub fn get_paired_peers(&self) -> Result<Vec<(String, String)>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT peer_id, display_name FROM sync_pairs ORDER BY display_name"
+        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        }).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(row.map_err(|e| CoreError::Storage { msg: e.to_string() })?);
+        }
+        Ok(result)
+    }
+
+    pub fn save_paired_peer(&self, peer_id: &str, display_name: &str) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR REPLACE INTO sync_pairs (peer_id, display_name) VALUES (?1, ?2)",
+            rusqlite::params![peer_id, display_name],
+        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        Ok(())
+    }
+
+    pub fn remove_paired_peer(&self, peer_id: &str) -> Result<(), CoreError> {
+        self.conn.execute(
+            "DELETE FROM sync_pairs WHERE peer_id = ?1",
+            rusqlite::params![peer_id],
+        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         Ok(())
     }
 

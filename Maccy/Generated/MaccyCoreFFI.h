@@ -379,6 +379,11 @@ int64_t uniffi_maccy_core_fn_method_historymanager_count(uint64_t ptr, RustCallS
 void uniffi_maccy_core_fn_method_historymanager_delete(uint64_t ptr, RustBuffer id, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_GET_PAIRED_PEERS
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_GET_PAIRED_PEERS
+RustBuffer uniffi_maccy_core_fn_method_historymanager_get_paired_peers(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_LOAD
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_LOAD
 RustBuffer uniffi_maccy_core_fn_method_historymanager_load(uint64_t ptr, RustCallStatus *_Nonnull out_status
@@ -389,9 +394,19 @@ RustBuffer uniffi_maccy_core_fn_method_historymanager_load(uint64_t ptr, RustCal
 uint64_t uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(uint64_t ptr, RustBuffer swiftdata_path, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REMOVE_PAIRED_PEER
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REMOVE_PAIRED_PEER
+void uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(uint64_t ptr, RustBuffer peer_id, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REQUEST_FILE
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_REQUEST_FILE
 void uniffi_maccy_core_fn_method_historymanager_request_file(uint64_t ptr, RustBuffer peer_id, RustBuffer file_path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
+void uniffi_maccy_core_fn_method_historymanager_save_paired_peer(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SEARCH
@@ -839,6 +854,12 @@ uint16_t uniffi_maccy_core_checksum_method_historymanager_delete(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_GET_PAIRED_PEERS
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_GET_PAIRED_PEERS
+uint16_t uniffi_maccy_core_checksum_method_historymanager_get_paired_peers(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_LOAD
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_LOAD
 uint16_t uniffi_maccy_core_checksum_method_historymanager_load(void
@@ -851,9 +872,21 @@ uint16_t uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REMOVE_PAIRED_PEER
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REMOVE_PAIRED_PEER
+uint16_t uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REQUEST_FILE
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_REQUEST_FILE
 uint16_t uniffi_maccy_core_checksum_method_historymanager_request_file(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
+uint16_t uniffi_maccy_core_checksum_method_historymanager_save_paired_peer(void
     
 );
 #endif

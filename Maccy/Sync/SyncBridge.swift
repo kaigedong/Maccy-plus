@@ -64,22 +64,8 @@ class MaccySyncObserver: ClipboardObserver {
   func onPairingComplete(peerId: String, success: Bool) {
     DispatchQueue.main.async {
       if success {
-        let displayName = SyncBridge.shared.peerDisplayNames[peerId] ?? peerId
-        let newDevice = PairedDeviceInfo(
-          peerID: peerId,
-          nickname: displayName,
-          icon: "💻",
-          connectedAt: Date(),
-          isConnected: true
-        )
-        var devices = PairedDeviceInfo.all
-        if let idx = devices.firstIndex(where: { $0.peerID == peerId }) {
-          devices[idx].nickname = displayName
-          devices[idx].isConnected = true
-        } else {
-          devices.append(newDevice)
-        }
-        PairedDeviceInfo.all = devices
+        SyncBridge.shared.recordPeerName(peerId, peerId) // name will be updated by peer_discovered
+        AppState.shared.history.core.savePairedPeer(peerId: peerId, displayName: peerId)
       }
       NotificationCenter.default.post(name: .syncPairingComplete, object: nil, userInfo: [
         "peerID": peerId,

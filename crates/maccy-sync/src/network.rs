@@ -37,6 +37,7 @@ pub struct NetworkManager {
     /// Pairing session IDs we've already shown to the user (avoid duplicate dialogs)
     seen_pairing_sessions: HashSet<String>,
     listen_port: u16,
+    local_peer_id: PeerId,
 }
 
 impl NetworkManager {
@@ -139,6 +140,7 @@ impl NetworkManager {
             paired_peers: HashSet::new(),
             seen_pairing_sessions: HashSet::new(),
             listen_port,
+            local_peer_id,
         })
     }
 
@@ -188,6 +190,7 @@ impl NetworkManager {
             // mDNS: peer found on LAN — store but don't emit until Identify gives us a name
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
                 for (peer_id, addr) in peers {
+                    if peer_id == self.local_peer_id { continue; }
                     let info = PeerInfo {
                         peer_id: peer_id.to_string(),
                         display_name: String::new(),
@@ -210,6 +213,9 @@ impl NetworkManager {
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Identify(
                 libp2p::identify::Event::Received { peer_id, info, .. },
             )) => {
+                if peer_id == self.local_peer_id {
+                    return; // Don't show ourselves
+                }
                 let device_name = info
                     .agent_version
                     .split('/')

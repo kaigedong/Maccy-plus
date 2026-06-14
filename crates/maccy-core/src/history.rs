@@ -234,6 +234,37 @@ impl HistoryManager {
             }
         }
     }
+
+    // ── Peer management (persisted in Rust, UI just displays) ─
+
+    /// Get all paired peers with their display names.
+    pub fn get_paired_peers(&self) -> Vec<String> {
+        self.storage.lock()
+            .map(|s| s.get_paired_peers().unwrap_or_default())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(peer_id, display_name)| {
+                serde_json::to_string(&serde_json::json!({
+                    "peerId": peer_id,
+                    "displayName": display_name
+                })).unwrap_or_default()
+            })
+            .collect()
+    }
+
+    /// Persist a paired peer.
+    pub fn save_paired_peer(&self, peer_id: String, display_name: String) {
+        if let Ok(s) = self.storage.lock() {
+            let _ = s.save_paired_peer(&peer_id, &display_name);
+        }
+    }
+
+    /// Remove a paired peer.
+    pub fn remove_paired_peer(&self, peer_id: String) {
+        if let Ok(s) = self.storage.lock() {
+            let _ = s.remove_paired_peer(&peer_id);
+        }
+    }
 }
 
 // ── Deduplication ─────────────────────────────────────────────────

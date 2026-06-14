@@ -728,11 +728,17 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_delete(
     ): Short
+    external fun uniffi_maccy_core_checksum_method_historymanager_get_paired_peers(
+    ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_load(
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata(
     ): Short
+    external fun uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer(
+    ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_request_file(
+    ): Short
+    external fun uniffi_maccy_core_checksum_method_historymanager_save_paired_peer(
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_search(
     ): Short
@@ -827,11 +833,17 @@ external fun uniffi_maccy_core_fn_method_historymanager_count(`ptr`: Long,uniffi
 ): Long
 external fun uniffi_maccy_core_fn_method_historymanager_delete(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+external fun uniffi_maccy_core_fn_method_historymanager_get_paired_peers(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 external fun uniffi_maccy_core_fn_method_historymanager_load(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 external fun uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(`ptr`: Long,`swiftdataPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Long
+external fun uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(`ptr`: Long,`peerId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_request_file(`ptr`: Long,`peerId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_maccy_core_fn_method_historymanager_save_paired_peer(`ptr`: Long,`peerId`: RustBuffer.ByValue,`displayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_search(`ptr`: Long,`query`: RustBuffer.ByValue,`items`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1029,13 +1041,22 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_maccy_core_checksum_method_historymanager_delete() != 58087.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_load() != 48972.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer() != 4944.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_search() != 8895.toShort()) {
@@ -2283,6 +2304,11 @@ public interface HistoryManagerInterface {
     fun `delete`(`id`: kotlin.String)
     
     /**
+     * Get all paired peers with their display names.
+     */
+    fun `getPairedPeers`(): List<kotlin.String>
+    
+    /**
      * Load all items from storage.
      */
     fun `load`(): List<ClipboardItem>
@@ -2290,9 +2316,19 @@ public interface HistoryManagerInterface {
     fun `migrateFromSwiftdata`(`swiftdataPath`: kotlin.String): kotlin.ULong
     
     /**
+     * Remove a paired peer.
+     */
+    fun `removePairedPeer`(`peerId`: kotlin.String)
+    
+    /**
      * Request a file download from a peer.
      */
     fun `requestFile`(`peerId`: kotlin.String, `filePath`: kotlin.String)
+    
+    /**
+     * Persist a paired peer.
+     */
+    fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String)
     
     fun `search`(`query`: kotlin.String, `items`: List<ClipboardItem>, `mode`: SearchMode): List<SearchResult>
     
@@ -2528,6 +2564,22 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
 
     
     /**
+     * Get all paired peers with their display names.
+     */override fun `getPairedPeers`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_historymanager_get_paired_peers(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Load all items from storage.
      */
     @Throws(CoreException::class)override fun `load`(): List<ClipboardItem> {
@@ -2559,6 +2611,21 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
 
     
     /**
+     * Remove a paired peer.
+     */override fun `removePairedPeer`(`peerId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(
+        it,
+        FfiConverterString.lower(`peerId`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Request a file download from a peer.
      */override fun `requestFile`(`peerId`: kotlin.String, `filePath`: kotlin.String)
         = 
@@ -2567,6 +2634,21 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
     UniffiLib.uniffi_maccy_core_fn_method_historymanager_request_file(
         it,
         FfiConverterString.lower(`peerId`),FfiConverterString.lower(`filePath`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Persist a paired peer.
+     */override fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
+        it,
+        FfiConverterString.lower(`peerId`),FfiConverterString.lower(`displayName`),_status)
 }
     }
     

@@ -1241,6 +1241,11 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
     func delete(id: String) throws 
     
     /**
+     * Get all paired peers with their display names.
+     */
+    func getPairedPeers()  -> [String]
+    
+    /**
      * Load all items from storage.
      */
     func load() throws  -> [ClipboardItem]
@@ -1248,9 +1253,19 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
     func migrateFromSwiftdata(swiftdataPath: String) throws  -> UInt64
     
     /**
+     * Remove a paired peer.
+     */
+    func removePairedPeer(peerId: String) 
+    
+    /**
      * Request a file download from a peer.
      */
     func requestFile(peerId: String, filePath: String) 
+    
+    /**
+     * Persist a paired peer.
+     */
+    func savePairedPeer(peerId: String, displayName: String) 
     
     func search(query: String, items: [ClipboardItem], mode: SearchMode)  -> [SearchResult]
     
@@ -1414,6 +1429,17 @@ open func delete(id: String)throws   {try rustCallWithError(FfiConverterTypeCore
 }
     
     /**
+     * Get all paired peers with their display names.
+     */
+open func getPairedPeers() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_get_paired_peers(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
      * Load all items from storage.
      */
 open func load()throws  -> [ClipboardItem]  {
@@ -1434,6 +1460,17 @@ open func migrateFromSwiftdata(swiftdataPath: String)throws  -> UInt64  {
 }
     
     /**
+     * Remove a paired peer.
+     */
+open func removePairedPeer(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
+    /**
      * Request a file download from a peer.
      */
 open func requestFile(peerId: String, filePath: String)  {try! rustCall() {
@@ -1441,6 +1478,18 @@ open func requestFile(peerId: String, filePath: String)  {try! rustCall() {
             self.uniffiCloneHandle(),
         FfiConverterString.lower(peerId),
         FfiConverterString.lower(filePath),$0
+    )
+}
+}
+    
+    /**
+     * Persist a paired peer.
+     */
+open func savePairedPeer(peerId: String, displayName: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(displayName),$0
     )
 }
 }
@@ -2456,13 +2505,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_maccy_core_checksum_method_historymanager_delete() != 58087) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_maccy_core_checksum_method_historymanager_load() != 48972) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer() != 4944) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_search() != 8895) {

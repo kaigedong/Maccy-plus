@@ -8,16 +8,21 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
   var connectedAt: Date
   var isConnected: Bool
 
+  /// Load paired devices from Rust core (SQLite), not UserDefaults.
   static var all: [PairedDeviceInfo] {
-    get {
-      guard let data = UserDefaults.standard.data(forKey: "syncPairedDeviceInfos"),
-            let infos = try? JSONDecoder().decode([PairedDeviceInfo].self, from: data)
-      else { return [] }
-      return infos
-    }
-    set {
-      let data = try? JSONEncoder().encode(newValue)
-      UserDefaults.standard.set(data, forKey: "syncPairedDeviceInfos")
+    let jsonList = AppState.shared.history.core.getPairedPeers()
+    return jsonList.compactMap { json in
+      guard let data = json.data(using: .utf8),
+            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
+            let peerId = dict["peerId"],
+            let name = dict["displayName"] else { return nil }
+      return PairedDeviceInfo(
+        peerID: peerId,
+        nickname: name,
+        icon: "💻",
+        connectedAt: Date(),
+        isConnected: true
+      )
     }
   }
 }

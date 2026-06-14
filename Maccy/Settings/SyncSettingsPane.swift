@@ -169,8 +169,8 @@ struct SyncSettingsPane: View {
         .controlSize(.small)
       Button("Unpair") {
         SyncBridge.shared.unpair(peerID: device.peerID)
-        pairedDevices.removeAll { $0.peerID == device.peerID }
-        PairedDeviceInfo.all = pairedDevices
+        AppState.shared.history.core.removePairedPeer(peerId: device.peerID)
+        pairedDevices = PairedDeviceInfo.all
       }
       .buttonStyle(.bordered)
       .controlSize(.small)
@@ -191,11 +191,8 @@ struct SyncSettingsPane: View {
       HStack {
         Button("Cancel") { editingDevice = nil }.keyboardShortcut(.cancelAction)
         Button("Save") {
-          if let idx = pairedDevices.firstIndex(where: { $0.peerID == device.peerID }) {
-            pairedDevices[idx].nickname = editingNickname
-            pairedDevices[idx].icon = editingIcon
-            PairedDeviceInfo.all = pairedDevices
-          }
+          AppState.shared.history.core.savePairedPeer(peerId: device.peerID, displayName: editingNickname)
+          pairedDevices = PairedDeviceInfo.all
           editingDevice = nil
         }
         .keyboardShortcut(.defaultAction)
@@ -240,9 +237,9 @@ struct SyncSettingsPane: View {
     guard let peerID = notification.userInfo?["peerID"] as? String,
           let name = notification.userInfo?["displayName"] as? String else { return }
     SyncBridge.shared.recordPeerName(peerID, name)
-    if !discoveredPeers.contains(where: { $0.peerID == peerID }) {
-      discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
-    }
+    // Deduplicate by display name — same device reconnecting gets a new peerID
+    discoveredPeers.removeAll { $0.displayName == name }
+    discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
   }
 
   private func handlePeerLost(_ notification: NotificationCenter.Publisher.Output) {
