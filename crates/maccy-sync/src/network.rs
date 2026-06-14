@@ -5,21 +5,27 @@ use futures::StreamExt;
 use libp2p::gossipsub::{self, IdentTopic, MessageAuthenticity, MessageId};
 use libp2p::identity::Keypair;
 use libp2p::mdns;
+use libp2p::request_response::{self, ProtocolSupport};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{PeerId, SwarmBuilder};
+use std::fs;
+use std::io::Read;
 use tokio::sync::mpsc;
+
 
 use crate::error::ErrorCode;
 use crate::state::{SharedState, SyncCommand};
 use crate::types::*;
 
 const PAIRING_TOPIC: &str = "maccy-sync-pairing-v1";
+const CHUNK_SIZE: u64 = 1024 * 1024; // 1 MiB chunks
 
 #[derive(NetworkBehaviour)]
 pub struct MaccyBehaviour {
     pub mdns: mdns::tokio::Behaviour,
     pub gossipsub: gossipsub::Behaviour,
     pub identify: libp2p::identify::Behaviour,
+    pub file_transfer: request_response::cbor::Behaviour<FileRequest, FileChunk>,
 }
 
 pub struct NetworkManager {
@@ -95,10 +101,19 @@ impl NetworkManager {
             )),
         );
 
+        let file_transfer = request_response::cbor::Behaviour::new(
+            [(
+                libp2p::StreamProtocol::new(FILE_TRANSFER_PROTOCOL),
+                ProtocolSupport::Full,
+            )],
+            request_response::Config::default(),
+        );
+
         let behaviour = MaccyBehaviour {
             mdns: mdns_behaviour,
             gossipsub: gossipsub_behaviour,
             identify,
+            file_transfer,
         };
 
         let swarm = SwarmBuilder::with_existing_identity(local_key)
@@ -281,6 +296,24 @@ impl NetworkManager {
             SwarmEvent::ListenerError { error, .. } => {
                 log::error!("Listener error: {:?}", error);
             }
+
+            // ── File transfer ────────────────────────────────
+            SwarmEvent::Behaviour(MaccyBehaviourEvent::FileTransfer(
+                request_response::Event::Message { peer, message, .. },
+            )) => {
+                self.handle_file_transfer_message(peer, message);
+            }
+            SwarmEvent::Behaviour(MaccyBehaviourEvent::FileTransfer(
+                request_response::Event::OutboundFailure { peer, request_id, error, .. },
+            )) => {
+                log::error!("File transfer outbound failure to {}: {:?}", peer, error);
+                self.state_emit(SyncEvent::FileDownloadComplete {
+                    request_id: request_id.to_string(),
+                    file_path: String::new(),
+                    success: false,
+                });
+            }
+
             _ => {}
         }
     }
@@ -331,6 +364,66 @@ impl NetworkManager {
                     peer_id: peer.to_string(),
                     success: false,
                 });
+            }
+        }
+    }
+
+    // ── File transfer ────────────────────────────────────────────
+
+    fn handle_file_transfer_message(
+        &mut self,
+        peer: PeerId,
+        msg: request_response::Message<FileRequest, FileChunk>,
+    ) {
+        match msg {
+            request_response::Message::Request { request_id, request, channel } => {
+                log::info!("File request from {}: {}", peer, request.file_path);
+                self.send_file_chunks(channel, &request);
+            }
+            request_response::Message::Response { request_id, response } => {
+                self.state_emit(SyncEvent::FileChunkReceived {
+                    request_id: request_id.to_string(),
+                    file_name: response.file_name,
+                    file_size: response.file_size,
+                    chunk_index: response.chunk_index,
+                    total_chunks: response.total_chunks,
+                    data: response.data,
+                });
+            }
+        }
+    }
+
+    fn send_file_chunks(&mut self, channel: request_response::ResponseChannel<FileChunk>, req: &FileRequest) {
+        let path = &req.file_path;
+        match std::fs::read(path) {
+            Ok(data) => {
+                let name = std::path::Path::new(path)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                let size = data.len() as u64;
+                log::info!("Sending file '{}' ({:.1} KiB)", name, size as f64 / 1024.0);
+                let chunk = FileChunk {
+                    request_id: req.request_id.clone(),
+                    file_name: name,
+                    file_size: size,
+                    chunk_index: 0,
+                    total_chunks: 1,
+                    data,
+                };
+                let _ = self.swarm.behaviour_mut().file_transfer.send_response(channel, chunk);
+            }
+            Err(e) => {
+                log::error!("File not found {}: {}", path, e);
+                let chunk = FileChunk {
+                    request_id: req.request_id.clone(),
+                    file_name: String::new(),
+                    file_size: 0,
+                    chunk_index: 0,
+                    total_chunks: 0,
+                    data: vec![],
+                };
+                let _ = self.swarm.behaviour_mut().file_transfer.send_response(channel, chunk);
             }
         }
     }
@@ -432,6 +525,12 @@ impl NetworkManager {
             SyncCommand::Unpair { peer_id } => {
                 if let Ok(peer) = peer_id.parse::<PeerId>() {
                     self.paired_peers.remove(&peer);
+                }
+            }
+            SyncCommand::SendFileChunk { peer_id, request_id, file_path, offset } => {
+                if let Ok(peer) = peer_id.parse::<PeerId>() {
+                    let request = FileRequest { request_id, file_path, offset };
+                    let _ = self.swarm.behaviour_mut().file_transfer.send_request(&peer, request);
                 }
             }
             _ => {}

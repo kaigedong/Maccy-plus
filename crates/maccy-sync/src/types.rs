@@ -88,6 +88,12 @@ pub enum SyncEvent {
     Error { code: i32, message: String },
     #[serde(rename = "listening")]
     Listening { address: String },
+    #[serde(rename = "file_request")]
+    FileRequestReceived { peer_id: String, request_id: String, file_path: String, offset: u64 },
+    #[serde(rename = "file_chunk")]
+    FileChunkReceived { request_id: String, file_name: String, file_size: u64, chunk_index: u32, total_chunks: u32, data: Vec<u8> },
+    #[serde(rename = "file_complete")]
+    FileDownloadComplete { request_id: String, file_path: String, success: bool },
 }
 
 /// Gossipsub topic name.
@@ -101,3 +107,35 @@ pub const BULK_SYNC_PROTOCOL: &str = "/maccy-sync/bulk/1";
 
 /// Fixed listen port for reliable reconnection.
 pub const LISTEN_PORT: u16 = 31774;
+
+// ── File transfer ─────────────────────────────────────────────────
+
+/// Protocol name for file transfer request-response.
+pub const FILE_TRANSFER_PROTOCOL: &str = "/maccy-sync/file/1";
+
+/// Metadata extracted from a file clipboard item.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileInfo {
+    pub path: String,
+    pub name: String,
+    pub size: u64,
+}
+
+/// Request to download a file chunk from a peer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileRequest {
+    pub request_id: String,
+    pub file_path: String,
+    pub offset: u64,
+}
+
+/// Response containing a chunk of file data.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileChunk {
+    pub request_id: String,
+    pub file_name: String,
+    pub file_size: u64,
+    pub chunk_index: u32,
+    pub total_chunks: u32,
+    pub data: Vec<u8>,
+}

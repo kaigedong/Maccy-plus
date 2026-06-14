@@ -623,6 +623,16 @@ public protocol ClipboardObserver: AnyObject, Sendable {
      */
     func onError(code: Int32, message: String) 
     
+    /**
+     * A file chunk was received (append to local temp file).
+     */
+    func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data) 
+    
+    /**
+     * File download completed (or failed).
+     */
+    func onFileDownloadComplete(requestId: String, filePath: String, success: Bool) 
+    
 }
 /**
  * Callback interface that platforms implement to receive sync events.
@@ -783,6 +793,35 @@ open func onError(code: Int32, message: String)  {try! rustCall() {
             self.uniffiCloneHandle(),
         FfiConverterInt32.lower(code),
         FfiConverterString.lower(message),$0
+    )
+}
+}
+    
+    /**
+     * A file chunk was received (append to local temp file).
+     */
+open func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(requestId),
+        FfiConverterString.lower(fileName),
+        FfiConverterInt64.lower(fileSize),
+        FfiConverterInt32.lower(chunkIndex),
+        FfiConverterInt32.lower(totalChunks),
+        FfiConverterData.lower(data),$0
+    )
+}
+}
+    
+    /**
+     * File download completed (or failed).
+     */
+open func onFileDownloadComplete(requestId: String, filePath: String, success: Bool)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(requestId),
+        FfiConverterString.lower(filePath),
+        FfiConverterBool.lower(success),$0
     )
 }
 }
@@ -1044,6 +1083,68 @@ fileprivate struct UniffiCallbackInterfaceClipboardObserver {
                 makeCall: makeCall,
                 writeReturn: writeReturn
             )
+        },
+        onFileChunk: { (
+            uniffiHandle: UInt64,
+            requestId: RustBuffer,
+            fileName: RustBuffer,
+            fileSize: Int64,
+            chunkIndex: Int32,
+            totalChunks: Int32,
+            data: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onFileChunk(
+                     requestId: try FfiConverterString.lift(requestId),
+                     fileName: try FfiConverterString.lift(fileName),
+                     fileSize: try FfiConverterInt64.lift(fileSize),
+                     chunkIndex: try FfiConverterInt32.lift(chunkIndex),
+                     totalChunks: try FfiConverterInt32.lift(totalChunks),
+                     data: try FfiConverterData.lift(data)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        onFileDownloadComplete: { (
+            uniffiHandle: UInt64,
+            requestId: RustBuffer,
+            filePath: RustBuffer,
+            success: Int8,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.onFileDownloadComplete(
+                     requestId: try FfiConverterString.lift(requestId),
+                     filePath: try FfiConverterString.lift(filePath),
+                     success: try FfiConverterBool.lift(success)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
         }
     )
 
@@ -1145,6 +1246,11 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
     func load() throws  -> [ClipboardItem]
     
     func migrateFromSwiftdata(swiftdataPath: String) throws  -> UInt64
+    
+    /**
+     * Request a file download from a peer.
+     */
+    func requestFile(peerId: String, filePath: String) 
     
     func search(query: String, items: [ClipboardItem], mode: SearchMode)  -> [SearchResult]
     
@@ -1325,6 +1431,18 @@ open func migrateFromSwiftdata(swiftdataPath: String)throws  -> UInt64  {
         FfiConverterString.lower(swiftdataPath),$0
     )
 })
+}
+    
+    /**
+     * Request a file download from a peer.
+     */
+open func requestFile(peerId: String, filePath: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_request_file(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(filePath),$0
+    )
+}
 }
     
 open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult]  {
@@ -1857,13 +1975,13 @@ public enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedErr
 
     
     
-    case Storage(message: String
+    case Storage(msg: String
     )
     case NotFound(id: String
     )
-    case InvalidArg(message: String
+    case InvalidArg(msg: String
     )
-    case Sync(message: String
+    case Sync(msg: String
     )
 
     
@@ -1895,16 +2013,16 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
 
         
         case 1: return .Storage(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 2: return .NotFound(
             id: try FfiConverterString.read(from: &buf)
             )
         case 3: return .InvalidArg(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
         case 4: return .Sync(
-            message: try FfiConverterString.read(from: &buf)
+            msg: try FfiConverterString.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -1918,9 +2036,9 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
 
         
         
-        case let .Storage(message):
+        case let .Storage(msg):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
         case let .NotFound(id):
@@ -1928,14 +2046,14 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
             FfiConverterString.write(id, into: &buf)
             
         
-        case let .InvalidArg(message):
+        case let .InvalidArg(msg):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         
-        case let .Sync(message):
+        case let .Sync(msg):
             writeInt(&buf, Int32(4))
-            FfiConverterString.write(message, into: &buf)
+            FfiConverterString.write(msg, into: &buf)
             
         }
     }
@@ -2344,6 +2462,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_maccy_core_checksum_method_historymanager_search() != 8895) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2420,6 +2541,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_clipboardobserver_on_error() != 6485) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk() != 45171) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete() != 27812) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_constructor_historymanager_new() != 54344) {

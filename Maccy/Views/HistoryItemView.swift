@@ -66,6 +66,19 @@ struct HistoryItemView: View {
       // Copy & Delete buttons (show on hover)
       if isHovered && item.isVisible {
         HStack(spacing: 2) {
+          if item.isFile, item.isRemote {
+            ActionIconButton(
+              icon: "icloud.and.arrow.down",
+              isDark: item.isSelected,
+              tooltip: "Download file"
+            ) {
+              SyncBridge.shared.requestFile(
+                peerId: item.item.syncSource!,
+                filePath: item.title
+              )
+            }
+          }
+
           ActionIconButton(
             icon: "doc.on.doc",
             isDark: item.isSelected,
@@ -148,6 +161,17 @@ struct HistoryItemView: View {
         Text(item.isPinned
               ? String(localized: "unpin", table: "Localizable")
               : String(localized: "pin", table: "Localizable"))
+      }
+
+      if item.isFile, item.isRemote, let path = item.fileName {
+        Button {
+          SyncBridge.shared.requestFile(
+            peerId: item.item.syncSource!,
+            filePath: item.title
+          )
+        } label: {
+          Text("Download \(path)")
+        }
       }
 
       Button {

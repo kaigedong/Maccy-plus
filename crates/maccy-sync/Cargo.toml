@@ -10,7 +10,7 @@ crate-type = ["lib", "staticlib"]
 [dependencies]
 libp2p = { version = "0.56", features = [
     "tokio", "mdns", "gossipsub", "noise", "tcp", "yamux",
-    "identify", "macros", "ed25519"
+    "identify", "macros", "ed25519", "request-response", "cbor"
 ] }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "time", "io-util"] }
 serde = { version = "1", features = ["derive"] }

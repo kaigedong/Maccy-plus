@@ -38,4 +38,12 @@ pub trait ClipboardObserver: Send + Sync + std::fmt::Debug {
 
     /// An error occurred in the sync engine.
     fn on_error(&self, code: i32, message: String);
+
+    // ── File transfer ─────────────────────────────────────────
+
+    /// A file chunk was received (append to local temp file).
+    fn on_file_chunk(&self, request_id: String, file_name: String, file_size: i64, chunk_index: i32, total_chunks: i32, data: Vec<u8>);
+
+    /// File download completed (or failed).
+    fn on_file_download_complete(&self, request_id: String, file_path: String, success: bool);
 }

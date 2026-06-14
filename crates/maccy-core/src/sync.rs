@@ -72,6 +72,15 @@ impl SyncEngine {
                         SyncEvent::Error { code, message } => {
                             obs.on_error(code, message);
                         }
+                        SyncEvent::FileRequestReceived { .. } => {
+                            // Handled by NetworkManager internally
+                        }
+                        SyncEvent::FileChunkReceived { request_id, file_name, file_size, chunk_index, total_chunks, data } => {
+                            obs.on_file_chunk(request_id, file_name, file_size as i64, chunk_index as i32, total_chunks as i32, data);
+                        }
+                        SyncEvent::FileDownloadComplete { request_id, file_path, success } => {
+                            obs.on_file_download_complete(request_id, file_path, success);
+                        }
                     }
                 }
             }));
@@ -157,7 +166,19 @@ impl SyncEngine {
         let _ = self.command_tx.send(SyncCommand::BroadcastUpdate { item_json: json });
     }
 
-    // ── Serialization (canonical — platforms don't duplicate this) ─
+    // ── File transfer ────────────────────────────────────────────
+
+    pub fn request_file(&self, peer_id: &str, file_path: &str) {
+        let request_id = uuid::Uuid::new_v4().to_string();
+        let _ = self.command_tx.send(SyncCommand::SendFileChunk {
+            peer_id: peer_id.to_string(),
+            request_id,
+            file_path: file_path.to_string(),
+            offset: 0,
+        });
+    }
+
+    // ── Serialization ────────────────────────────────────────────
 
     fn serialize_item(item: &ClipboardItem) -> String {
         let sync_item = maccy_sync::SyncItem {

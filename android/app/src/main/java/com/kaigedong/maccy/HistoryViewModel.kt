@@ -96,6 +96,14 @@ class HistoryViewModel : ViewModel() {
             onErrorCb = { code, message ->
                 LogManager.e("Sync", "Error $code: $message")
                 _syncError.value = "Sync error: $message"
+            },
+            onFileChunkCb = { requestId, fileName, fileSize, chunkIndex, totalChunks, data ->
+                LogManager.d("FileTransfer", "Chunk $chunkIndex/$totalChunks of $fileName")
+                FileDownloadManager.receiveChunk(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
+            },
+            onFileDownloadCompleteCb = { requestId, filePath, success ->
+                LogManager.i("FileTransfer", "Download complete: $filePath success=$success")
+                FileDownloadManager.complete(requestId, filePath, success)
             }
         )
 
@@ -135,6 +143,11 @@ class HistoryViewModel : ViewModel() {
     fun unpair(peerId: String) {
         core?.syncUnpair(peerId)
         LogManager.i("Sync", "Unpaired: $peerId")
+    }
+
+    fun requestFile(peerId: String, filePath: String) {
+        core?.requestFile(peerId, filePath)
+        LogManager.i("FileTransfer", "Requesting file: $filePath from $peerId")
     }
 
     fun addPeerAddress(address: String) {
@@ -255,6 +268,8 @@ class MaccyClipboardObserver(
     private val onPairingCompleteCb: (peerId: String, success: Boolean) -> Unit,
     private val onListeningCb: (String) -> Unit,
     private val onErrorCb: (code: Int, message: String) -> Unit,
+    private val onFileChunkCb: (requestId: String, fileName: String, fileSize: Long, chunkIndex: Int, totalChunks: Int, data: ByteArray) -> Unit,
+    private val onFileDownloadCompleteCb: (requestId: String, filePath: String, success: Boolean) -> Unit,
 ) : ClipboardObserver {
     override fun onItemReceived(item: ClipboardItem) = onItemReceivedCb(item)
     override fun onItemDeleted(itemId: String) = onItemDeletedCb(itemId)
@@ -267,4 +282,8 @@ class MaccyClipboardObserver(
     override fun onPairingComplete(peerId: String, success: Boolean) = onPairingCompleteCb(peerId, success)
     override fun onListening(address: String) = onListeningCb(address)
     override fun onError(code: Int, message: String) = onErrorCb(code, message)
+    override fun onFileChunk(requestId: String, fileName: String, fileSize: Long, chunkIndex: Int, totalChunks: Int, data: ByteArray) =
+        onFileChunkCb(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
+    override fun onFileDownloadComplete(requestId: String, filePath: String, success: Boolean) =
+        onFileDownloadCompleteCb(requestId, filePath, success)
 }

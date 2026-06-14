@@ -223,6 +223,17 @@ impl HistoryManager {
             if let Some(ref e) = *guard { e.broadcast_update(&item); }
         }
     }
+
+    // ── File transfer ─────────────────────────────────────────
+
+    /// Request a file download from a peer.
+    pub fn request_file(&self, peer_id: String, file_path: String) {
+        if let Ok(guard) = self.sync_engine.lock() {
+            if let Some(ref e) = *guard {
+                e.request_file(&peer_id, &file_path);
+            }
+        }
+    }
 }
 
 // ── Deduplication ─────────────────────────────────────────────────
