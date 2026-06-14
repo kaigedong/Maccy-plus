@@ -260,7 +260,7 @@ class ClipboardTests: XCTestCase {
         let hookExpectation = expectation(description: "Hook is called")
         clipboard.onNewCopy { (item: HistoryItem) in
             XCTAssertEqual(
-                Set(item.contents.map { $0.type }),
+                Set(item.contents.map(\.type)),
                 Set([self.tiffType.rawValue, self.stringType.rawValue])
             )
             hookExpectation.fulfill()
@@ -283,7 +283,7 @@ class ClipboardTests: XCTestCase {
 
         let hookExpectation = expectation(description: "Hook is called")
         clipboard.onNewCopy { (item: HistoryItem) in
-            XCTAssertEqual(item.contents.map { $0.type }, [self.fileURLType.rawValue])
+            XCTAssertEqual(item.contents.map(\.type), [self.fileURLType.rawValue])
             hookExpectation.fulfill()
         }
 
@@ -302,7 +302,7 @@ class ClipboardTests: XCTestCase {
     func testRemovesDynamicTypes() throws {
         let hookExpectation = expectation(description: "Hook is called")
         clipboard.onNewCopy { (item: HistoryItem) in
-            XCTAssertEqual(item.contents.map { $0.type }, [self.stringType.rawValue])
+            XCTAssertEqual(item.contents.map(\.type), [self.stringType.rawValue])
             hookExpectation.fulfill()
         }
 

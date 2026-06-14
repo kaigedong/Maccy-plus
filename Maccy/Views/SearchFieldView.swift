@@ -44,7 +44,7 @@ struct SearchFieldView: View {
 }
 
 #Preview {
-    return List {
+    List {
         SearchFieldView(placeholder: "search_placeholder", query: .constant(""))
         SearchFieldView(placeholder: "search_placeholder", query: .constant("search"))
     }

@@ -8,19 +8,19 @@ struct Selection<Item: Equatable> {
     }
 
     var isEmpty: Bool {
-        return items.isEmpty
+        items.isEmpty
     }
 
     var count: Int {
-        return items.count
+        items.count
     }
 
     var first: Item? {
-        return items.first
+        items.first
     }
 
     func first(where condition: (Item) -> Bool) -> Item? {
-        return items.first(where: condition)
+        items.first(where: condition)
     }
 
     func forEach(_ body: (Int, Item) throws -> Void) rethrows {

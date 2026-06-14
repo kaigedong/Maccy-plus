@@ -42,7 +42,7 @@ class HistoryItem {
         let descriptor = FetchDescriptor<HistoryItem>(
             predicate: #Predicate { $0.pin != nil }
         )
-        let pins = try? Storage.shared.context.fetch(descriptor).compactMap { $0.pin }
+        let pins = try? Storage.shared.context.fetch(descriptor).compactMap(\.pin)
         let assignedPins = Set(pins ?? [])
         return Array(supportedPins.subtracting(assignedPins))
     }
@@ -86,7 +86,7 @@ class HistoryItem {
     }
 
     func supersedes(_ item: HistoryItem) -> Bool {
-        return item.contents
+        item.contents
             .filter { content in
                 !Self.transientTypes.contains(content.type)
             }
@@ -126,13 +126,13 @@ class HistoryItem {
     var previewableText: String {
         if !fileURLs.isEmpty {
             fileURLs
-                .compactMap { $0.absoluteString.removingPercentEncoding }
+                .compactMap(\.absoluteString.removingPercentEncoding)
                 .joined(separator: "\n")
-        } else if let text = text, !text.isEmpty {
+        } else if let text, !text.isEmpty {
             text
-        } else if let rtf = rtf, !rtf.string.isEmpty {
+        } else if let rtf, !rtf.string.isEmpty {
             rtf.string
-        } else if let html = html, !html.string.isEmpty {
+        } else if let html, !html.string.isEmpty {
             html.string
         } else {
             title
@@ -233,9 +233,9 @@ class HistoryItem {
     }
 
     private func allContentData(_ types: [NSPasteboard.PasteboardType]) -> [Data] {
-        return contents
+        contents
             .filter { types.contains(NSPasteboard.PasteboardType($0.type)) }
-            .compactMap { $0.value }
+            .compactMap(\.value)
     }
 
     private func performTextRecognition() {

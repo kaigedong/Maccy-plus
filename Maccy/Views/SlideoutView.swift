@@ -33,19 +33,19 @@ struct SlideoutView<Content: View, Slideout: View>: View {
     @ViewBuilder var slideout: () -> Slideout
 
     var leftToRight: Bool {
-        return controller.placement == .right
+        controller.placement == .right
     }
 
     var isAnimating: Bool {
-        return controller.state.isAnimating
+        controller.state.isAnimating
     }
 
     var isContentResizing: Bool {
-        return controller.resizingMode == .content
+        controller.resizingMode == .content
     }
 
     var isSlideoutResizing: Bool {
-        return controller.resizingMode == .slideout
+        controller.resizingMode == .slideout
     }
 
     private func resizeDivider() -> some View {

@@ -123,7 +123,7 @@ struct GeneralSettingsPane: View {
             }
 
             Settings.Section(title: "") {
-                if let notificationsURL = notificationsURL {
+                if let notificationsURL {
                     Link(destination: notificationsURL, label: {
                         Text("NotificationsAndSounds", tableName: "GeneralSettings")
                     })

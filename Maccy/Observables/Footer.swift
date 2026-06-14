@@ -18,11 +18,11 @@ class Footer: ItemsContainer {
     )
 
     private var showFooter: Bool {
-        return Defaults[.showFooter]
+        Defaults[.showFooter]
     }
 
     var containerVisible: Bool {
-        return showFooter
+        showFooter
     }
 
     init() { // swiftlint:disable:this function_body_length

@@ -10,7 +10,7 @@ class FooterItem: Equatable, Identifiable, HasVisibility {
     }
 
     static func == (lhs: FooterItem, rhs: FooterItem) -> Bool {
-        return lhs.id == rhs.id
+        lhs.id == rhs.id
     }
 
     let id = UUID()

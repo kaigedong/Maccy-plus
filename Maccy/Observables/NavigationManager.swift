@@ -44,12 +44,12 @@ class NavigationManager { // swiftlint:disable:this type_body_length
     }
 
     var pasteStackSelected: Bool {
-        return leadSelection != nil && leadSelection == history.pasteStack?.id
+        leadSelection != nil && leadSelection == history.pasteStack?.id
     }
 
     var isManualMultiSelect: Bool = false
     var isMultiSelectInProgress: Bool {
-        return isManualMultiSelect || selection.count > 1
+        isManualMultiSelect || selection.count > 1
     }
 
     var hoverSelectionWhileKeyboardNavigating: UUID?
@@ -155,9 +155,9 @@ class NavigationManager { // swiftlint:disable:this type_body_length
         item: HistoryItemDecorator? = nil,
         footerItem: FooterItem? = nil
     ) {
-        if let item = item {
+        if let item {
             selectInHistory(item)
-        } else if let footerItem = footerItem {
+        } else if let footerItem {
             selectInFooter(footerItem)
         } else {
             leadHistoryItem = nil

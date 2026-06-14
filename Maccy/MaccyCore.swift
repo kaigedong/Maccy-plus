@@ -112,17 +112,17 @@ private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: 
 
 /// Reads a float at the current offset.
 private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
-    return try Float(bitPattern: readInt(&reader))
+    try Float(bitPattern: readInt(&reader))
 }
 
 /// Reads a float at the current offset.
 private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
-    return try Double(bitPattern: readInt(&reader))
+    try Double(bitPattern: readInt(&reader))
 }
 
 /// Indicates if the offset has reached the end of the buffer.
 private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
-    return reader.offset < reader.data.count
+    reader.offset < reader.data.count
 }
 
 // Define writer functionality.  Normally this would be defined in a class or
@@ -130,10 +130,10 @@ private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
 // types work.  See the above discussion on Readers for details.
 
 private func createWriter() -> [UInt8] {
-    return []
+    []
 }
 
-private func writeBytes<S: Sequence>(_ writer: inout [UInt8], _ byteArr: S) where S.Element == UInt8 {
+private func writeBytes(_ writer: inout [UInt8], _ byteArr: some Sequence<UInt8>) {
     writer.append(contentsOf: byteArr)
 }
 
@@ -141,7 +141,7 @@ private func writeBytes<S: Sequence>(_ writer: inout [UInt8], _ byteArr: S) wher
 ///
 /// Warning: make sure what you are trying to write
 /// is in the correct type!
-private func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
+private func writeInt(_ writer: inout [UInt8], _ value: some FixedWidthInteger) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
 }
@@ -174,14 +174,14 @@ extension FfiConverterPrimitive {
         @_documentation(visibility: private)
     #endif
     public static func lift(_ value: FfiType) throws -> SwiftType {
-        return value
+        value
     }
 
     #if swift(>=5.8)
         @_documentation(visibility: private)
     #endif
     public static func lower(_ value: SwiftType) -> FfiType {
-        return value
+        value
     }
 }
 
@@ -228,15 +228,15 @@ private enum UniffiInternalError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
-        case .incompleteData: return "The buffer still has data after lifting its containing value"
-        case .unexpectedOptionalTag: return "Unexpected optional tag; should be 0 or 1"
-        case .unexpectedEnumCase: return "Raw enum value doesn't match any cases"
-        case .unexpectedNullPointer: return "Raw pointer value was null"
-        case .unexpectedRustCallStatusCode: return "Unexpected RustCallStatus code"
-        case .unexpectedRustCallError: return "CALL_ERROR but no errorClass specified"
-        case .unexpectedStaleHandle: return "The object in the handle map has been dropped already"
-        case let .rustPanic(message): return message
+        case .bufferOverflow: "Reading the requested value would read past the end of the buffer"
+        case .incompleteData: "The buffer still has data after lifting its containing value"
+        case .unexpectedOptionalTag: "Unexpected optional tag; should be 0 or 1"
+        case .unexpectedEnumCase: "Raw enum value doesn't match any cases"
+        case .unexpectedNullPointer: "Raw pointer value was null"
+        case .unexpectedRustCallStatusCode: "Unexpected RustCallStatus code"
+        case .unexpectedRustCallError: "CALL_ERROR but no errorClass specified"
+        case .unexpectedStaleHandle: "The object in the handle map has been dropped already"
+        case let .rustPanic(message): message
         }
     }
 }
@@ -272,16 +272,16 @@ private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
     return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private func rustCallWithError<T, E: Swift.Error>(
-    _ errorHandler: @escaping (RustBuffer) throws -> E,
+private func rustCallWithError<T>(
+    _ errorHandler: @escaping (RustBuffer) throws -> some Swift.Error,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
 ) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T, E: Swift.Error>(
+private func makeRustCall<T>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
-    errorHandler: ((RustBuffer) throws -> E)?
+    errorHandler: ((RustBuffer) throws -> some Swift.Error)?
 ) throws -> T {
     uniffiEnsureMaccyCoreInitialized()
     var callStatus = RustCallStatus()
@@ -290,16 +290,16 @@ private func makeRustCall<T, E: Swift.Error>(
     return returnedVal
 }
 
-private func uniffiCheckCallStatus<E: Swift.Error>(
+private func uniffiCheckCallStatus(
     callStatus: RustCallStatus,
-    errorHandler: ((RustBuffer) throws -> E)?
+    errorHandler: ((RustBuffer) throws -> some Swift.Error)?
 ) throws {
     switch callStatus.code {
     case CALL_SUCCESS:
         return
 
     case CALL_ERROR:
-        if let errorHandler = errorHandler {
+        if let errorHandler {
             throw try errorHandler(callStatus.errorBuf)
         } else {
             callStatus.errorBuf.deallocate()
@@ -430,7 +430,7 @@ private struct FfiConverterInt32: FfiConverterPrimitive {
     typealias SwiftType = Int32
 
     static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
-        return try lift(readInt(&buf))
+        try lift(readInt(&buf))
     }
 
     static func write(_ value: Int32, into buf: inout [UInt8]) {
@@ -446,7 +446,7 @@ private struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias SwiftType = UInt64
 
     static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
-        return try lift(readInt(&buf))
+        try lift(readInt(&buf))
     }
 
     static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -462,7 +462,7 @@ private struct FfiConverterInt64: FfiConverterPrimitive {
     typealias SwiftType = Int64
 
     static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
-        return try lift(readInt(&buf))
+        try lift(readInt(&buf))
     }
 
     static func write(_ value: Int64, into buf: inout [UInt8]) {
@@ -478,7 +478,7 @@ private struct FfiConverterDouble: FfiConverterPrimitive {
     typealias SwiftType = Double
 
     static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
-        return try lift(readDouble(&buf))
+        try lift(readDouble(&buf))
     }
 
     static func write(_ value: Double, into buf: inout [UInt8]) {
@@ -494,15 +494,15 @@ private struct FfiConverterBool: FfiConverter {
     typealias SwiftType = Bool
 
     static func lift(_ value: Int8) throws -> Bool {
-        return value != 0
+        value != 0
     }
 
     static func lower(_ value: Bool) -> Int8 {
-        return value ? 1 : 0
+        value ? 1 : 0
     }
 
     static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
-        return try lift(readInt(&buf))
+        try lift(readInt(&buf))
     }
 
     static func write(_ value: Bool, into buf: inout [UInt8]) {
@@ -529,7 +529,7 @@ private struct FfiConverterString: FfiConverter {
     }
 
     static func lower(_ value: String) -> RustBuffer {
-        return value.utf8CString.withUnsafeBufferPointer { ptr in
+        value.utf8CString.withUnsafeBufferPointer { ptr in
             // The swift string gives us int8_t, we want uint8_t.
             ptr.withMemoryRebound(to: UInt8.self) { ptr in
                 // The swift string gives us a trailing null byte, we don't want it.
@@ -671,7 +671,7 @@ open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
         @_documentation(visibility: private)
     #endif
     public func uniffiCloneHandle() -> UInt64 {
-        return try! rustCall { uniffi_maccy_core_fn_clone_clipboardobserver(self.handle, $0) }
+        try! rustCall { uniffi_maccy_core_fn_clone_clipboardobserver(self.handle, $0) }
     }
 
     // No primary constructor declared for this class.
@@ -1162,20 +1162,20 @@ public struct FfiConverterTypeClipboardObserver: FfiConverter {
         if (handle & 1) == 0 {
             // Rust-generated handle, construct a new class that uses the handle to implement the
             // interface
-            return ClipboardObserverImpl(unsafeFromHandle: handle)
+            ClipboardObserverImpl(unsafeFromHandle: handle)
         } else {
             // Swift-generated handle, get the object from the handle map
-            return try handleMap.remove(handle: handle)
+            try handleMap.remove(handle: handle)
         }
     }
 
     public static func lower(_ value: ClipboardObserver) -> UInt64 {
         if let rustImpl = value as? ClipboardObserverImpl {
             // Rust-implemented object.  Clone the handle and return it
-            return rustImpl.uniffiCloneHandle()
+            rustImpl.uniffiCloneHandle()
         } else {
             // Swift object, generate a new vtable handle and return that.
-            return handleMap.insert(obj: value)
+            handleMap.insert(obj: value)
         }
     }
 
@@ -1193,14 +1193,14 @@ public struct FfiConverterTypeClipboardObserver: FfiConverter {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardObserver_lift(_ handle: UInt64) throws -> ClipboardObserver {
-    return try FfiConverterTypeClipboardObserver.lift(handle)
+    try FfiConverterTypeClipboardObserver.lift(handle)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardObserver_lower(_ value: ClipboardObserver) -> UInt64 {
-    return FfiConverterTypeClipboardObserver.lower(value)
+    FfiConverterTypeClipboardObserver.lower(value)
 }
 
 /**
@@ -1344,7 +1344,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
         @_documentation(visibility: private)
     #endif
     public func uniffiCloneHandle() -> UInt64 {
-        return try! rustCall { uniffi_maccy_core_fn_clone_historymanager(self.handle, $0) }
+        try! rustCall { uniffi_maccy_core_fn_clone_historymanager(self.handle, $0) }
     }
 
     public convenience init(dbPath: String) throws {
@@ -1370,7 +1370,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
      * Add a new clipboard item. Handles deduplication and size limiting.
      */
     open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws -> ClipboardItem {
-        return try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_add(
                 self.uniffiCloneHandle(),
                 FfiConverterTypeClipboardItem_lower(item),
@@ -1381,7 +1381,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func clearAll() throws -> UInt64 {
-        return try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_clear_all(
                 self.uniffiCloneHandle(), $0
             )
@@ -1389,7 +1389,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func clearUnpinned() throws -> UInt64 {
-        return try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_clear_unpinned(
                 self.uniffiCloneHandle(), $0
             )
@@ -1397,7 +1397,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func count() throws -> Int64 {
-        return try FfiConverterInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_count(
                 self.uniffiCloneHandle(), $0
             )
@@ -1417,7 +1417,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
      * Get all paired peers with their display names.
      */
     open func getPairedPeers() -> [String] {
-        return try! FfiConverterSequenceString.lift(try! rustCall {
+        try! FfiConverterSequenceString.lift(try! rustCall {
             uniffi_maccy_core_fn_method_historymanager_get_paired_peers(
                 self.uniffiCloneHandle(), $0
             )
@@ -1428,7 +1428,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
      * Load all items from storage.
      */
     open func load() throws -> [ClipboardItem] {
-        return try FfiConverterSequenceTypeClipboardItem.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterSequenceTypeClipboardItem.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_load(
                 self.uniffiCloneHandle(), $0
             )
@@ -1436,7 +1436,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func migrateFromSwiftdata(swiftdataPath: String) throws -> UInt64 {
-        return try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(
                 self.uniffiCloneHandle(),
                 FfiConverterString.lower(swiftdataPath), $0
@@ -1483,7 +1483,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult] {
-        return try! FfiConverterSequenceTypeSearchResult.lift(try! rustCall {
+        try! FfiConverterSequenceTypeSearchResult.lift(try! rustCall {
             uniffi_maccy_core_fn_method_historymanager_search(
                 self.uniffiCloneHandle(),
                 FfiConverterString.lower(query),
@@ -1494,7 +1494,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [ClipboardItem] {
-        return try! FfiConverterSequenceTypeClipboardItem.lift(try! rustCall {
+        try! FfiConverterSequenceTypeClipboardItem.lift(try! rustCall {
             uniffi_maccy_core_fn_method_historymanager_sort(
                 self.uniffiCloneHandle(),
                 FfiConverterSequenceTypeClipboardItem.lower(items),
@@ -1530,7 +1530,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func storageSizeBytes(dbPath: String) -> Int64 {
-        return try! FfiConverterInt64.lift(try! rustCall {
+        try! FfiConverterInt64.lift(try! rustCall {
             uniffi_maccy_core_fn_method_historymanager_storage_size_bytes(
                 self.uniffiCloneHandle(),
                 FfiConverterString.lower(dbPath), $0
@@ -1648,7 +1648,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func togglePin(id: String, availablePins: [String]) throws -> ClipboardItem {
-        return try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_toggle_pin(
                 self.uniffiCloneHandle(),
                 FfiConverterString.lower(id),
@@ -1658,7 +1658,7 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     }
 
     open func updateItemText(id: String, newText: String) throws -> ClipboardItem {
-        return try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
+        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
             uniffi_maccy_core_fn_method_historymanager_update_item_text(
                 self.uniffiCloneHandle(),
                 FfiConverterString.lower(id),
@@ -1676,11 +1676,11 @@ public struct FfiConverterTypeHistoryManager: FfiConverter {
     typealias SwiftType = HistoryManager
 
     public static func lift(_ handle: UInt64) throws -> HistoryManager {
-        return HistoryManager(unsafeFromHandle: handle)
+        HistoryManager(unsafeFromHandle: handle)
     }
 
     public static func lower(_ value: HistoryManager) -> UInt64 {
-        return value.uniffiCloneHandle()
+        value.uniffiCloneHandle()
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HistoryManager {
@@ -1697,14 +1697,14 @@ public struct FfiConverterTypeHistoryManager: FfiConverter {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeHistoryManager_lift(_ handle: UInt64) throws -> HistoryManager {
-    return try FfiConverterTypeHistoryManager.lift(handle)
+    try FfiConverterTypeHistoryManager.lift(handle)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeHistoryManager_lower(_ value: HistoryManager) -> UInt64 {
-    return FfiConverterTypeHistoryManager.lower(value)
+    FfiConverterTypeHistoryManager.lower(value)
 }
 
 /**
@@ -1723,10 +1723,10 @@ public struct ClipboardContent: Equatable, Hashable {
     /// Default memberwise initializers are never public by default, so we
     /// declare one manually.
     public init(
-        /* 
+        /*
          * UTI string like "public.utf8-plain-text", "public.png", etc.
          */ contentType: String,
-        /* 
+        /*
             * Raw bytes of the content value.
             */ value: Data?
     ) {
@@ -1744,11 +1744,10 @@ public struct ClipboardContent: Equatable, Hashable {
 #endif
 public struct FfiConverterTypeClipboardContent: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClipboardContent {
-        return
-            try ClipboardContent(
-                contentType: FfiConverterString.read(from: &buf),
-                value: FfiConverterOptionData.read(from: &buf)
-            )
+        try ClipboardContent(
+            contentType: FfiConverterString.read(from: &buf),
+            value: FfiConverterOptionData.read(from: &buf)
+        )
     }
 
     public static func write(_ value: ClipboardContent, into buf: inout [UInt8]) {
@@ -1761,14 +1760,14 @@ public struct FfiConverterTypeClipboardContent: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardContent_lift(_ buf: RustBuffer) throws -> ClipboardContent {
-    return try FfiConverterTypeClipboardContent.lift(buf)
+    try FfiConverterTypeClipboardContent.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardContent_lower(_ value: ClipboardContent) -> RustBuffer {
-    return FfiConverterTypeClipboardContent.lower(value)
+    FfiConverterTypeClipboardContent.lower(value)
 }
 
 /**
@@ -1802,16 +1801,16 @@ public struct ClipboardItem: Equatable, Hashable {
     /// Default memberwise initializers are never public by default, so we
     /// declare one manually.
     public init(id: String, application: String?,
-                /* 
+                /*
                     * Unix epoch milliseconds
                     */ firstCopiedAt: Int64,
-                /* 
+                /*
                     * Unix epoch milliseconds
                     */ lastCopiedAt: Int64, numberOfCopies: Int32,
-                /* 
+                /*
                     * Pin key character (e.g., "b", "c"), or None if unpinned
                     */ pin: String?, title: String, contents: [ClipboardContent],
-                /* 
+                /*
                     * Unix epoch milliseconds
                     */ syncTimestamp: Int64, syncSource: String?, syncDeleted: Bool)
     {
@@ -1838,20 +1837,19 @@ public struct ClipboardItem: Equatable, Hashable {
 #endif
 public struct FfiConverterTypeClipboardItem: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClipboardItem {
-        return
-            try ClipboardItem(
-                id: FfiConverterString.read(from: &buf),
-                application: FfiConverterOptionString.read(from: &buf),
-                firstCopiedAt: FfiConverterInt64.read(from: &buf),
-                lastCopiedAt: FfiConverterInt64.read(from: &buf),
-                numberOfCopies: FfiConverterInt32.read(from: &buf),
-                pin: FfiConverterOptionString.read(from: &buf),
-                title: FfiConverterString.read(from: &buf),
-                contents: FfiConverterSequenceTypeClipboardContent.read(from: &buf),
-                syncTimestamp: FfiConverterInt64.read(from: &buf),
-                syncSource: FfiConverterOptionString.read(from: &buf),
-                syncDeleted: FfiConverterBool.read(from: &buf)
-            )
+        try ClipboardItem(
+            id: FfiConverterString.read(from: &buf),
+            application: FfiConverterOptionString.read(from: &buf),
+            firstCopiedAt: FfiConverterInt64.read(from: &buf),
+            lastCopiedAt: FfiConverterInt64.read(from: &buf),
+            numberOfCopies: FfiConverterInt32.read(from: &buf),
+            pin: FfiConverterOptionString.read(from: &buf),
+            title: FfiConverterString.read(from: &buf),
+            contents: FfiConverterSequenceTypeClipboardContent.read(from: &buf),
+            syncTimestamp: FfiConverterInt64.read(from: &buf),
+            syncSource: FfiConverterOptionString.read(from: &buf),
+            syncDeleted: FfiConverterBool.read(from: &buf)
+        )
     }
 
     public static func write(_ value: ClipboardItem, into buf: inout [UInt8]) {
@@ -1873,14 +1871,14 @@ public struct FfiConverterTypeClipboardItem: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardItem_lift(_ buf: RustBuffer) throws -> ClipboardItem {
-    return try FfiConverterTypeClipboardItem.lift(buf)
+    try FfiConverterTypeClipboardItem.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardItem_lower(_ value: ClipboardItem) -> RustBuffer {
-    return FfiConverterTypeClipboardItem.lower(value)
+    FfiConverterTypeClipboardItem.lower(value)
 }
 
 /**
@@ -1907,11 +1905,10 @@ public struct MatchRange: Equatable, Hashable {
 #endif
 public struct FfiConverterTypeMatchRange: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatchRange {
-        return
-            try MatchRange(
-                start: FfiConverterInt64.read(from: &buf),
-                end: FfiConverterInt64.read(from: &buf)
-            )
+        try MatchRange(
+            start: FfiConverterInt64.read(from: &buf),
+            end: FfiConverterInt64.read(from: &buf)
+        )
     }
 
     public static func write(_ value: MatchRange, into buf: inout [UInt8]) {
@@ -1924,14 +1921,14 @@ public struct FfiConverterTypeMatchRange: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeMatchRange_lift(_ buf: RustBuffer) throws -> MatchRange {
-    return try FfiConverterTypeMatchRange.lift(buf)
+    try FfiConverterTypeMatchRange.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeMatchRange_lower(_ value: MatchRange) -> RustBuffer {
-    return FfiConverterTypeMatchRange.lower(value)
+    FfiConverterTypeMatchRange.lower(value)
 }
 
 /**
@@ -1951,10 +1948,10 @@ public struct SearchResult: Equatable, Hashable {
     /// Default memberwise initializers are never public by default, so we
     /// declare one manually.
     public init(item: ClipboardItem,
-                /* 
+                /*
                     * Fuzzy match score (lower is better). None for exact/regex matches.
                     */ score: Double?,
-                /* 
+                /*
                     * Character ranges in the title that match the query.
                     */ ranges: [MatchRange])
     {
@@ -1973,12 +1970,11 @@ public struct SearchResult: Equatable, Hashable {
 #endif
 public struct FfiConverterTypeSearchResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SearchResult {
-        return
-            try SearchResult(
-                item: FfiConverterTypeClipboardItem.read(from: &buf),
-                score: FfiConverterOptionDouble.read(from: &buf),
-                ranges: FfiConverterSequenceTypeMatchRange.read(from: &buf)
-            )
+        try SearchResult(
+            item: FfiConverterTypeClipboardItem.read(from: &buf),
+            score: FfiConverterOptionDouble.read(from: &buf),
+            ranges: FfiConverterSequenceTypeMatchRange.read(from: &buf)
+        )
     }
 
     public static func write(_ value: SearchResult, into buf: inout [UInt8]) {
@@ -1992,14 +1988,14 @@ public struct FfiConverterTypeSearchResult: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchResult_lift(_ buf: RustBuffer) throws -> SearchResult {
-    return try FfiConverterTypeSearchResult.lift(buf)
+    try FfiConverterTypeSearchResult.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchResult_lower(_ value: SearchResult) -> RustBuffer {
-    return FfiConverterTypeSearchResult.lower(value)
+    FfiConverterTypeSearchResult.lower(value)
 }
 
 public enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
@@ -2067,14 +2063,14 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeCoreError_lift(_ buf: RustBuffer) throws -> CoreError {
-    return try FfiConverterTypeCoreError.lift(buf)
+    try FfiConverterTypeCoreError.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
-    return FfiConverterTypeCoreError.lower(value)
+    FfiConverterTypeCoreError.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -2133,14 +2129,14 @@ public struct FfiConverterTypeSearchMode: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchMode_lift(_ buf: RustBuffer) throws -> SearchMode {
-    return try FfiConverterTypeSearchMode.lift(buf)
+    try FfiConverterTypeSearchMode.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchMode_lower(_ value: SearchMode) -> RustBuffer {
-    return FfiConverterTypeSearchMode.lower(value)
+    FfiConverterTypeSearchMode.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -2193,14 +2189,14 @@ public struct FfiConverterTypeSortBy: FfiConverterRustBuffer {
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSortBy_lift(_ buf: RustBuffer) throws -> SortBy {
-    return try FfiConverterTypeSortBy.lift(buf)
+    try FfiConverterTypeSortBy.lift(buf)
 }
 
 #if swift(>=5.8)
     @_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSortBy_lower(_ value: SortBy) -> RustBuffer {
-    return FfiConverterTypeSortBy.lower(value)
+    FfiConverterTypeSortBy.lower(value)
 }
 
 #if swift(>=5.8)
@@ -2210,7 +2206,7 @@ private struct FfiConverterOptionDouble: FfiConverterRustBuffer {
     typealias SwiftType = Double?
 
     static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
+        guard let value else {
             writeInt(&buf, Int8(0))
             return
         }
@@ -2234,7 +2230,7 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
     static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
+        guard let value else {
             writeInt(&buf, Int8(0))
             return
         }
@@ -2258,7 +2254,7 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data?
 
     static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
+        guard let value else {
             writeInt(&buf, Int8(0))
             return
         }

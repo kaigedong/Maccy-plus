@@ -26,7 +26,7 @@ struct HistoryListView: View {
     }
 
     private var pinsVisible: Bool {
-        return !pinnedItems.isEmpty
+        !pinnedItems.isEmpty
     }
 
     private var pasteStackVisible: Bool {
@@ -39,11 +39,11 @@ struct HistoryListView: View {
     }
 
     private var topPadding: CGFloat {
-        return Popup.verticalSeparatorPadding
+        Popup.verticalSeparatorPadding
     }
 
     private var bottomPadding: CGFloat {
-        return showFooter
+        showFooter
             ? Popup.verticalSeparatorPadding
             : (Popup.verticalSeparatorPadding - 1)
     }

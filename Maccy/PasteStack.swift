@@ -39,7 +39,7 @@ class PasteStack: Identifiable, Hashable {
     }
 
     static func == (lhs: PasteStack, rhs: PasteStack) -> Bool {
-        return lhs.id == rhs.id
+        lhs.id == rhs.id
             && lhs.items == rhs.items
             && lhs.modifierFlags.rawValue == rhs.modifierFlags.rawValue
     }

@@ -124,11 +124,11 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
     func windowWillResize(_: NSWindow, to frameSize: NSSize) -> NSSize {
         let preview = AppState.shared.preview
 
-        if inLiveResize && preview.resizingMode == .none {
+        if inLiveResize, preview.resizingMode == .none {
             let screenPoint = NSEvent.mouseLocation
             let windowPoint = convertPoint(fromScreen: screenPoint)
             let location: SlideoutPlacement = windowPoint.x <= frame.width / 2 ? .left : .right
-            if (location == preview.placement) && preview.state == .open {
+            if location == preview.placement, preview.state == .open {
                 preview.startResize(mode: .slideout)
             } else {
                 preview.startResize(mode: .content)
@@ -139,8 +139,8 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
         var minContent = preview.minimumContentWidth
         var minPreview = 0.0
 
-        if inLiveResize && preview.resizingMode != .none {
-            if preview.resizingMode == .content && preview.state == .open {
+        if inLiveResize, preview.resizingMode != .none {
+            if preview.resizingMode == .content, preview.state == .open {
                 minPreview = preview.slideoutWidth
             }
             if preview.resizingMode == .slideout {
@@ -208,6 +208,6 @@ class FloatingPanel<Content: View>: NSPanel, NSWindowDelegate {
 
     /// Allow text inputs inside the panel can receive focus
     override var canBecomeKey: Bool {
-        return true
+        true
     }
 }

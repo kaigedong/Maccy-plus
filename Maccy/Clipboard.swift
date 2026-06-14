@@ -343,7 +343,7 @@ class Clipboard {
     // MARK: - Private Helpers
 
     private func shouldIgnore(_ types: Set<NSPasteboard.PasteboardType>) -> Bool {
-        let ignoredTypes = self.ignoredTypes
+        let ignoredTypes = ignoredTypes
             .union(Defaults[.ignoredPasteboardTypes].map { NSPasteboard.PasteboardType($0) })
 
         return types.isDisjoint(with: enabledTypes) ||
@@ -352,9 +352,9 @@ class Clipboard {
 
     private func shouldIgnore(_ sourceAppBundle: String) -> Bool {
         if Defaults[.ignoreAllAppsExceptListed] {
-            return !Defaults[.ignoredApps].contains(sourceAppBundle)
+            !Defaults[.ignoredApps].contains(sourceAppBundle)
         } else {
-            return Defaults[.ignoredApps].contains(sourceAppBundle)
+            Defaults[.ignoredApps].contains(sourceAppBundle)
         }
     }
 

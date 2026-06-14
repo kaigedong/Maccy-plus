@@ -16,13 +16,13 @@ class Search {
         var description: String {
             switch self {
             case .exact:
-                return NSLocalizedString("Exact", tableName: "GeneralSettings", comment: "")
+                NSLocalizedString("Exact", tableName: "GeneralSettings", comment: "")
             case .fuzzy:
-                return NSLocalizedString("Fuzzy", tableName: "GeneralSettings", comment: "")
+                NSLocalizedString("Fuzzy", tableName: "GeneralSettings", comment: "")
             case .regexp:
-                return NSLocalizedString("Regex", tableName: "GeneralSettings", comment: "")
+                NSLocalizedString("Regex", tableName: "GeneralSettings", comment: "")
             case .mixed:
-                return NSLocalizedString("Mixed", tableName: "GeneralSettings", comment: "")
+                NSLocalizedString("Mixed", tableName: "GeneralSettings", comment: "")
             }
         }
     }
@@ -97,7 +97,7 @@ class Search {
         within: [Searchable],
         options: NSString.CompareOptions
     ) -> [SearchResult] {
-        return within.compactMap { simpleSearch(for: string, in: $0.title, of: $0, options: options) }
+        within.compactMap { simpleSearch(for: string, in: $0.title, of: $0, options: options) }
     }
 
     private func simpleSearch(
@@ -107,9 +107,9 @@ class Search {
         options: NSString.CompareOptions
     ) -> SearchResult? {
         if let range = searchString.range(of: string, options: options, range: nil, locale: nil) {
-            return SearchResult(object: item, ranges: [range])
+            SearchResult(object: item, ranges: [range])
         } else {
-            return nil
+            nil
         }
     }
 

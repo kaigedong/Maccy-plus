@@ -73,12 +73,10 @@ enum KeyChord: CaseIterable {
         let modifierFlags = event.modifierFlags
             .intersection(.deviceIndependentFlagsMask)
             .subtracting([.capsLock, .numericPad, .function])
-        var key: Key?
-
-        if KeyboardLayout.current.commandSwitchesToQWERTY, modifierFlags.contains(.command) {
-            key = Key(QWERTYKeyCode: Int(event.keyCode))
+        var key: Key? = if KeyboardLayout.current.commandSwitchesToQWERTY, modifierFlags.contains(.command) {
+            Key(QWERTYKeyCode: Int(event.keyCode))
         } else {
-            key = Sauce.shared.key(for: Int(event.keyCode))
+            Sauce.shared.key(for: Int(event.keyCode))
         }
 
         guard let key else {

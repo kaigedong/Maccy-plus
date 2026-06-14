@@ -7,7 +7,7 @@ import Sauce
 @Observable
 class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
     static func == (lhs: HistoryItemDecorator, rhs: HistoryItemDecorator) -> Bool {
-        return lhs.id == rhs.id
+        lhs.id == rhs.id
     }
 
     static var previewImageSize: NSSize {
@@ -26,7 +26,7 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
     var isVisible: Bool = true
     var selectionIndex: Int = -1
     var isSelected: Bool {
-        return selectionIndex != -1
+        selectionIndex != -1
     }
 
     var shortcuts: [KeyShortcut] = []
@@ -81,7 +81,7 @@ class HistoryItemDecorator: Identifiable, Hashable, HasVisibility {
         guard isFile else { return nil }
         return item.contents
             .first { $0.contentType == NSPasteboard.PasteboardType.fileURL.rawValue }
-            .flatMap { $0.value }
+            .flatMap(\.value)
             .flatMap { URL(dataRepresentation: Data($0), relativeTo: nil, isAbsolute: true) }
             .map { $0.lastPathComponent.removingPercentEncoding ?? $0.lastPathComponent }
     }

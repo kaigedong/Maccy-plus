@@ -11,7 +11,7 @@ struct FooterItemView: View {
             }
         }
         .onHover { hovering in
-            if hovering && appState.preview.state.isOpen {
+            if hovering, appState.preview.state.isOpen {
                 appState.preview.togglePreview()
             }
         }

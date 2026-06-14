@@ -23,7 +23,7 @@ struct ListHeaderView: View {
                 .focused($searchFocused)
                 .frame(maxWidth: .infinity)
                 .onChange(of: scenePhase) {
-                    if scenePhase == .background && !searchQuery.isEmpty {
+                    if scenePhase == .background, !searchQuery.isEmpty {
                         searchQuery = ""
                     }
                 }

@@ -77,7 +77,7 @@ struct PasteStackView: View {
             ForEach(Array(stack.items[..<maxItems].enumerated()), id: \.element.id) { index, element in
                 CollapsedStackItem(maxItems: maxItems, index: index, open: open) {
                     PasteStackItemView(
-                        stack: self.stack,
+                        stack: stack,
                         item: element,
                         index: indexTagFor(index),
                         isSelected: appState.navigator.pasteStackSelected

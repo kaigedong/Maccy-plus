@@ -16,7 +16,7 @@ struct PreviewItemView: View {
                 AsyncView {
                     await item.asyncGetPreviewImage()
                 } content: { image in
-                    if let image = image {
+                    if let image {
                         previewImage {
                             Image(nsImage: image)
                                 .resizable()

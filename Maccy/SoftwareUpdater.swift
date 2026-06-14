@@ -30,7 +30,7 @@ class SoftwareUpdater: NSObject, SPUUpdaterDelegate {
                 return
             }
 
-            self.automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+            automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
         }
     }
 

@@ -94,7 +94,7 @@ class Popup {
 
         var minimumHeight = 0.0
         // If the preview is non-empty make sure the window accomodates for it to be visible.
-        if AppState.shared.preview.state.isOpen && AppState.shared.navigator.leadSelection != nil {
+        if AppState.shared.preview.state.isOpen, AppState.shared.navigator.leadSelection != nil {
             minimumHeight += Self.minimumPreviewHeight
         }
         minimumHeight = max(headerHeight + Self.verticalPadding, minimumHeight)
@@ -125,11 +125,11 @@ class Popup {
     private func handleEvent(_ event: NSEvent) -> NSEvent? {
         switch event.type {
         case .keyDown:
-            return handleKeyDown(event)
+            handleKeyDown(event)
         case .flagsChanged:
-            return handleFlagsChanged(event)
+            handleFlagsChanged(event)
         default:
-            return event
+            event
         }
     }
 
@@ -198,6 +198,6 @@ class Popup {
     }
 
     private func allModifiersReleased(_ event: NSEvent) -> Bool {
-        return event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask)
+        event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask)
     }
 }

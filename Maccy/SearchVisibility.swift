@@ -12,9 +12,9 @@ enum SearchVisibility: String, CaseIterable, Identifiable, CustomStringConvertib
     var description: String {
         switch self {
         case .always:
-            return NSLocalizedString("SearchVisibilityAlways", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("SearchVisibilityAlways", tableName: "AppearanceSettings", comment: "")
         case .duringSearch:
-            return NSLocalizedString("SearchVisibilityDuringSearch", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("SearchVisibilityDuringSearch", tableName: "AppearanceSettings", comment: "")
         }
     }
 }

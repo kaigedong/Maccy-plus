@@ -12,7 +12,7 @@ struct KeyboardShortcutView: View {
     }
 
     var character: String {
-        return shortcut?.description.last?.description ?? ""
+        shortcut?.description.last?.description ?? ""
     }
 
     var body: some View {

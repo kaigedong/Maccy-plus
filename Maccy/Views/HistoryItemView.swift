@@ -64,7 +64,7 @@ struct HistoryItemView: View {
             .animation(.easeInOut(duration: 0.15), value: isHovered)
 
             // Copy & Delete buttons (show on hover)
-            if isHovered && item.isVisible {
+            if isHovered, item.isVisible {
                 HStack(spacing: 2) {
                     if item.isFile, item.isRemote {
                         ActionIconButton(
@@ -126,7 +126,7 @@ struct HistoryItemView: View {
             isHovered = hovering
         }
         .onTapGesture {
-            if NSEvent.modifierFlags.contains(.command) && appState.multiSelectionEnabled {
+            if NSEvent.modifierFlags.contains(.command), appState.multiSelectionEnabled {
                 appState.navigator.addToSelection(item: item)
             } else {
                 Task {

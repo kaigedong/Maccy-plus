@@ -235,7 +235,7 @@ class SearchTests: XCTestCase {
     }
 
     private func search(_ string: String) -> [Search.SearchResult] {
-        return Search().search(string: string, within: items)
+        Search().search(string: string, within: items)
     }
 
     // swiftlint:disable:next identifier_name

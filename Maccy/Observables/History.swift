@@ -327,7 +327,7 @@ class History: ItemsContainer {
     }
 
     private func currentModifierFlags() -> NSEvent.ModifierFlags {
-        return NSApp.currentEvent?.modifierFlags
+        NSApp.currentEvent?.modifierFlags
             .intersection(.deviceIndependentFlagsMask)
             .subtracting([.capsLock, .numericPad, .function]) ?? []
     }
@@ -622,18 +622,18 @@ class History: ItemsContainer {
 
     private func mapSearchMode(_ mode: Search.Mode) -> SearchMode {
         switch mode {
-        case .exact: return .exact
-        case .fuzzy: return .fuzzy
-        case .regexp: return .regexp
-        case .mixed: return .mixed
+        case .exact: .exact
+        case .fuzzy: .fuzzy
+        case .regexp: .regexp
+        case .mixed: .mixed
         }
     }
 
     private func mapSortBy(_ by: Sorter.By) -> SortBy {
         switch by {
-        case .lastCopiedAt: return .lastCopiedAt
-        case .firstCopiedAt: return .firstCopiedAt
-        case .numberOfCopies: return .numberOfCopies
+        case .lastCopiedAt: .lastCopiedAt
+        case .firstCopiedAt: .firstCopiedAt
+        case .numberOfCopies: .numberOfCopies
         }
     }
 }

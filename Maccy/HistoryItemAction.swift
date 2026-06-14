@@ -39,29 +39,29 @@ enum HistoryItemAction {
     var modifierFlags: NSEvent.ModifierFlags {
         switch self {
         case .copy where !Defaults[.pasteByDefault]:
-            return .command
+            .command
         case .paste where Defaults[.pasteByDefault] && !Defaults[.removeFormattingByDefault]:
-            return .command
+            .command
         case .pasteWithoutFormatting where Defaults[.pasteByDefault] && Defaults[.removeFormattingByDefault]:
-            return .command
+            .command
         case .paste where !Defaults[.pasteByDefault] && !Defaults[.removeFormattingByDefault]:
-            return .option
+            .option
         case .pasteWithoutFormatting where !Defaults[.pasteByDefault] && Defaults[.removeFormattingByDefault]:
-            return .option
+            .option
         case .copy where Defaults[.pasteByDefault] && !Defaults[.removeFormattingByDefault]:
-            return .option
+            .option
         case .copy where Defaults[.pasteByDefault] && Defaults[.removeFormattingByDefault]:
-            return .option
+            .option
         case .pasteWithoutFormatting where !Defaults[.pasteByDefault] && !Defaults[.removeFormattingByDefault]:
-            return [.option, .shift]
+            [.option, .shift]
         case .paste where !Defaults[.pasteByDefault] && Defaults[.removeFormattingByDefault]:
-            return [.option, .shift]
+            [.option, .shift]
         case .pasteWithoutFormatting where Defaults[.pasteByDefault] && !Defaults[.removeFormattingByDefault]:
-            return [.command, .shift]
+            [.command, .shift]
         case .paste where Defaults[.pasteByDefault] && Defaults[.removeFormattingByDefault]:
-            return [.command, .shift]
+            [.command, .shift]
         default:
-            return []
+            []
         }
     }
 }

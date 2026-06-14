@@ -31,7 +31,7 @@ struct AppFilterBar: View {
                         }
                     }
 
-                    if !apps.isEmpty && !pairedDevices.isEmpty {
+                    if !apps.isEmpty, !pairedDevices.isEmpty {
                         Rectangle()
                             .fill(Color.primary.opacity(0.15))
                             .frame(width: 1, height: 16)

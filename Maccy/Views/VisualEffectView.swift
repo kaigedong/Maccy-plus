@@ -7,7 +7,7 @@ struct VisualEffectView: NSViewRepresentable {
     var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
 
     func makeNSView(context _: Context) -> NSVisualEffectView {
-        return visualEffectView
+        visualEffectView
     }
 
     func updateNSView(_: NSVisualEffectView, context _: Context) {
@@ -23,7 +23,7 @@ struct GlassEffectView: NSViewRepresentable {
     var style: NSGlassEffectView.Style = .regular
 
     func makeNSView(context _: Context) -> NSGlassEffectView {
-        return glassEffectView
+        glassEffectView
     }
 
     func updateNSView(_: NSGlassEffectView, context _: Context) {

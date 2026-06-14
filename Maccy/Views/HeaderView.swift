@@ -8,7 +8,7 @@ struct HeaderView: View {
     @FocusState.Binding var searchFocused: Bool
 
     var previewPlacement: SlideoutPlacement {
-        return controller.placement
+        controller.placement
     }
 
     var body: some View {

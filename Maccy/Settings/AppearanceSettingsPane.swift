@@ -214,9 +214,9 @@ struct AppearanceSettingsPane: View {
     private func labelForScreen(index screenIndex: Int) -> String {
         switch screenIndex {
         case 0:
-            return String(localized: "ActiveScreen", table: "AppearanceSettings")
+            String(localized: "ActiveScreen", table: "AppearanceSettings")
         case _:
-            return screens[screenIndex - 1].localizedName
+            screens[screenIndex - 1].localizedName
         }
     }
 }

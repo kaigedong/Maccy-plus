@@ -14,13 +14,13 @@ enum HighlightMatch: String, CaseIterable, Identifiable, CustomStringConvertible
     var description: String {
         switch self {
         case .bold:
-            return NSLocalizedString("HighlightMatchBold", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("HighlightMatchBold", tableName: "AppearanceSettings", comment: "")
         case .color:
-            return NSLocalizedString("HighlightMatchColor", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("HighlightMatchColor", tableName: "AppearanceSettings", comment: "")
         case .italic:
-            return NSLocalizedString("HighlightMatchItalic", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("HighlightMatchItalic", tableName: "AppearanceSettings", comment: "")
         case .underline:
-            return NSLocalizedString("HighlightMatchUnderline", tableName: "AppearanceSettings", comment: "")
+            NSLocalizedString("HighlightMatchUnderline", tableName: "AppearanceSettings", comment: "")
         }
     }
 }

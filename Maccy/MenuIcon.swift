@@ -14,13 +14,13 @@ enum MenuIcon: String, CaseIterable, Identifiable, Defaults.Serializable {
     var image: NSImage {
         switch self {
         case .maccy:
-            return NSImage(named: .maccyStatusBar)!
+            NSImage(named: .maccyStatusBar)!
         case .clipboard:
-            return NSImage(named: .clipboard)!
+            NSImage(named: .clipboard)!
         case .scissors:
-            return NSImage(named: .scissors)!
+            NSImage(named: .scissors)!
         case .paperclip:
-            return NSImage(named: .paperclip)!
+            NSImage(named: .paperclip)!
         }
     }
 }

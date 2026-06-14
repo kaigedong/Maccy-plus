@@ -16,17 +16,17 @@ class Sorter {
         var description: String {
             switch self {
             case .lastCopiedAt:
-                return NSLocalizedString("LastCopiedAt", tableName: "StorageSettings", comment: "")
+                NSLocalizedString("LastCopiedAt", tableName: "StorageSettings", comment: "")
             case .firstCopiedAt:
-                return NSLocalizedString("FirstCopiedAt", tableName: "StorageSettings", comment: "")
+                NSLocalizedString("FirstCopiedAt", tableName: "StorageSettings", comment: "")
             case .numberOfCopies:
-                return NSLocalizedString("NumberOfCopies", tableName: "StorageSettings", comment: "")
+                NSLocalizedString("NumberOfCopies", tableName: "StorageSettings", comment: "")
             }
         }
     }
 
     func sort(_ items: [HistoryItem], by: By = Defaults[.sortBy]) -> [HistoryItem] {
-        return items
+        items
             .sorted(by: { bySortingAlgorithm($0, $1, by) })
             .sorted(by: byPinned)
     }
@@ -34,19 +34,19 @@ class Sorter {
     private func bySortingAlgorithm(_ lhs: HistoryItem, _ rhs: HistoryItem, _ by: By) -> Bool {
         switch by {
         case .firstCopiedAt:
-            return lhs.firstCopiedAt > rhs.firstCopiedAt
+            lhs.firstCopiedAt > rhs.firstCopiedAt
         case .numberOfCopies:
-            return lhs.numberOfCopies > rhs.numberOfCopies
+            lhs.numberOfCopies > rhs.numberOfCopies
         default:
-            return lhs.lastCopiedAt > rhs.lastCopiedAt
+            lhs.lastCopiedAt > rhs.lastCopiedAt
         }
     }
 
     private func byPinned(_ lhs: HistoryItem, _ rhs: HistoryItem) -> Bool {
         if Defaults[.pinTo] == .bottom {
-            return (lhs.pin == nil) && (rhs.pin != nil)
+            (lhs.pin == nil) && (rhs.pin != nil)
         } else {
-            return (lhs.pin != nil) && (rhs.pin == nil)
+            (lhs.pin != nil) && (rhs.pin == nil)
         }
     }
 }

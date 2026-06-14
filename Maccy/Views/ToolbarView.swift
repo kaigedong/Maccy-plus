@@ -73,11 +73,11 @@ struct ToolbarView: View {
     }
 
     private var shouldUnpin: Bool {
-        return appState.navigator.selection.items.allSatisfy { $0.isPinned }
+        appState.navigator.selection.items.allSatisfy(\.isPinned)
     }
 
     private var pinActionDisabled: Bool {
-        return appState.navigator.selection.items.contains { $0.isPinned }
+        appState.navigator.selection.items.contains { $0.isPinned }
             && appState.navigator.selection.items.contains { !$0.isPinned }
     }
 
@@ -91,7 +91,7 @@ struct ToolbarView: View {
                         appState.togglePin()
                     }
                 } label: {
-                    if (appState.navigator.selection.items.allSatisfy { $0.isPinned }) {
+                    if appState.navigator.selection.items.allSatisfy(\.isPinned) {
                         Image(systemName: "pin.slash")
                     } else {
                         Image(systemName: "pin")

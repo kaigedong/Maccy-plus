@@ -12,36 +12,36 @@ enum SlideoutState {
     var isAnimating: Bool {
         switch self {
         case .closed, .open:
-            return false
+            false
         case .opening, .closing:
-            return true
+            true
         }
     }
 
     var isOpen: Bool {
         switch self {
         case .open, .opening:
-            return true
+            true
         case .closed, .closing:
-            return false
+            false
         }
     }
 
     fileprivate func toggleWithAnimation() -> SlideoutState {
         switch self {
         case .open, .opening:
-            return .closing
+            .closing
         case .closed, .closing:
-            return .opening
+            .opening
         }
     }
 
     func animationDone() -> SlideoutState {
         switch self {
         case .open, .opening:
-            return .open
+            .open
         case .closed, .closing:
-            return .closed
+            .closed
         }
     }
 }
@@ -79,7 +79,7 @@ class SlideoutController {
 
     private var _contentWidth: CGFloat = 0
     var contentWidth: CGFloat {
-        get { return _contentWidth }
+        get { _contentWidth }
         set {
             _contentWidth = max(minimumContentWidth, newValue).rounded()
             onContentResize(_contentWidth)
@@ -88,7 +88,7 @@ class SlideoutController {
 
     private var _slideoutWidth: CGFloat = 400
     var slideoutWidth: CGFloat {
-        get { return _slideoutWidth }
+        get { _slideoutWidth }
         set {
             _slideoutWidth = max(minimumSlideoutWidth, newValue).rounded()
             onSlideoutResize(_slideoutWidth)
@@ -100,7 +100,7 @@ class SlideoutController {
     var resizingMode: ResizingMode = .none
 
     var nswindow: NSWindow? {
-        return AppState.shared.appDelegate?.panel
+        AppState.shared.appDelegate?.panel
     }
 
     private var windowAnimationOrigin: CGPoint?
