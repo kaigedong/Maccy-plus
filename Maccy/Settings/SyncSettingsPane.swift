@@ -88,9 +88,15 @@ struct SyncSettingsPane: View {
   @ViewBuilder
   private var discoveredDevicesContent: some View {
     if discoveredPeers.isEmpty {
-      Text("No devices found.")
-        .foregroundStyle(.secondary)
-        .controlSize(.small)
+      VStack(alignment: .leading, spacing: 4) {
+        Text("No devices found.")
+          .foregroundStyle(.secondary)
+          .controlSize(.small)
+        Text("Make sure both devices are on the same network and \"Local Network\" permission is enabled in System Settings → Privacy & Security.")
+          .font(.caption2)
+          .foregroundStyle(.tertiary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
     } else {
       ForEach(discoveredPeers) { peer in
         HStack {
