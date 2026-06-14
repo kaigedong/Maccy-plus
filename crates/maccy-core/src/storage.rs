@@ -87,7 +87,8 @@ impl Storage {
                 .execute_batch(
                     "CREATE TABLE IF NOT EXISTS sync_pairs (
                     peer_id TEXT PRIMARY KEY,
-                    display_name TEXT NOT NULL
+                    display_name TEXT NOT NULL,
+                    is_admin INTEGER NOT NULL DEFAULT 0
                 );
                 INSERT INTO schema_version (version) VALUES (2);",
                 )
@@ -103,6 +104,28 @@ impl Storage {
                 );
                 INSERT INTO schema_version (version) VALUES (3);",
                 )
+                .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        }
+
+        if current_version < 4 {
+            // Fix: older V2 migration created sync_pairs without is_admin column.
+            // Add the column for databases that already ran the old V2.
+            self.conn
+                .execute(
+                    "ALTER TABLE sync_pairs ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
+                    [],
+                )
+                .or_else(|e| {
+                    // Column may already exist (fresh DB with fixed V2) — not an error
+                    if e.to_string().contains("duplicate column name") {
+                        Ok(0)
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+            self.conn
+                .execute("INSERT INTO schema_version (version) VALUES (4)", [])
                 .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         }
 
