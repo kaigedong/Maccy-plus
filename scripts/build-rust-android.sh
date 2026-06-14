@@ -17,13 +17,14 @@ cargo ndk \
   --package maccy-core
 
 echo "==> Generating UniFFI Kotlin bindings"
-ls -lh target/aarch64-linux-android/release/libmaccy_core.so
+LIB="android/app/src/main/jniLibs/arm64-v8a/libmaccy_core.so"
+ls -lh "$LIB"
 
 cargo run --release \
   --bin uniffi-bindgen \
   --package maccy-core \
   generate \
-  --library target/aarch64-linux-android/release/libmaccy_core.so \
+  --library "$LIB" \
   --language kotlin \
   --out-dir android/app/src/main/java
 
@@ -31,7 +32,8 @@ echo "Generated Kotlin files:"
 find android/app/src/main/java -name "*.kt" -o -name "*.java" | sort
 
 echo "==> Fixing UniFFI generated code"
-# CoreError.message shadows Throwable.message — needs 'override'
-sed -i 's/^\([[:space:]]*\)val message: String/\1override val message: String/' \
+# CoreError subclasses have 'val `message`' that shadows Throwable.message.
+# Remove 'val' from constructor param so 'override val message' getter works alone.
+sed -i 's/val `message`: kotlin\.String/`message`: kotlin.String/g' \
   android/app/src/main/java/com/kaigedong/maccy/maccy_core.kt
 echo "✅ Android Rust build complete"

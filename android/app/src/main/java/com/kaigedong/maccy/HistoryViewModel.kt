@@ -100,7 +100,7 @@ class HistoryViewModel : ViewModel() {
         )
 
         try {
-            core.startSync(deviceName, deviceId, syncObserver)
+            core.startSync(deviceName, deviceId, syncObserver!!)
             LogManager.i("Sync", "Sync started (via HistoryManager)")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to start sync", e)

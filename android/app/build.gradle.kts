@@ -79,7 +79,8 @@ tasks.register<Exec>("buildRustCoreArm64") {
 tasks.register<Exec>("generateKotlinBindings") {
     dependsOn("buildRustCoreArm64")
     workingDir = file("../..")
-    val libPath = file("../../target/aarch64-linux-android/release/libmaccy_core.so").absolutePath
+    // Read .so from jniLibs (cargo ndk -o copies it there)
+    val libPath = file("src/main/jniLibs/arm64-v8a/libmaccy_core.so").absolutePath
     val outDir = file("src/main/java").absolutePath
     commandLine(
         "cargo", "run", "--release",
@@ -92,6 +93,17 @@ tasks.register<Exec>("generateKotlinBindings") {
     )
 }
 
-tasks.named("preBuild") {
+tasks.register("fixUniffiCode") {
     dependsOn("generateKotlinBindings")
+    doLast {
+        val f = file("src/main/java/com/kaigedong/maccy/maccy_core.kt")
+        var text = f.readText()
+        // CoreError subclasses have 'val `message`' that conflicts with Throwable.message
+        text = text.replace("val `message`: kotlin.String", "`message`: kotlin.String")
+        f.writeText(text)
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn("fixUniffiCode")
 }

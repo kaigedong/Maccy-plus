@@ -25,7 +25,7 @@ impl SyncEngine {
         observer: Arc<dyn ClipboardObserver>,
     ) -> Result<Self, CoreError> {
         let sync_state = SyncState::new(device_name, device_id).map_err(|e| CoreError::Sync {
-            message: format!("Failed to create sync state: {:?}", e),
+            msg: format!("Failed to create sync state: {:?}", e),
         })?;
         let state = Arc::new(std::sync::Mutex::new(sync_state));
         let obs = observer.clone();

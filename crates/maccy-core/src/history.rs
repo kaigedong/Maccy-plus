@@ -30,7 +30,7 @@ impl HistoryManager {
 
     /// Load all items from storage.
     pub fn load(&self) -> Result<Vec<ClipboardItem>, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .get_all_items()
     }
 
@@ -42,7 +42,7 @@ impl HistoryManager {
         is_unlimited: bool,
     ) -> Result<ClipboardItem, CoreError> {
         let storage = self.storage.lock().map_err(|e| CoreError::Storage {
-            message: e.to_string(),
+            msg: e.to_string(),
         })?;
 
         let existing_items = storage.get_all_items()?;
@@ -80,22 +80,22 @@ impl HistoryManager {
     }
 
     pub fn delete(&self, id: String) -> Result<(), CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_item(&id)
     }
 
     pub fn clear_unpinned(&self) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_unpinned()
     }
 
     pub fn clear_all(&self) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_all()
     }
 
     pub fn toggle_pin(&self, id: String, available_pins: Vec<String>) -> Result<ClipboardItem, CoreError> {
-        let storage = self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?;
+        let storage = self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         let mut item = storage.get_item(&id)?.ok_or(CoreError::NotFound { id: id.clone() })?;
         if item.pin.is_some() { item.pin = None; }
         else { item.pin = available_pins.first().cloned(); }
@@ -104,7 +104,7 @@ impl HistoryManager {
     }
 
     pub fn update_item_text(&self, id: String, new_text: String) -> Result<ClipboardItem, CoreError> {
-        let storage = self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?;
+        let storage = self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         let mut item = storage.get_item(&id)?.ok_or(CoreError::NotFound { id: id.clone() })?;
         let text_type = "public.utf8-plain-text";
         if let Some(content) = item.contents.iter_mut().find(|c| c.content_type == text_type) {
@@ -128,12 +128,12 @@ impl HistoryManager {
     }
 
     pub fn count(&self) -> Result<i64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .count_items()
     }
 
     pub fn migrate_from_swiftdata(&self, swiftdata_path: String) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { message: e.to_string() })?
+        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .migrate_from_swiftdata(&swiftdata_path)
     }
 
@@ -147,14 +147,14 @@ impl HistoryManager {
         observer: Arc<dyn ClipboardObserver>,
     ) -> Result<(), CoreError> {
         let engine = SyncEngine::start(&device_name, &device_id, observer)?;
-        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { message: e.to_string() })?;
+        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { msg: e.to_string() })?;
         *guard = Some(engine);
         Ok(())
     }
 
     /// Stop the sync engine.
     pub fn stop_sync(&self) -> Result<(), CoreError> {
-        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { message: e.to_string() })?;
+        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { msg: e.to_string() })?;
         if let Some(engine) = guard.take() {
             engine.stop();
         }

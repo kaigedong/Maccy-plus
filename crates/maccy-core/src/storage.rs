@@ -15,7 +15,7 @@ impl Storage {
             let parent = Path::new(path).parent();
             if let Some(dir) = parent {
                 std::fs::create_dir_all(dir).map_err(|e| CoreError::Storage {
-                    message: format!("Failed to create database directory: {}", e),
+                    msg: format!("Failed to create database directory: {}", e),
                 })?;
             }
             Connection::open(path)?
@@ -33,7 +33,7 @@ impl Storage {
         self.conn
             .execute_batch("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);")
             .map_err(|e| CoreError::Storage {
-                message: e.to_string(),
+                msg: e.to_string(),
             })?;
 
         let current_version: u32 = self
@@ -78,7 +78,7 @@ impl Storage {
                 ",
                 )
                 .map_err(|e| CoreError::Storage {
-                    message: e.to_string(),
+                    msg: e.to_string(),
                 })?;
         }
 
@@ -177,7 +177,7 @@ impl Storage {
             }
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(CoreError::Storage {
-                message: e.to_string(),
+                msg: e.to_string(),
             }),
         }
     }
@@ -284,7 +284,7 @@ impl Storage {
         }
 
         let sd_conn = Connection::open(swiftdata_path).map_err(|e| CoreError::Storage {
-            message: format!("Failed to open SwiftData DB: {}", e),
+            msg: format!("Failed to open SwiftData DB: {}", e),
         })?;
 
         // Read SwiftData items. SwiftData uses Z_ prefixed table names.
@@ -293,7 +293,7 @@ impl Storage {
                     ZPIN, ZTITLE, ZSYNCID, ZSYNCTIMESTAMP, ZSYNCSOURCE, ZSYNCDELETED
              FROM Z_HISTORYITEM",
         ).map_err(|e| CoreError::Storage {
-            message: format!("SwiftData query failed: {}", e),
+            msg: format!("SwiftData query failed: {}", e),
         })?;
 
         let swiftdata_items = item_stmt
@@ -333,11 +333,11 @@ impl Storage {
                 ))
             })
             .map_err(|e| CoreError::Storage {
-                message: format!("SwiftData row parse failed: {}", e),
+                msg: format!("SwiftData row parse failed: {}", e),
             })?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| CoreError::Storage {
-                message: format!("SwiftData collect failed: {}", e),
+                msg: format!("SwiftData collect failed: {}", e),
             })?;
 
         drop(item_stmt);
@@ -346,7 +346,7 @@ impl Storage {
         let mut content_stmt = sd_conn.prepare(
             "SELECT ZITEM, ZTYPE, ZVALUE FROM Z_HISTORYITEMCONTENT",
         ).map_err(|e| CoreError::Storage {
-            message: format!("SwiftData content query failed: {}", e),
+            msg: format!("SwiftData content query failed: {}", e),
         })?;
 
         let contents_by_pk: std::collections::HashMap<i64, Vec<ClipboardContent>> = {
@@ -359,12 +359,12 @@ impl Storage {
                     Ok((item_pk, ClipboardContent { content_type, value }))
                 })
                 .map_err(|e| CoreError::Storage {
-                    message: format!("SwiftData content parse failed: {}", e),
+                    msg: format!("SwiftData content parse failed: {}", e),
                 })?;
 
             for row in rows {
                 let (pk, content) = row.map_err(|e| CoreError::Storage {
-                    message: format!("SwiftData content row failed: {}", e),
+                    msg: format!("SwiftData content row failed: {}", e),
                 })?;
                 map.entry(pk).or_default().push(content);
             }
