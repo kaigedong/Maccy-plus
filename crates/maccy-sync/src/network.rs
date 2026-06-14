@@ -142,14 +142,19 @@ impl NetworkManager {
 
     pub async fn run(&mut self) {
         let sync_topic = IdentTopic::new(TOPIC_NAME);
-        let _ = self.swarm.behaviour_mut().gossipsub.subscribe(&sync_topic);
+        if let Err(e) = self.swarm.behaviour_mut().gossipsub.subscribe(&sync_topic) {
+            log::error!("Failed to subscribe to sync topic: {:?}", e);
+        }
 
         let pairing_topic = IdentTopic::new(PAIRING_TOPIC);
-        let _ = self
+        if let Err(e) = self
             .swarm
             .behaviour_mut()
             .gossipsub
-            .subscribe(&pairing_topic);
+            .subscribe(&pairing_topic)
+        {
+            log::error!("Failed to subscribe to pairing topic: {:?}", e);
+        }
 
         let listen_addr: libp2p::Multiaddr = format!("/ip4/0.0.0.0/tcp/{}", self.listen_port)
             .parse()
@@ -209,7 +214,9 @@ impl NetworkManager {
                         is_connected: false,
                     };
                     self.discovered_peers.insert(peer_id, info);
-                    let _ = self.swarm.dial(peer_id);
+                    if let Err(e) = self.swarm.dial(peer_id) {
+                        log::debug!("Dial failed for {}: {:?}", peer_id, e);
+                    }
                 }
             }
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Expired(peers))) => {
@@ -465,11 +472,14 @@ impl NetworkManager {
                     total_chunks: 1,
                     data,
                 };
-                let _ = self
+                if let Err(e) = self
                     .swarm
                     .behaviour_mut()
                     .file_transfer
-                    .send_response(channel, chunk);
+                    .send_response(channel, chunk)
+                {
+                    log::warn!("Failed to send file chunk: {:?}", e);
+                }
             }
             Err(e) => {
                 log::error!("File not found {}: {}", path, e);
@@ -481,11 +491,14 @@ impl NetworkManager {
                     total_chunks: 0,
                     data: vec![],
                 };
-                let _ = self
+                if let Err(e) = self
                     .swarm
                     .behaviour_mut()
                     .file_transfer
-                    .send_response(channel, chunk);
+                    .send_response(channel, chunk)
+                {
+                    log::warn!("Failed to send error response: {:?}", e);
+                }
             }
         }
     }
@@ -526,7 +539,9 @@ impl NetworkManager {
                     };
                     if let Ok(data) = serde_json::to_vec(&request) {
                         let topic = IdentTopic::new(PAIRING_TOPIC);
-                        let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+                        if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(topic, data) {
+                            log::warn!("Failed to publish pairing request: {:?}", e);
+                        }
                     }
                     // Optimistically add — the remote will respond with Accept
                     self.paired_peers.insert(peer);
@@ -545,7 +560,11 @@ impl NetworkManager {
                         };
                         if let Ok(data) = serde_json::to_vec(&accept) {
                             let topic = IdentTopic::new(PAIRING_TOPIC);
-                            let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+                            if let Err(e) =
+                                self.swarm.behaviour_mut().gossipsub.publish(topic, data)
+                            {
+                                log::warn!("Failed to publish pairing accept: {:?}", e);
+                            }
                         }
                         self.state_emit(SyncEvent::PairingComplete {
                             peer_id: peer.to_string(),
@@ -567,7 +586,9 @@ impl NetworkManager {
                     };
                     if let Ok(data) = serde_json::to_vec(&reject) {
                         let topic = IdentTopic::new(PAIRING_TOPIC);
-                        let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+                        if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(topic, data) {
+                            log::warn!("Failed to publish pairing reject: {:?}", e);
+                        }
                     }
                 }
             }
@@ -628,7 +649,9 @@ impl NetworkManager {
     fn broadcast_sync_message(&mut self, msg: SyncMessage) {
         if let Ok(data) = serde_json::to_vec(&msg) {
             let topic = IdentTopic::new(TOPIC_NAME);
-            let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+            if let Err(e) = self.swarm.behaviour_mut().gossipsub.publish(topic, data) {
+                log::warn!("Failed to publish sync message: {:?}", e);
+            }
         }
     }
 }

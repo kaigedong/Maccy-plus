@@ -388,15 +388,25 @@ impl HistoryManager {
             .collect()
     }
     pub fn save_paired_peer(&self, peer_id: String, display_name: String, is_admin: bool) {
-        if let Ok(s) = self.storage.lock() {
-            let _ = s.save_paired_peer(&peer_id, &display_name, is_admin);
+        match self.storage.lock() {
+            Ok(s) => {
+                if let Err(e) = s.save_paired_peer(&peer_id, &display_name, is_admin) {
+                    log::error!("Failed to save paired peer {}: {}", peer_id, e);
+                }
+            }
+            Err(e) => log::error!("Failed to lock storage for save_paired_peer: {}", e),
         }
     }
 
     /// Remove a paired peer.
     pub fn remove_paired_peer(&self, peer_id: String) {
-        if let Ok(s) = self.storage.lock() {
-            let _ = s.remove_paired_peer(&peer_id);
+        match self.storage.lock() {
+            Ok(s) => {
+                if let Err(e) = s.remove_paired_peer(&peer_id) {
+                    log::error!("Failed to remove paired peer {}: {}", peer_id, e);
+                }
+            }
+            Err(e) => log::error!("Failed to lock storage for remove_paired_peer: {}", e),
         }
     }
 }

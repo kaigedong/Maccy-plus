@@ -62,6 +62,11 @@ impl SyncEngine {
                                 }
                             }
                             SyncEvent::PeerDiscovered { peer } => {
+                                if peer.is_connected {
+                                    connected_clone.lock().unwrap().insert(peer.peer_id.clone());
+                                } else {
+                                    connected_clone.lock().unwrap().remove(&peer.peer_id);
+                                }
                                 obs.on_peer_discovered(
                                     peer.peer_id,
                                     peer.display_name,
@@ -70,6 +75,7 @@ impl SyncEngine {
                                 );
                             }
                             SyncEvent::PeerLost { peer_id } => {
+                                connected_clone.lock().unwrap().remove(&peer_id);
                                 obs.on_peer_lost(peer_id);
                             }
                             SyncEvent::PairingRequest {
@@ -151,7 +157,9 @@ impl SyncEngine {
         });
 
         // Send StartDiscovery so peers can find us
-        let _ = command_tx.send(SyncCommand::StartDiscovery);
+        if let Err(e) = command_tx.send(SyncCommand::StartDiscovery) {
+            log::error!("SyncEngine: failed to send StartDiscovery: {:?}", e);
+        }
 
         Ok((
             SyncEngine {
@@ -169,45 +177,54 @@ impl SyncEngine {
         let _ = self.command_tx.send(SyncCommand::Shutdown);
     }
 
+    fn send(&self, cmd: SyncCommand) {
+        if let Err(e) = self.command_tx.send(cmd) {
+            log::error!(
+                "SyncEngine: failed to send command (network thread may have crashed): {:?}",
+                e
+            );
+        }
+    }
+
     // ── Peer management ───────────────────────────────────────────
 
     pub fn add_peer_address(&self, address: &str) {
-        let _ = self.command_tx.send(SyncCommand::AddPeerAddress {
+        self.send(SyncCommand::AddPeerAddress {
             address: address.to_string(),
         });
     }
 
     pub fn start_discovery(&self) {
-        let _ = self.command_tx.send(SyncCommand::StartDiscovery);
+        self.send(SyncCommand::StartDiscovery);
     }
 
     pub fn stop_discovery(&self) {
-        let _ = self.command_tx.send(SyncCommand::StopDiscovery);
+        self.send(SyncCommand::StopDiscovery);
     }
 
     // ── Pairing ───────────────────────────────────────────────────
 
     pub fn request_pairing(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::RequestPairing {
+        self.send(SyncCommand::RequestPairing {
             peer_id: peer_id.to_string(),
         });
     }
 
     pub fn accept_pairing(&self, peer_id: &str, pin: &str) {
-        let _ = self.command_tx.send(SyncCommand::AcceptPairing {
+        self.send(SyncCommand::AcceptPairing {
             peer_id: peer_id.to_string(),
             pin: pin.to_string(),
         });
     }
 
     pub fn reject_pairing(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::RejectPairing {
+        self.send(SyncCommand::RejectPairing {
             peer_id: peer_id.to_string(),
         });
     }
 
     pub fn unpair(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::Unpair {
+        self.send(SyncCommand::Unpair {
             peer_id: peer_id.to_string(),
         });
     }
@@ -216,29 +233,25 @@ impl SyncEngine {
 
     pub fn broadcast_item(&self, item: &ClipboardItem) {
         let json = Self::serialize_item(item);
-        let _ = self
-            .command_tx
-            .send(SyncCommand::BroadcastItem { item_json: json });
+        self.send(SyncCommand::BroadcastItem { item_json: json });
     }
 
     pub fn broadcast_deletion(&self, item_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::BroadcastDeletion {
+        self.send(SyncCommand::BroadcastDeletion {
             item_id: item_id.to_string(),
         });
     }
 
     pub fn broadcast_update(&self, item: &ClipboardItem) {
         let json = Self::serialize_item(item);
-        let _ = self
-            .command_tx
-            .send(SyncCommand::BroadcastUpdate { item_json: json });
+        self.send(SyncCommand::BroadcastUpdate { item_json: json });
     }
 
     // ── File transfer ────────────────────────────────────────────
 
     pub fn request_file(&self, peer_id: &str, file_path: &str) {
         let request_id = uuid::Uuid::new_v4().to_string();
-        let _ = self.command_tx.send(SyncCommand::SendFileChunk {
+        self.send(SyncCommand::SendFileChunk {
             peer_id: peer_id.to_string(),
             request_id,
             file_path: file_path.to_string(),
