@@ -13,8 +13,12 @@ class NavigationManager { // swiftlint:disable:this type_body_length
 
     var selection: Selection<HistoryItemDecorator> = Selection() {
         willSet {
-            selection.forEach { _, item in item.selectionIndex = -1 }
-            newValue.forEach { index, item in item.selectionIndex = index }
+            for item in selection {
+                item.selectionIndex = -1
+            }
+            for (index, item) in newValue.enumerated() {
+                item.selectionIndex = index
+            }
         }
     }
 

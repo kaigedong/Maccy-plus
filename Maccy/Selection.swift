@@ -1,10 +1,14 @@
 import AppKit
 
-struct Selection<Item: Equatable> {
+struct Selection<Item: Equatable>: Sequence {
     var items: [Item]
 
     init(items: [Item] = []) {
         self.items = items
+    }
+
+    func makeIterator() -> IndexingIterator<[Item]> {
+        items.makeIterator()
     }
 
     var isEmpty: Bool {
@@ -21,10 +25,6 @@ struct Selection<Item: Equatable> {
 
     func first(where condition: (Item) -> Bool) -> Item? {
         items.first(where: condition)
-    }
-
-    func forEach(_ body: (Int, Item) throws -> Void) rethrows {
-        try items.enumerated().forEach(body)
     }
 
     mutating func remove(_ item: Item) {
