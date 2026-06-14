@@ -266,7 +266,7 @@ typedef void (*UniffiCallbackInterfaceClipboardObserverMethod2)(uint64_t, RustBu
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD3
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD3
-typedef void (*UniffiCallbackInterfaceClipboardObserverMethod3)(uint64_t, RustBuffer, RustBuffer, void* _Nonnull, 
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod3)(uint64_t, RustBuffer, RustBuffer, RustBuffer, int8_t, void* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -274,6 +274,34 @@ typedef void (*UniffiCallbackInterfaceClipboardObserverMethod3)(uint64_t, RustBu
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD4
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD4
 typedef void (*UniffiCallbackInterfaceClipboardObserverMethod4)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD5
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD5
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod5)(uint64_t, RustBuffer, RustBuffer, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD6
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD6
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod6)(uint64_t, RustBuffer, int8_t, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD7
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD7
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod7)(uint64_t, RustBuffer, void* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD8
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_CLIPBOARD_OBSERVER_METHOD8
+typedef void (*UniffiCallbackInterfaceClipboardObserverMethod8)(uint64_t, int32_t, RustBuffer, void* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -288,6 +316,10 @@ typedef struct UniffiVTableCallbackInterfaceClipboardObserver {
     UniffiCallbackInterfaceClipboardObserverMethod2 _Nonnull onItemUpdated;
     UniffiCallbackInterfaceClipboardObserverMethod3 _Nonnull onPeerDiscovered;
     UniffiCallbackInterfaceClipboardObserverMethod4 _Nonnull onPeerLost;
+    UniffiCallbackInterfaceClipboardObserverMethod5 _Nonnull onPairingRequest;
+    UniffiCallbackInterfaceClipboardObserverMethod6 _Nonnull onPairingComplete;
+    UniffiCallbackInterfaceClipboardObserverMethod7 _Nonnull onListening;
+    UniffiCallbackInterfaceClipboardObserverMethod8 _Nonnull onError;
 } UniffiVTableCallbackInterfaceClipboardObserver;
 
 #endif
@@ -346,19 +378,74 @@ uint64_t uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(uint6
 RustBuffer uniffi_maccy_core_fn_method_historymanager_search(uint64_t ptr, RustBuffer query, RustBuffer items, RustBuffer mode, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SET_OBSERVER
-#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SET_OBSERVER
-void uniffi_maccy_core_fn_method_historymanager_set_observer(uint64_t ptr, uint64_t observer, RustCallStatus *_Nonnull out_status
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SORT
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SORT
 RustBuffer uniffi_maccy_core_fn_method_historymanager_sort(uint64_t ptr, RustBuffer items, RustBuffer sort_by, int8_t pin_to_top, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_START_SYNC
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_START_SYNC
+void uniffi_maccy_core_fn_method_historymanager_start_sync(uint64_t ptr, RustBuffer device_name, RustBuffer device_id, uint64_t observer, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_STOP_SYNC
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_STOP_SYNC
+void uniffi_maccy_core_fn_method_historymanager_stop_sync(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_STORAGE_SIZE_BYTES
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_STORAGE_SIZE_BYTES
 int64_t uniffi_maccy_core_fn_method_historymanager_storage_size_bytes(uint64_t ptr, RustBuffer db_path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_ACCEPT_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_ACCEPT_PAIRING
+void uniffi_maccy_core_fn_method_historymanager_sync_accept_pairing(uint64_t ptr, RustBuffer peer_id, RustBuffer pin, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_ADD_PEER_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_ADD_PEER_ADDRESS
+void uniffi_maccy_core_fn_method_historymanager_sync_add_peer_address(uint64_t ptr, RustBuffer address, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_DELETION
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_DELETION
+void uniffi_maccy_core_fn_method_historymanager_sync_broadcast_deletion(uint64_t ptr, RustBuffer item_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_ITEM
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_ITEM
+void uniffi_maccy_core_fn_method_historymanager_sync_broadcast_item(uint64_t ptr, RustBuffer item, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_UPDATE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_BROADCAST_UPDATE
+void uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(uint64_t ptr, RustBuffer item, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_REJECT_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_REJECT_PAIRING
+void uniffi_maccy_core_fn_method_historymanager_sync_reject_pairing(uint64_t ptr, RustBuffer peer_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_REQUEST_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_REQUEST_PAIRING
+void uniffi_maccy_core_fn_method_historymanager_sync_request_pairing(uint64_t ptr, RustBuffer peer_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_START_DISCOVERY
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_START_DISCOVERY
+void uniffi_maccy_core_fn_method_historymanager_sync_start_discovery(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_STOP_DISCOVERY
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_STOP_DISCOVERY
+void uniffi_maccy_core_fn_method_historymanager_sync_stop_discovery(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_UNPAIR
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SYNC_UNPAIR
+void uniffi_maccy_core_fn_method_historymanager_sync_unpair(uint64_t ptr, RustBuffer peer_id, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_TOGGLE_PIN
@@ -403,12 +490,32 @@ void uniffi_maccy_core_fn_method_clipboardobserver_on_item_updated(uint64_t ptr,
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PEER_DISCOVERED
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PEER_DISCOVERED
-void uniffi_maccy_core_fn_method_clipboardobserver_on_peer_discovered(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, RustCallStatus *_Nonnull out_status
+void uniffi_maccy_core_fn_method_clipboardobserver_on_peer_discovered(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, RustBuffer addresses, int8_t is_connected, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PEER_LOST
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PEER_LOST
 void uniffi_maccy_core_fn_method_clipboardobserver_on_peer_lost(uint64_t ptr, RustBuffer peer_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_REQUEST
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_REQUEST
+void uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_request(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, RustBuffer pin, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_COMPLETE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_COMPLETE
+void uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_complete(uint64_t ptr, RustBuffer peer_id, int8_t success, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_LISTENING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_LISTENING
+void uniffi_maccy_core_fn_method_clipboardobserver_on_listening(uint64_t ptr, RustBuffer address, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_ERROR
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_CLIPBOARDOBSERVER_ON_ERROR
+void uniffi_maccy_core_fn_method_clipboardobserver_on_error(uint64_t ptr, int32_t code, RustBuffer message, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_MACCY_CORE_RUSTBUFFER_ALLOC
@@ -719,21 +826,87 @@ uint16_t uniffi_maccy_core_checksum_method_historymanager_search(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SET_OBSERVER
-#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SET_OBSERVER
-uint16_t uniffi_maccy_core_checksum_method_historymanager_set_observer(void
-    
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SORT
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SORT
 uint16_t uniffi_maccy_core_checksum_method_historymanager_sort(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_START_SYNC
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_START_SYNC
+uint16_t uniffi_maccy_core_checksum_method_historymanager_start_sync(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_STOP_SYNC
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_STOP_SYNC
+uint16_t uniffi_maccy_core_checksum_method_historymanager_stop_sync(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_STORAGE_SIZE_BYTES
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_STORAGE_SIZE_BYTES
 uint16_t uniffi_maccy_core_checksum_method_historymanager_storage_size_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_ACCEPT_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_ACCEPT_PAIRING
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_accept_pairing(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_ADD_PEER_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_ADD_PEER_ADDRESS
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_add_peer_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_DELETION
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_DELETION
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_deletion(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_ITEM
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_ITEM
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_item(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_UPDATE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_BROADCAST_UPDATE
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_REJECT_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_REJECT_PAIRING
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_REQUEST_PAIRING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_REQUEST_PAIRING
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_request_pairing(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_START_DISCOVERY
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_START_DISCOVERY
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_start_discovery(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_STOP_DISCOVERY
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_STOP_DISCOVERY
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_stop_discovery(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_UNPAIR
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_HISTORYMANAGER_SYNC_UNPAIR
+uint16_t uniffi_maccy_core_checksum_method_historymanager_sync_unpair(void
     
 );
 #endif
@@ -776,6 +949,30 @@ uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_discovered(
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PEER_LOST
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PEER_LOST
 uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_lost(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_REQUEST
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_REQUEST
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_request(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_COMPLETE
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_PAIRING_COMPLETE
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_complete(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_LISTENING
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_LISTENING
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_listening(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_ERROR
+#define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_CHECKSUM_METHOD_CLIPBOARDOBSERVER_ON_ERROR
+uint16_t uniffi_maccy_core_checksum_method_clipboardobserver_on_error(void
     
 );
 #endif

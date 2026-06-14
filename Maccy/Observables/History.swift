@@ -99,6 +99,10 @@ class History: ItemsContainer {
   @ObservationIgnored
   private var sessionLog: [Int: ClipboardItem] = [:]
 
+  /// Set to false when processing a sync-received item to avoid echo.
+  @ObservationIgnored
+  var syncBroadcastToPeers = true
+
   @ObservationIgnored
   var all: [HistoryItemDecorator] = []
 
@@ -224,6 +228,12 @@ class History: ItemsContainer {
       }
     }
 
+    // Broadcast to synced peers (unless this item came from sync itself)
+    if syncBroadcastToPeers {
+      SyncBridge.shared.broadcastNewItem(result)
+    }
+    syncBroadcastToPeers = true
+
     sessionLog[Clipboard.shared.changeCount] = result
 
     var itemDecorator: HistoryItemDecorator
@@ -290,6 +300,20 @@ class History: ItemsContainer {
     Task {
       AppState.shared.popup.needsResize = true
     }
+  }
+
+  /// Delete an item by its sync UUID (received from a peer).
+  @MainActor
+  func deleteBySyncID(_ syncID: String) {
+    guard let item = all.first(where: { $0.item.syncSource == syncID || $0.item.id == syncID }) else { return }
+    delete(item)
+  }
+
+  /// Update an item received from a synced peer.
+  @MainActor
+  func updateBySyncID(_ item: ClipboardItem) {
+    syncBroadcastToPeers = false
+    _ = add(item, shouldAppend: false)
   }
 
   @MainActor

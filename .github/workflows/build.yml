@@ -2,173 +2,106 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - master
-      - feat/p2p-sync
-      - refactor/rust-shared-core
-    tags:
-      - 'v*'
+    branches: [master, feat/p2p-sync, refactor/rust-shared-core]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build MaccyPlus
+  build-macos:
+    name: Build MaccyPlus (macOS)
     runs-on: macos-15
     permissions:
       contents: write
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Select Xcode
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           xcodebuild -version
 
-      - name: Determine version
-        id: version
+      - id: version
+        name: Determine version
         run: |
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG="${{ github.ref_name }}"
-            VERSION="${TAG#v}"
-            BUILD_NUM="${{ github.run_number }}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
             echo "channel=stable" >> "$GITHUB_OUTPUT"
           else
-            VERSION="2.7.0-beta.${SHORT_SHA}"
-            BUILD_NUM="${{ github.run_number }}"
+            VERSION="2.7.0-beta.$SHORT_SHA"
             echo "channel=beta" >> "$GITHUB_OUTPUT"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "build_num=$BUILD_NUM" >> "$GITHUB_OUTPUT"
+          echo "build_num=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Build Rust core
-        run: |
-          cargo build --release
-          ls -lh target/release/libmaccy_core.a target/release/libmaccy_sync.a
-
-      - name: Generate UniFFI Swift bindings
-        run: |
-          cargo run --release --bin uniffi-bindgen --package maccy-core generate \
-            --library target/release/libmaccy_core.dylib \
-            --language swift \
-            --out-dir Maccy/Generated
-          cp Maccy/Generated/MaccyCore.swift Maccy/MaccyCore.swift
-          ls -lh Maccy/Generated/ Maccy/MaccyCore.swift
-
-      - name: Patch Xcode project
-        run: |
-          cat > Maccy/Generated/module.modulemap << 'EOF'
-          module MaccyCoreFFI {
-              header "MaccyCoreFFI.h"
-              export *
-              use "Darwin"
-              use "_Builtin_stdbool"
-              use "_Builtin_stdint"
-          }
-          EOF
-
-          ruby -e '
-            require "xcodeproj"
-            project = Xcodeproj::Project.open("Maccy.xcodeproj")
-            target = project.targets.find { |t| t.name == "Maccy" }
-            abort "Target not found" unless target
-
-            # Add MaccyCore.swift to sources
-            phase = target.source_build_phase
-            unless phase.files.any? { |f| f.file_ref && f.file_ref.path == "MaccyCore.swift" }
-              group = project.main_group.find_subpath("Maccy", true)
-              phase.add_file_reference(group.new_file("MaccyCore.swift"))
-            end
-
-            # Patch ALL build configurations
-            target.build_configurations.each do |cfg|
-              # Swift include path for modulemap
-              paths = cfg.build_settings["SWIFT_INCLUDE_PATHS"] || ["$(inherited)"]
-              paths = [paths] unless paths.is_a?(Array)
-              unless paths.include?("$(SRCROOT)/Maccy/Generated")
-                paths << "$(SRCROOT)/Maccy/Generated"
-                cfg.build_settings["SWIFT_INCLUDE_PATHS"] = paths
-              end
-
-              # Header search path
-              hdrs = cfg.build_settings["HEADER_SEARCH_PATHS"] || ["$(inherited)"]
-              hdrs = [hdrs] unless hdrs.is_a?(Array)
-              unless hdrs.include?("Maccy/Generated")
-                hdrs << "Maccy/Generated"
-                cfg.build_settings["HEADER_SEARCH_PATHS"] = hdrs
-              end
-
-              # Library search path for Rust static libs
-              libs = cfg.build_settings["LIBRARY_SEARCH_PATHS"] || ["$(inherited)"]
-              libs = [libs] unless libs.is_a?(Array)
-              unless libs.include?("$(PROJECT_DIR)/target/release")
-                libs << "$(PROJECT_DIR)/target/release"
-                cfg.build_settings["LIBRARY_SEARCH_PATHS"] = libs
-              end
-
-              # Ensure maccy_sync is linked (maccy_core uses -force_load in project)
-              flags = cfg.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"]
-              flags = [flags] unless flags.is_a?(Array)
-              unless flags.include?("-lmaccy_sync")
-                flags << "-lmaccy_sync"
-              end
-              cfg.build_settings["OTHER_LDFLAGS"] = flags
-            end
-
-            project.save
-            puts "Patched all configurations (Debug + Release)"
-          '
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash scripts/build-rust-macos.sh
+      - run: ruby scripts/patch-xcode.rb
 
       - name: Build
         run: |
           xcodebuild build \
-            -project Maccy.xcodeproj \
-            -scheme Maccy \
-            -configuration Release \
-            -derivedDataPath build \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=NO \
+            -project Maccy.xcodeproj -scheme Maccy -configuration Release \
+            -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_num }}" \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
       - name: Package
-        run: |
-          cd build/Build/Products/Release
-          zip -r Maccy.app.zip Maccy.app
+        run: cd build/Build/Products/Release && zip -r Maccy.app.zip Maccy.app
 
-      - name: Upload Artifact (beta)
-        if: steps.version.outputs.channel == 'beta'
+      - if: steps.version.outputs.channel == 'beta'
         uses: actions/upload-artifact@v4
         with:
-          name: Maccy-latest
+          name: Maccy-macOS
           path: build/Build/Products/Release/Maccy.app.zip
 
-      - name: Publish Beta Release
-        if: steps.version.outputs.channel == 'beta'
+      - if: steps.version.outputs.channel == 'beta'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete latest-beta --yes --cleanup-tag 2>/dev/null || true
-          gh release create latest-beta \
-            build/Build/Products/Release/Maccy.app.zip \
+          gh release create latest-beta build/Build/Products/Release/Maccy.app.zip \
             --title "MaccyPlus Beta (${{ steps.version.outputs.version }})" \
-            --notes "Automated beta build (${{ github.sha }})." \
-            --prerelease
+            --notes "Automated beta build ($GITHUB_SHA)." --prerelease
 
-      - name: Publish Stable Release
-        if: steps.version.outputs.channel == 'stable'
+      - if: steps.version.outputs.channel == 'stable'
         uses: softprops/action-gh-release@v2
         with:
           files: build/Build/Products/Release/Maccy.app.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    name: Build MaccyPlus (Android)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with: { java-version: '17', distribution: 'temurin' }
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 ndk;27.0.12077973'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - run: cargo install cargo-ndk
+      - run: sudo apt-get update && sudo apt-get install -y build-essential ninja-build
+      - run: bash scripts/build-rust-android.sh
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Maccy-Android
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk

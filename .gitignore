@@ -1,8 +1,28 @@
+# ── Xcode ─────────────────────────────────────────────────────────
 xcuserdata/
 Maccy.xcodeproj/project.xcworkspace/xcshareddata
+Maccy/build/
+build/
+
+# ── Rust ──────────────────────────────────────────────────────────
+target/
+maccy-sync/target/
+maccy-sync/Cargo.lock
+maccy-sync/maccy_sync.h
+
+# ── Android ───────────────────────────────────────────────────────
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/jniLibs/
+android/local.properties
+*.apk
+*.aab
+
+# ── IDE / OS ──────────────────────────────────────────────────────
 .idea
 .DS_Store
 Maccy/.DS_Store
 .sisyphus/
-maccy-sync/target/
-maccy-sync/Cargo.lock
+.vscode/
+*.swp
