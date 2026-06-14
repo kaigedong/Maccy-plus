@@ -1,5 +1,6 @@
 package com.kaigedong.maccy.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,14 +27,13 @@ fun HistoryListScreen(viewModel: HistoryViewModel = viewModel()) {
     val context = LocalContext.current
     val items by viewModel.items.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    var showLogs by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         LogManager.i("Maccy", "App started, initializing...")
         viewModel.initialize(context)
-        LogManager.i("Maccy", "History initialized, ${items.size} items loaded")
+        LogManager.i("Maccy", "History initialized")
 
-        // Start clipboard polling
         val clipboardService = ClipboardService(context)
         clipboardService.startPolling { item ->
             LogManager.d("Clipboard", "New clip: ${item.title.take(80)}")
@@ -41,107 +41,137 @@ fun HistoryListScreen(viewModel: HistoryViewModel = viewModel()) {
         }
     }
 
-    // Log screen overlay
-    if (showLogs) {
-        LogScreen(onBack = { showLogs = false })
-        return
-    }
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Maccy") },
-                actions = {
-                    IconButton(onClick = { showLogs = true }) {
-                        Icon(Icons.Filled.BugReport, "Logs")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+            if (selectedTab == 0) {
+                TopAppBar(
+                    title = { Text("Maccy") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    )
                 )
-            )
+            }
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.ContentPaste, "History") },
+                    label = { Text("History") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Sync, "Sync") },
+                    label = { Text("Sync") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 }
+                )
+            }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Search bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { query ->
+        when (selectedTab) {
+            0 -> HistoryTab(
+                items = items,
+                searchQuery = searchQuery,
+                onSearchChange = { query ->
                     searchQuery = query
-                    if (query.isNotEmpty()) {
-                        viewModel.search(query)
+                    if (query.isNotEmpty()) viewModel.search(query)
+                },
+                onCopy = { item ->
+                    ClipboardService(context).copyToClipboard(item)
+                    LogManager.d("Maccy", "Copied: ${item.title.take(80)}")
+                },
+                onDelete = { item ->
+                    viewModel.deleteItem(item.id)
+                    LogManager.d("Maccy", "Deleted: ${item.title.take(80)}")
+                },
+                onTogglePin = { item ->
+                    viewModel.togglePin(item.id)
+                },
+                onDownload = { item ->
+                    val peerId = item.syncSource ?: ""
+                    if (peerId.isNotEmpty()) {
+                        viewModel.requestFile(peerId, item.title)
+                        Toast.makeText(context, "Downloading...", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Search clipboard history...") },
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Filled.Search, "Search") },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Filled.Clear, "Clear")
-                        }
-                    }
-                }
+                modifier = Modifier.padding(padding)
             )
+            1 -> SyncSettingsScreen(
+                viewModel = viewModel,
+                modifier = Modifier.padding(padding)
+            )
+        }
+    }
+}
 
-            if (items.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.ContentPaste,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Clipboard is empty",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "Copy something to see it here",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+@Composable
+private fun HistoryTab(
+    items: List<ClipboardItem>,
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    onCopy: (ClipboardItem) -> Unit,
+    onDelete: (ClipboardItem) -> Unit,
+    onTogglePin: (ClipboardItem) -> Unit,
+    onDownload: (ClipboardItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        // Search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            placeholder = { Text("Search clipboard history...") },
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Filled.Search, "Search") },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchChange("") }) {
+                        Icon(Icons.Filled.Clear, "Clear")
                     }
                 }
-            } else {
-                // History list
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    val displayItems = items
+            }
+        )
 
-                    items(displayItems, key = { it.id }) { item ->
-                        HistoryItemRow(
-                            item = item,
-                            onCopy = {
-                                val service = ClipboardService(context)
-                                service.copyToClipboard(item)
-                                LogManager.d("Maccy", "Copied: ${item.title.take(80)}")
-                            },
-                            onDelete = {
-                                viewModel.deleteItem(item.id)
-                                LogManager.d("Maccy", "Deleted: ${item.title.take(80)}")
-                            },
-                            onTogglePin = {
-                                viewModel.togglePin(item.id)
-                                LogManager.d("Maccy", "Toggled pin: ${item.id.take(8)}")
-                            }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.ContentPaste,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Clipboard is empty",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Copy something to see it here",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(items, key = { it.id }) { item ->
+                    HistoryItemRow(
+                        item = item,
+                        onCopy = { onCopy(item) },
+                        onDelete = { onDelete(item) },
+                        onTogglePin = { onTogglePin(item) },
+                        onDownload = { onDownload(item) }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
             }
         }
@@ -153,12 +183,19 @@ fun HistoryItemRow(
     item: ClipboardItem,
     onCopy: () -> Unit,
     onDelete: () -> Unit,
-    onTogglePin: () -> Unit
+    onTogglePin: () -> Unit,
+    onDownload: () -> Unit,
 ) {
+    val isFile = item.contents.any { it.contentType == "public.file-url" }
+    val isRemote = !item.syncSource.isNullOrEmpty()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCopy() }
+            .clickable {
+                if (isFile && isRemote) onDownload()
+                else onCopy()
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -170,52 +207,58 @@ fun HistoryItemRow(
                 overflow = TextOverflow.Ellipsis
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isFile) {
+                    Icon(
+                        Icons.Filled.InsertDriveFile,
+                        contentDescription = "File",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 item.application?.let { app ->
-                    Text(
-                        text = app,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Text(app, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (isRemote) {
+                    if (item.application != null) Text(" · ", style = MaterialTheme.typography.bodySmall)
+                    Icon(
+                        Icons.Filled.Cloud,
+                        contentDescription = "Remote",
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
                 if (item.pin != null) {
-                    if (item.application != null) {
-                        Text(
-                            " · ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        Icons.Filled.PushPin,
-                        contentDescription = "Pinned",
+                    Text(" · ", style = MaterialTheme.typography.bodySmall)
+                    Icon(Icons.Filled.PushPin, "Pinned",
                         modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                        tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
 
+        if (isFile && isRemote) {
+            IconButton(onClick = onDownload) {
+                Icon(Icons.Filled.CloudDownload, "Download",
+                    tint = MaterialTheme.colorScheme.primary)
+            }
+        }
         IconButton(onClick = onTogglePin) {
             Icon(
-                imageVector = if (item.pin != null) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                contentDescription = if (item.pin != null) "Unpin" else "Pin",
+                if (item.pin != null) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                contentDescription = "Pin",
                 tint = if (item.pin != null) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         IconButton(onClick = onCopy) {
-            Icon(
-                Icons.Filled.ContentCopy,
-                contentDescription = "Copy",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Icon(Icons.Filled.ContentCopy, "Copy",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error
-            )
+            Icon(Icons.Filled.Delete, "Delete",
+                tint = MaterialTheme.colorScheme.error)
         }
     }
 }
