@@ -1030,7 +1030,7 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if (lib.uniffi_maccy_core_checksum_method_historymanager_add() != 6845.toShort()) {
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_add() != 38622.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_clear_all() != 29384.toShort()) {
@@ -2299,6 +2299,7 @@ public interface HistoryManagerInterface {
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Rejects items that have no meaningful content.
      */
     fun `add`(`item`: ClipboardItem, `maxSize`: kotlin.Int, `isUnlimited`: kotlin.Boolean): ClipboardItem
     
@@ -2505,6 +2506,7 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Rejects items that have no meaningful content.
      */
     @Throws(CoreException::class)override fun `add`(`item`: ClipboardItem, `maxSize`: kotlin.Int, `isUnlimited`: kotlin.Boolean): ClipboardItem {
             return FfiConverterTypeClipboardItem.lift(

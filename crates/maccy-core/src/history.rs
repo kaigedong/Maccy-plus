@@ -37,12 +37,19 @@ impl HistoryManager {
     }
 
     /// Add a new clipboard item. Handles deduplication and size limiting.
+    /// Rejects items that have no meaningful content.
     pub fn add(
         &self,
         item: ClipboardItem,
         max_size: i32,
         is_unlimited: bool,
     ) -> Result<ClipboardItem, CoreError> {
+        // Reject items with no content
+        if item.title.is_empty() && item.contents.is_empty() {
+            return Err(CoreError::InvalidArg {
+                msg: "empty item".into(),
+            });
+        }
         let storage = self
             .storage
             .lock()

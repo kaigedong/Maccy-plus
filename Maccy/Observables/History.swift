@@ -221,9 +221,11 @@ class History: ItemsContainer {
             }
         }
 
-        // Add through Rust core (handles dedup and size limit)
+        // Add through Rust core (handles dedup, size limit, empty filtering)
         let maxSize = Defaults[.isUnlimitedHistory] ? 0 : Defaults[.size]
-        let result = (try? core.add(item: item, maxSize: Int32(maxSize), isUnlimited: Defaults[.isUnlimitedHistory])) ?? item
+        guard let result = try? core.add(item: item, maxSize: Int32(maxSize), isUnlimited: Defaults[.isUnlimitedHistory]) else {
+            return HistoryItemDecorator(item) // empty item rejected, return placeholder without storing
+        }
 
         // Check if it was a dedup (same id returned) or new item
         let isNew = all.contains(where: { $0.item.id == result.id }) == false

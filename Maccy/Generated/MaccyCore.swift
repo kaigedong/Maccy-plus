@@ -1229,6 +1229,7 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Rejects items that have no meaningful content.
      */
     func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws  -> ClipboardItem
     
@@ -1389,6 +1390,7 @@ public convenience init(dbPath: String)throws  {
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Rejects items that have no meaningful content.
      */
 open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool)throws  -> ClipboardItem  {
     return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -2505,7 +2507,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_add() != 6845) {
+    if (uniffi_maccy_core_checksum_method_historymanager_add() != 38622) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_clear_all() != 29384) {
