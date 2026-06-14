@@ -7,7 +7,7 @@ struct SyncSettingsPane: View {
   @Default(.syncDeviceName) private var syncDeviceName
   @Default(.syncDiscoverable) private var syncDiscoverable
   @State private var discoveredPeers: [DiscoveredPeer] = []
-  @State private var pairedDevices: [PairedDeviceInfo] = PairedDeviceInfo.all
+  @State private var pairedDevices: [PairedDeviceInfo] = []
   @State private var editingDevice: PairedDeviceInfo?
   @State private var editingNickname = ""
   @State private var editingIcon = "💻"
@@ -65,6 +65,7 @@ struct SyncSettingsPane: View {
     }
     .sheet(item: $editingDevice) { device in editDeviceSheet(device) }
     .sheet(isPresented: $showPairingDialog) { pairingDialogContent }
+    .onAppear { pairedDevices = PairedDeviceInfo.loadFromCore() }
     .onReceive(NotificationCenter.default.publisher(for: .syncPeerDiscovered)) { n in
       handlePeerDiscovered(n)
     }
@@ -75,7 +76,7 @@ struct SyncSettingsPane: View {
       handlePairingRequest(n)
     }
     .onReceive(NotificationCenter.default.publisher(for: .syncPairingComplete)) { _ in
-      pairedDevices = PairedDeviceInfo.all
+      pairedDevices = PairedDeviceInfo.loadFromCore()
     }
     .onReceive(NotificationCenter.default.publisher(for: .syncError)) { n in
       if let msg = n.userInfo?["message"] as? String {
@@ -170,7 +171,7 @@ struct SyncSettingsPane: View {
       Button("Unpair") {
         SyncBridge.shared.unpair(peerID: device.peerID)
         AppState.shared.history.core.removePairedPeer(peerId: device.peerID)
-        pairedDevices = PairedDeviceInfo.all
+        pairedDevices = PairedDeviceInfo.loadFromCore()
       }
       .buttonStyle(.bordered)
       .controlSize(.small)
@@ -192,7 +193,7 @@ struct SyncSettingsPane: View {
         Button("Cancel") { editingDevice = nil }.keyboardShortcut(.cancelAction)
         Button("Save") {
           AppState.shared.history.core.savePairedPeer(peerId: device.peerID, displayName: editingNickname)
-          pairedDevices = PairedDeviceInfo.all
+          pairedDevices = PairedDeviceInfo.loadFromCore()
           editingDevice = nil
         }
         .keyboardShortcut(.defaultAction)

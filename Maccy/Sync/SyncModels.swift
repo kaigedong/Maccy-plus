@@ -9,8 +9,8 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
   var isConnected: Bool
 
   /// Load paired devices from Rust core (SQLite), not UserDefaults.
-  static var all: [PairedDeviceInfo] {
-    let jsonList = AppState.shared.history.core.getPairedPeers()
+  static func loadFromCore() -> [PairedDeviceInfo] {
+    guard let jsonList = try? AppState.shared.history.core.getPairedPeers() else { return [] }
     return jsonList.compactMap { json in
       guard let data = json.data(using: .utf8),
             let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
