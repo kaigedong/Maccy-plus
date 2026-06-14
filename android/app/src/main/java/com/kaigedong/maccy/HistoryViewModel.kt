@@ -10,7 +10,7 @@ import java.io.File
 
 class HistoryViewModel : ViewModel() {
     private var core: HistoryManager? = null
-    private var syncObserver: MaccyClipboardObserver? = null
+    private var syncObserver: ClipboardObserver? = null
 
     private val _items = MutableStateFlow<List<ClipboardItem>>(emptyList())
     val items: StateFlow<List<ClipboardItem>> = _items
@@ -45,7 +45,7 @@ class HistoryViewModel : ViewModel() {
     fun startSync(deviceName: String, deviceId: String) {
         val core = this.core ?: return
         syncObserver = MaccyClipboardObserver(
-            onItemReceived = { item ->
+            onItemReceivedCb = { item ->
                 LogManager.i("Sync", "Received item: ${item.title.take(80)}")
                 viewModelScope.launch {
                     try {
@@ -56,14 +56,14 @@ class HistoryViewModel : ViewModel() {
                     }
                 }
             },
-            onItemDeleted = { itemId ->
+            onItemDeletedCb = { itemId ->
                 LogManager.d("Sync", "Remote delete: $itemId")
                 viewModelScope.launch {
                     try { core.delete(itemId); loadItems() }
                     catch (e: Exception) { LogManager.e("Sync", "Failed to delete synced item", e) }
                 }
             },
-            onItemUpdated = { item ->
+            onItemUpdatedCb = { item ->
                 LogManager.d("Sync", "Remote update: ${item.title.take(80)}")
                 viewModelScope.launch {
                     try {
@@ -72,35 +72,35 @@ class HistoryViewModel : ViewModel() {
                     } catch (e: Exception) { LogManager.e("Sync", "Failed to update synced item", e) }
                 }
             },
-            onPeerDiscovered = { peerId, displayName, addresses, isConnected ->
+            onPeerDiscoveredCb = { peerId, displayName, addresses, isConnected ->
                 LogManager.i("Sync", "Peer: $displayName (connected=$isConnected)")
                 val list = _peers.value.toMutableList()
                 list.removeAll { it.peerId == peerId }
-                list.add(DiscoveredPeer(peerId, displayName, addresses.toList(), isConnected))
+                list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected))
                 _peers.value = list
             },
-            onPeerLost = { peerId ->
+            onPeerLostCb = { peerId ->
                 _peers.value = _peers.value.filter { it.peerId != peerId }
             },
-            onPairingRequest = { peerId, displayName, pin ->
+            onPairingRequestCb = { peerId, displayName, pin ->
                 LogManager.i("Sync", "Pairing request from $displayName (pin=$pin)")
                 _pairingRequest.value = PairingRequest(peerId, displayName, pin)
             },
-            onPairingComplete = { peerId, success ->
+            onPairingCompleteCb = { peerId, success ->
                 LogManager.i("Sync", "Pairing complete: peer=$peerId success=$success")
                 _pairingRequest.value = null
             },
-            onListening = { address ->
+            onListeningCb = { address ->
                 LogManager.i("Sync", "Listening on $address")
             },
-            onError = { code, message ->
+            onErrorCb = { code, message ->
                 LogManager.e("Sync", "Error $code: $message")
                 _syncError.value = "Sync error: $message"
             }
         )
 
         try {
-            core.startSync(deviceName, deviceId, syncObserver!!)
+            core.startSync(deviceName, deviceId, syncObserver)
             LogManager.i("Sync", "Sync started (via HistoryManager)")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to start sync", e)
@@ -162,7 +162,6 @@ class HistoryViewModel : ViewModel() {
             core?.let { manager ->
                 try {
                     val result = manager.add(item, maxSize = 500, isUnlimited = false)
-                    // Broadcast to peers
                     manager.syncBroadcastItem(result)
                     LogManager.d("History", "Added item: ${item.id.take(8)}...")
                 } catch (e: Exception) {
@@ -201,7 +200,7 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun search(query: String, mode: SearchMode = SearchMode.Mixed) {
+    fun search(query: String, mode: SearchMode = SearchMode.MIXED) {
         viewModelScope.launch {
             core?.let { manager ->
                 try {
@@ -245,20 +244,18 @@ data class PairingRequest(
 )
 
 // ── ClipboardObserver UniFFI implementation ──────────────────────
-// After UniFFI generates the ClipboardObserverInterface, this class implements it.
-// If the generated name differs, search/replace "ClipboardObserverInterface" below.
 
 class MaccyClipboardObserver(
     private val onItemReceivedCb: (ClipboardItem) -> Unit,
     private val onItemDeletedCb: (String) -> Unit,
     private val onItemUpdatedCb: (ClipboardItem) -> Unit,
-    private val onPeerDiscoveredCb: (String, String, List<String>, Boolean) -> Unit,
+    private val onPeerDiscoveredCb: (peerId: String, displayName: String, addresses: List<String>, isConnected: Boolean) -> Unit,
     private val onPeerLostCb: (String) -> Unit,
-    private val onPairingRequestCb: (String, String, String) -> Unit,
-    private val onPairingCompleteCb: (String, Boolean) -> Unit,
+    private val onPairingRequestCb: (peerId: String, displayName: String, pin: String) -> Unit,
+    private val onPairingCompleteCb: (peerId: String, success: Boolean) -> Unit,
     private val onListeningCb: (String) -> Unit,
-    private val onErrorCb: (Int, String) -> Unit,
-) : ClipboardObserverInterface {
+    private val onErrorCb: (code: Int, message: String) -> Unit,
+) : ClipboardObserver {
     override fun onItemReceived(item: ClipboardItem) = onItemReceivedCb(item)
     override fun onItemDeleted(itemId: String) = onItemDeletedCb(itemId)
     override fun onItemUpdated(item: ClipboardItem) = onItemUpdatedCb(item)

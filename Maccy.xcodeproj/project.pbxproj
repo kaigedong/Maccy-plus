@@ -1830,7 +1830,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_INCLUDE_PATHS = "$(inherited) /Users/bobo/Documents/bobo/Maccy-plus/Maccy/Generated $(SRCROOT)/Maccy/Generated";
+				SWIFT_INCLUDE_PATHS = "$(inherited) /Users/bobo/Documents/bobo/Maccy-plus/Maccy/Generated $(SRCROOT)/Maccy/Generated $(SRCROOT)/Maccy/Generated";
 				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1859,6 +1859,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Maccy/Include",
+					Maccy/Generated,
 				);
 				INFOPLIST_FILE = Maccy/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -1884,7 +1885,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Maccy/Generated";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Maccy/Generated $(SRCROOT)/Maccy/Generated";
 				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
