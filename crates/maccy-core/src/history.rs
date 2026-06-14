@@ -30,7 +30,9 @@ impl HistoryManager {
 
     /// Load all items from storage.
     pub fn load(&self) -> Result<Vec<ClipboardItem>, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .get_all_items()
     }
 
@@ -41,9 +43,10 @@ impl HistoryManager {
         max_size: i32,
         is_unlimited: bool,
     ) -> Result<ClipboardItem, CoreError> {
-        let storage = self.storage.lock().map_err(|e| CoreError::Storage {
-            msg: e.to_string(),
-        })?;
+        let storage = self
+            .storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
 
         let existing_items = storage.get_all_items()?;
         if let Some(similar) = find_similar(&item, &existing_items) {
@@ -51,11 +54,20 @@ impl HistoryManager {
             updated.last_copied_at = item.last_copied_at;
             updated.number_of_copies += 1;
             for new_content in &item.contents {
-                let has_type = updated.contents.iter().any(|c| c.content_type == new_content.content_type);
-                if !has_type { updated.contents.push(new_content.clone()); }
+                let has_type = updated
+                    .contents
+                    .iter()
+                    .any(|c| c.content_type == new_content.content_type);
+                if !has_type {
+                    updated.contents.push(new_content.clone());
+                }
             }
             for new_content in &item.contents {
-                if let Some(existing) = updated.contents.iter_mut().find(|c| c.content_type == new_content.content_type) {
+                if let Some(existing) = updated
+                    .contents
+                    .iter_mut()
+                    .find(|c| c.content_type == new_content.content_type)
+                {
                     existing.value = new_content.value.clone();
                 }
             }
@@ -67,7 +79,8 @@ impl HistoryManager {
             let count = storage.count_items()?;
             if count >= max_size as i64 {
                 let all = storage.get_all_items()?;
-                let unpinned: Vec<&ClipboardItem> = all.iter().filter(|i| i.pin.is_none()).collect();
+                let unpinned: Vec<&ClipboardItem> =
+                    all.iter().filter(|i| i.pin.is_none()).collect();
                 let excess = (count - max_size as i64 + 1) as usize;
                 for item in unpinned.iter().rev().take(excess) {
                     storage.delete_item(&item.id)?;
@@ -80,34 +93,65 @@ impl HistoryManager {
     }
 
     pub fn delete(&self, id: String) -> Result<(), CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_item(&id)
     }
 
     pub fn clear_unpinned(&self) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_unpinned()
     }
 
     pub fn clear_all(&self) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .delete_all()
     }
 
-    pub fn toggle_pin(&self, id: String, available_pins: Vec<String>) -> Result<ClipboardItem, CoreError> {
-        let storage = self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?;
-        let mut item = storage.get_item(&id)?.ok_or(CoreError::NotFound { id: id.clone() })?;
-        if item.pin.is_some() { item.pin = None; }
-        else { item.pin = available_pins.first().cloned(); }
+    pub fn toggle_pin(
+        &self,
+        id: String,
+        available_pins: Vec<String>,
+    ) -> Result<ClipboardItem, CoreError> {
+        let storage = self
+            .storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let mut item = storage
+            .get_item(&id)?
+            .ok_or(CoreError::NotFound { id: id.clone() })?;
+        if item.pin.is_some() {
+            item.pin = None;
+        } else {
+            item.pin = available_pins.first().cloned();
+        }
         storage.update_item(&item)?;
         Ok(item)
     }
 
-    pub fn update_item_text(&self, id: String, new_text: String) -> Result<ClipboardItem, CoreError> {
-        let storage = self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?;
-        let mut item = storage.get_item(&id)?.ok_or(CoreError::NotFound { id: id.clone() })?;
+    pub fn update_item_text(
+        &self,
+        id: String,
+        new_text: String,
+    ) -> Result<ClipboardItem, CoreError> {
+        let storage = self
+            .storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let mut item = storage
+            .get_item(&id)?
+            .ok_or(CoreError::NotFound { id: id.clone() })?;
         let text_type = "public.utf8-plain-text";
-        if let Some(content) = item.contents.iter_mut().find(|c| c.content_type == text_type) {
+        if let Some(content) = item
+            .contents
+            .iter_mut()
+            .find(|c| c.content_type == text_type)
+        {
             content.value = Some(new_text.as_bytes().to_vec());
         }
         item.title = new_text;
@@ -115,25 +159,42 @@ impl HistoryManager {
         Ok(item)
     }
 
-    pub fn search(&self, query: &str, items: Vec<ClipboardItem>, mode: SearchMode) -> Vec<SearchResult> {
+    pub fn search(
+        &self,
+        query: &str,
+        items: Vec<ClipboardItem>,
+        mode: SearchMode,
+    ) -> Vec<SearchResult> {
         SearchEngine::search(query, &items, mode)
     }
 
-    pub fn sort(&self, items: Vec<ClipboardItem>, sort_by: SortBy, pin_to_top: bool) -> Vec<ClipboardItem> {
+    pub fn sort(
+        &self,
+        items: Vec<ClipboardItem>,
+        sort_by: SortBy,
+        pin_to_top: bool,
+    ) -> Vec<ClipboardItem> {
         sort_items(items, sort_by, pin_to_top)
     }
 
     pub fn storage_size_bytes(&self, db_path: String) -> i64 {
-        self.storage.lock().map(|s| s.db_size_bytes(&db_path)).unwrap_or(0)
+        self.storage
+            .lock()
+            .map(|s| s.db_size_bytes(&db_path))
+            .unwrap_or(0)
     }
 
     pub fn count(&self) -> Result<i64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .count_items()
     }
 
     pub fn migrate_from_swiftdata(&self, swiftdata_path: String) -> Result<u64, CoreError> {
-        self.storage.lock().map_err(|e| CoreError::Storage { msg: e.to_string() })?
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .migrate_from_swiftdata(&swiftdata_path)
     }
 
@@ -147,14 +208,20 @@ impl HistoryManager {
         observer: Arc<dyn ClipboardObserver>,
     ) -> Result<(), CoreError> {
         let engine = SyncEngine::start(&device_name, &device_id, observer)?;
-        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { msg: e.to_string() })?;
+        let mut guard = self
+            .sync_engine
+            .lock()
+            .map_err(|e| CoreError::Sync { msg: e.to_string() })?;
         *guard = Some(engine);
         Ok(())
     }
 
     /// Stop the sync engine.
     pub fn stop_sync(&self) -> Result<(), CoreError> {
-        let mut guard = self.sync_engine.lock().map_err(|e| CoreError::Sync { msg: e.to_string() })?;
+        let mut guard = self
+            .sync_engine
+            .lock()
+            .map_err(|e| CoreError::Sync { msg: e.to_string() })?;
         if let Some(engine) = guard.take() {
             engine.stop();
         }
@@ -163,64 +230,94 @@ impl HistoryManager {
 
     pub fn sync_add_peer_address(&self, address: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.add_peer_address(&address); }
+            if let Some(ref e) = *guard {
+                e.add_peer_address(&address);
+            }
         }
     }
 
     pub fn sync_start_discovery(&self) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.start_discovery(); }
+            if let Some(ref e) = *guard {
+                e.start_discovery();
+            }
         }
     }
 
     pub fn sync_stop_discovery(&self) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.stop_discovery(); }
+            if let Some(ref e) = *guard {
+                e.stop_discovery();
+            }
+        }
+    }
+
+    /// Restart discovery to find new peers.
+    pub fn sync_refresh_discovery(&self) {
+        if let Ok(guard) = self.sync_engine.lock() {
+            if let Some(ref e) = *guard {
+                e.stop_discovery();
+                e.start_discovery();
+            }
         }
     }
 
     pub fn sync_request_pairing(&self, peer_id: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.request_pairing(&peer_id); }
+            if let Some(ref e) = *guard {
+                e.request_pairing(&peer_id);
+            }
         }
     }
 
     pub fn sync_accept_pairing(&self, peer_id: String, pin: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.accept_pairing(&peer_id, &pin); }
+            if let Some(ref e) = *guard {
+                e.accept_pairing(&peer_id, &pin);
+            }
         }
     }
 
     pub fn sync_reject_pairing(&self, peer_id: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.reject_pairing(&peer_id); }
+            if let Some(ref e) = *guard {
+                e.reject_pairing(&peer_id);
+            }
         }
     }
 
     pub fn sync_unpair(&self, peer_id: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.unpair(&peer_id); }
+            if let Some(ref e) = *guard {
+                e.unpair(&peer_id);
+            }
         }
     }
 
     /// Broadcast a newly copied item to synced peers.
     pub fn sync_broadcast_item(&self, item: ClipboardItem) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.broadcast_item(&item); }
+            if let Some(ref e) = *guard {
+                e.broadcast_item(&item);
+            }
         }
     }
 
     /// Broadcast a deletion to synced peers.
     pub fn sync_broadcast_deletion(&self, item_id: String) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.broadcast_deletion(&item_id); }
+            if let Some(ref e) = *guard {
+                e.broadcast_deletion(&item_id);
+            }
         }
     }
 
     /// Broadcast an update to synced peers.
     pub fn sync_broadcast_update(&self, item: ClipboardItem) {
         if let Ok(guard) = self.sync_engine.lock() {
-            if let Some(ref e) = *guard { e.broadcast_update(&item); }
+            if let Some(ref e) = *guard {
+                e.broadcast_update(&item);
+            }
         }
     }
 
@@ -239,7 +336,8 @@ impl HistoryManager {
 
     /// Get all paired peers with their display names.
     pub fn get_paired_peers(&self) -> Vec<String> {
-        self.storage.lock()
+        self.storage
+            .lock()
             .map(|s| s.get_paired_peers().unwrap_or_default())
             .unwrap_or_default()
             .into_iter()
@@ -247,7 +345,8 @@ impl HistoryManager {
                 serde_json::to_string(&serde_json::json!({
                     "peerId": peer_id,
                     "displayName": display_name
-                })).unwrap_or_default()
+                }))
+                .unwrap_or_default()
             })
             .collect()
     }
@@ -269,7 +368,10 @@ impl HistoryManager {
 
 // ── Deduplication ─────────────────────────────────────────────────
 
-fn find_similar<'a>(new_item: &ClipboardItem, existing: &'a [ClipboardItem]) -> Option<&'a ClipboardItem> {
+fn find_similar<'a>(
+    new_item: &ClipboardItem,
+    existing: &'a [ClipboardItem],
+) -> Option<&'a ClipboardItem> {
     let transient_types = [
         "com.apple.modified",
         "com.maccy.from-maccy",
@@ -283,10 +385,13 @@ fn find_similar<'a>(new_item: &ClipboardItem, existing: &'a [ClipboardItem]) -> 
 
     existing.iter().find(|existing| {
         let new_non_transient: Vec<&ClipboardContent> = new_item
-            .contents.iter()
+            .contents
+            .iter()
             .filter(|c| !transient_types.contains(&c.content_type.as_str()))
             .collect();
-        if new_non_transient.is_empty() { return false; }
+        if new_non_transient.is_empty() {
+            return false;
+        }
         new_non_transient.iter().all(|new_content| {
             existing.contents.iter().any(|existing_content| {
                 existing_content.content_type == new_content.content_type
@@ -302,28 +407,47 @@ mod tests {
 
     fn make_item(id: &str, title: &str, types: &[(&str, &[u8])]) -> ClipboardItem {
         ClipboardItem {
-            id: id.to_string(), application: None,
-            first_copied_at: 1000, last_copied_at: 1000,
-            number_of_copies: 1, pin: None,
+            id: id.to_string(),
+            application: None,
+            first_copied_at: 1000,
+            last_copied_at: 1000,
+            number_of_copies: 1,
+            pin: None,
             title: title.to_string(),
-            contents: types.iter().map(|(t, v)| ClipboardContent {
-                content_type: t.to_string(), value: Some(v.to_vec()),
-            }).collect(),
-            sync_timestamp: 1000, sync_source: None, sync_deleted: false,
+            contents: types
+                .iter()
+                .map(|(t, v)| ClipboardContent {
+                    content_type: t.to_string(),
+                    value: Some(v.to_vec()),
+                })
+                .collect(),
+            sync_timestamp: 1000,
+            sync_source: None,
+            sync_deleted: false,
         }
     }
 
     #[test]
     fn test_add_and_load() {
         let mgr = HistoryManager::new(":memory:".to_string()).unwrap();
-        mgr.add(make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]), 100, false).unwrap();
+        mgr.add(
+            make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]),
+            100,
+            false,
+        )
+        .unwrap();
         assert_eq!(mgr.load().unwrap().len(), 1);
     }
 
     #[test]
     fn test_delete() {
         let mgr = HistoryManager::new(":memory:".to_string()).unwrap();
-        mgr.add(make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]), 100, false).unwrap();
+        mgr.add(
+            make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]),
+            100,
+            false,
+        )
+        .unwrap();
         mgr.delete("1".to_string()).unwrap();
         assert!(mgr.load().unwrap().is_empty());
     }
@@ -331,7 +455,12 @@ mod tests {
     #[test]
     fn test_deduplication() {
         let mgr = HistoryManager::new(":memory:".to_string()).unwrap();
-        mgr.add(make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]), 100, false).unwrap();
+        mgr.add(
+            make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]),
+            100,
+            false,
+        )
+        .unwrap();
         let mut item2 = make_item("2", "Hello", &[("public.utf8-plain-text", b"Hello")]);
         item2.last_copied_at = 2000;
         let result = mgr.add(item2, 100, false).unwrap();
@@ -342,8 +471,15 @@ mod tests {
     #[test]
     fn test_toggle_pin() {
         let mgr = HistoryManager::new(":memory:".to_string()).unwrap();
-        mgr.add(make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]), 100, false).unwrap();
-        let pinned = mgr.toggle_pin("1".to_string(), vec!["b".to_string()]).unwrap();
+        mgr.add(
+            make_item("1", "Hello", &[("public.utf8-plain-text", b"Hello")]),
+            100,
+            false,
+        )
+        .unwrap();
+        let pinned = mgr
+            .toggle_pin("1".to_string(), vec!["b".to_string()])
+            .unwrap();
         assert_eq!(pinned.pin, Some("b".to_string()));
     }
 
@@ -351,7 +487,16 @@ mod tests {
     fn test_size_limit() {
         let mgr = HistoryManager::new(":memory:".to_string()).unwrap();
         for i in 0..5 {
-            mgr.add(make_item(&format!("{}", i), &format!("Item {}", i), &[("public.utf8-plain-text", b"text")]), 3, false).unwrap();
+            mgr.add(
+                make_item(
+                    &format!("{}", i),
+                    &format!("Item {}", i),
+                    &[("public.utf8-plain-text", b"text")],
+                ),
+                3,
+                false,
+            )
+            .unwrap();
         }
         assert!(mgr.load().unwrap().len() <= 3);
     }

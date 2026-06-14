@@ -12,7 +12,6 @@ use std::fs;
 use std::io::Read;
 use tokio::sync::mpsc;
 
-
 use crate::error::ErrorCode;
 use crate::state::{SharedState, SyncCommand};
 use crate::types::*;
@@ -71,8 +70,8 @@ impl NetworkManager {
             ttl: Duration::from_secs(120),
             ..mdns::Config::default()
         };
-        let mdns_behaviour = mdns::tokio::Behaviour::new(mdns_config, local_peer_id)
-            .map_err(|_| ErrorCode::Init)?;
+        let mdns_behaviour =
+            mdns::tokio::Behaviour::new(mdns_config, local_peer_id).map_err(|_| ErrorCode::Init)?;
 
         let gossipsub_config = gossipsub::ConfigBuilder::default()
             .heartbeat_interval(Duration::from_secs(1))
@@ -92,14 +91,11 @@ impl NetworkManager {
         .map_err(|_| ErrorCode::Init)?;
 
         let identify = libp2p::identify::Behaviour::new(
-            libp2p::identify::Config::new(
-                PAIRING_PROTOCOL.to_string(),
-                local_key.public(),
-            )
-            .with_agent_version(format!(
-                "maccy-sync/0.1.0/{}",
-                state.lock().unwrap().device_name,
-            )),
+            libp2p::identify::Config::new(PAIRING_PROTOCOL.to_string(), local_key.public())
+                .with_agent_version(format!(
+                    "maccy-sync/0.1.0/{}",
+                    state.lock().unwrap().device_name,
+                )),
         );
 
         let file_transfer = request_response::cbor::Behaviour::new(
@@ -127,9 +123,7 @@ impl NetworkManager {
             .map_err(|_| ErrorCode::Init)?
             .with_behaviour(|_| behaviour)
             .map_err(|_| ErrorCode::Init)?
-            .with_swarm_config(|cfg| {
-                cfg.with_idle_connection_timeout(Duration::from_secs(60))
-            })
+            .with_swarm_config(|cfg| cfg.with_idle_connection_timeout(Duration::from_secs(60)))
             .build();
 
         Ok(Self {
@@ -149,10 +143,15 @@ impl NetworkManager {
         let _ = self.swarm.behaviour_mut().gossipsub.subscribe(&sync_topic);
 
         let pairing_topic = IdentTopic::new(PAIRING_TOPIC);
-        let _ = self.swarm.behaviour_mut().gossipsub.subscribe(&pairing_topic);
+        let _ = self
+            .swarm
+            .behaviour_mut()
+            .gossipsub
+            .subscribe(&pairing_topic);
 
-        let listen_addr: libp2p::Multiaddr =
-            format!("/ip4/0.0.0.0/tcp/{}", self.listen_port).parse().unwrap();
+        let listen_addr: libp2p::Multiaddr = format!("/ip4/0.0.0.0/tcp/{}", self.listen_port)
+            .parse()
+            .unwrap();
         if self.swarm.listen_on(listen_addr).is_err() {
             self.emit_error(ErrorCode::Network, "Failed to listen on port".into());
             return;
@@ -190,7 +189,9 @@ impl NetworkManager {
             // mDNS: peer found on LAN — store but don't emit until Identify gives us a name
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
                 for (peer_id, addr) in peers {
-                    if peer_id == self.local_peer_id { continue; }
+                    if peer_id == self.local_peer_id {
+                        continue;
+                    }
                     let info = PeerInfo {
                         peer_id: peer_id.to_string(),
                         display_name: String::new(),
@@ -204,7 +205,9 @@ impl NetworkManager {
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Expired(peers))) => {
                 for (peer_id, _) in peers {
                     if let Some(info) = self.discovered_peers.remove(&peer_id) {
-                        self.state_emit(SyncEvent::PeerLost { peer_id: info.peer_id });
+                        self.state_emit(SyncEvent::PeerLost {
+                            peer_id: info.peer_id,
+                        });
                     }
                 }
             }
@@ -224,7 +227,8 @@ impl NetworkManager {
                     .to_string();
                 log::info!("Identified {} as {}", peer_id, device_name);
                 let observed_addr = info.observed_addr.to_string();
-                let listen_addrs: Vec<String> = info.listen_addrs.iter().map(|a| a.to_string()).collect();
+                let listen_addrs: Vec<String> =
+                    info.listen_addrs.iter().map(|a| a.to_string()).collect();
 
                 if let Some(peer_info) = self.discovered_peers.get_mut(&peer_id) {
                     peer_info.display_name = device_name;
@@ -239,7 +243,11 @@ impl NetworkManager {
                     let peer_info = PeerInfo {
                         peer_id: peer_id.to_string(),
                         display_name: device_name,
-                        addresses: if !listen_addrs.is_empty() { listen_addrs } else { vec![observed_addr] },
+                        addresses: if !listen_addrs.is_empty() {
+                            listen_addrs
+                        } else {
+                            vec![observed_addr]
+                        },
                         is_connected: true,
                     };
                     self.discovered_peers.insert(peer_id, peer_info.clone());
@@ -271,12 +279,15 @@ impl NetworkManager {
             }
 
             // Gossipsub messages
-            SwarmEvent::Behaviour(MaccyBehaviourEvent::Gossipsub(
-                gossipsub::Event::Message { message, propagation_source, .. },
-            )) => {
+            SwarmEvent::Behaviour(MaccyBehaviourEvent::Gossipsub(gossipsub::Event::Message {
+                message,
+                propagation_source,
+                ..
+            })) => {
                 let topic = message.topic.as_str();
                 if topic == PAIRING_TOPIC {
-                    if let Ok(pairing_msg) = serde_json::from_slice::<PairingMessage>(&message.data) {
+                    if let Ok(pairing_msg) = serde_json::from_slice::<PairingMessage>(&message.data)
+                    {
                         self.handle_pairing_message(propagation_source, pairing_msg);
                     }
                 } else if topic == TOPIC_NAME {
@@ -290,11 +301,16 @@ impl NetworkManager {
 
             SwarmEvent::NewListenAddr { address, .. } => {
                 log::info!("Listening on {}", address);
-                self.state_emit(SyncEvent::Listening { address: address.to_string() });
+                self.state_emit(SyncEvent::Listening {
+                    address: address.to_string(),
+                });
             }
             SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
                 log::error!("Outgoing connection error: {:?} ({:?})", peer_id, error);
-                self.emit_error(ErrorCode::Network, format!("Connection failed: {:?}", error));
+                self.emit_error(
+                    ErrorCode::Network,
+                    format!("Connection failed: {:?}", error),
+                );
             }
             SwarmEvent::IncomingConnectionError { error, .. } => {
                 log::error!("Incoming connection error: {:?}", error);
@@ -310,7 +326,12 @@ impl NetworkManager {
                 self.handle_file_transfer_message(peer, message);
             }
             SwarmEvent::Behaviour(MaccyBehaviourEvent::FileTransfer(
-                request_response::Event::OutboundFailure { peer, request_id, error, .. },
+                request_response::Event::OutboundFailure {
+                    peer,
+                    request_id,
+                    error,
+                    ..
+                },
             )) => {
                 log::error!("File transfer outbound failure to {}: {:?}", peer, error);
                 self.state_emit(SyncEvent::FileDownloadComplete {
@@ -343,7 +364,11 @@ impl NetworkManager {
 
     fn handle_pairing_message(&mut self, peer: PeerId, msg: PairingMessage) {
         match msg {
-            PairingMessage::Request { session_id, device_name, .. } => {
+            PairingMessage::Request {
+                session_id,
+                device_name,
+                ..
+            } => {
                 // Deduplicate: only show one dialog per session
                 if self.seen_pairing_sessions.contains(&session_id) {
                     return;
@@ -382,11 +407,18 @@ impl NetworkManager {
         msg: request_response::Message<FileRequest, FileChunk>,
     ) {
         match msg {
-            request_response::Message::Request { request_id, request, channel } => {
+            request_response::Message::Request {
+                request_id,
+                request,
+                channel,
+            } => {
                 log::info!("File request from {}: {}", peer, request.file_path);
                 self.send_file_chunks(channel, &request);
             }
-            request_response::Message::Response { request_id, response } => {
+            request_response::Message::Response {
+                request_id,
+                response,
+            } => {
                 self.state_emit(SyncEvent::FileChunkReceived {
                     request_id: request_id.to_string(),
                     file_name: response.file_name,
@@ -399,7 +431,11 @@ impl NetworkManager {
         }
     }
 
-    fn send_file_chunks(&mut self, channel: request_response::ResponseChannel<FileChunk>, req: &FileRequest) {
+    fn send_file_chunks(
+        &mut self,
+        channel: request_response::ResponseChannel<FileChunk>,
+        req: &FileRequest,
+    ) {
         let path = &req.file_path;
         match std::fs::read(path) {
             Ok(data) => {
@@ -417,7 +453,11 @@ impl NetworkManager {
                     total_chunks: 1,
                     data,
                 };
-                let _ = self.swarm.behaviour_mut().file_transfer.send_response(channel, chunk);
+                let _ = self
+                    .swarm
+                    .behaviour_mut()
+                    .file_transfer
+                    .send_response(channel, chunk);
             }
             Err(e) => {
                 log::error!("File not found {}: {}", path, e);
@@ -429,7 +469,11 @@ impl NetworkManager {
                     total_chunks: 0,
                     data: vec![],
                 };
-                let _ = self.swarm.behaviour_mut().file_transfer.send_response(channel, chunk);
+                let _ = self
+                    .swarm
+                    .behaviour_mut()
+                    .file_transfer
+                    .send_response(channel, chunk);
             }
         }
     }
@@ -520,12 +564,18 @@ impl NetworkManager {
                         Ok(()) => log::info!("Dialing {}", addr),
                         Err(e) => {
                             log::error!("Failed to dial {}: {:?}", addr, e);
-                            self.emit_error(ErrorCode::Network, format!("Failed to dial {}: {:?}", addr, e));
+                            self.emit_error(
+                                ErrorCode::Network,
+                                format!("Failed to dial {}: {:?}", addr, e),
+                            );
                         }
                     }
                 } else {
                     log::error!("Invalid multiaddr: {}", multiaddr);
-                    self.emit_error(ErrorCode::InvalidArg, format!("Invalid address: {}", address));
+                    self.emit_error(
+                        ErrorCode::InvalidArg,
+                        format!("Invalid address: {}", address),
+                    );
                 }
             }
             SyncCommand::Unpair { peer_id } => {
@@ -533,10 +583,23 @@ impl NetworkManager {
                     self.paired_peers.remove(&peer);
                 }
             }
-            SyncCommand::SendFileChunk { peer_id, request_id, file_path, offset } => {
+            SyncCommand::SendFileChunk {
+                peer_id,
+                request_id,
+                file_path,
+                offset,
+            } => {
                 if let Ok(peer) = peer_id.parse::<PeerId>() {
-                    let request = FileRequest { request_id, file_path, offset };
-                    let _ = self.swarm.behaviour_mut().file_transfer.send_request(&peer, request);
+                    let request = FileRequest {
+                        request_id,
+                        file_path,
+                        offset,
+                    };
+                    let _ = self
+                        .swarm
+                        .behaviour_mut()
+                        .file_transfer
+                        .send_request(&peer, request);
                 }
             }
             _ => {}

@@ -760,6 +760,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update(
     ): Short
+    external fun uniffi_maccy_core_checksum_method_historymanager_sync_refresh_discovery(
+    ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing(
     ): Short
     external fun uniffi_maccy_core_checksum_method_historymanager_sync_request_pairing(
@@ -864,6 +866,8 @@ external fun uniffi_maccy_core_fn_method_historymanager_sync_broadcast_deletion(
 external fun uniffi_maccy_core_fn_method_historymanager_sync_broadcast_item(`ptr`: Long,`item`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(`ptr`: Long,`item`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+external fun uniffi_maccy_core_fn_method_historymanager_sync_refresh_discovery(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_sync_reject_pairing(`ptr`: Long,`peerId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
@@ -1087,6 +1091,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update() != 36600.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_sync_refresh_discovery() != 54971.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing() != 56440.toShort()) {
@@ -2365,6 +2372,11 @@ public interface HistoryManagerInterface {
      */
     fun `syncBroadcastUpdate`(`item`: ClipboardItem)
     
+    /**
+     * Restart discovery to find new peers.
+     */
+    fun `syncRefreshDiscovery`()
+    
     fun `syncRejectPairing`(`peerId`: kotlin.String)
     
     fun `syncRequestPairing`(`peerId`: kotlin.String)
@@ -2789,6 +2801,21 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
     UniffiLib.uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(
         it,
         FfiConverterTypeClipboardItem.lower(`item`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Restart discovery to find new peers.
+     */override fun `syncRefreshDiscovery`()
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_maccy_core_fn_method_historymanager_sync_refresh_discovery(
+        it,
+        _status)
 }
     }
     

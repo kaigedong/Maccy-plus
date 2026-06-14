@@ -33,57 +33,84 @@ impl SyncEngine {
         // Register the unified event callback — dispatches to observer trait methods
         {
             let obs = observer.clone();
-            state.lock().unwrap().on_event.lock().replace(Box::new(move |json: &str| {
-                if let Ok(event) = serde_json::from_str::<SyncEvent>(json) {
-                    match event {
-                        SyncEvent::ItemReceived { item_json } => {
-                            if let Ok(item) = Self::deserialize_item(&item_json) {
-                                obs.on_item_received(item);
+            state
+                .lock()
+                .unwrap()
+                .on_event
+                .lock()
+                .replace(Box::new(move |json: &str| {
+                    if let Ok(event) = serde_json::from_str::<SyncEvent>(json) {
+                        match event {
+                            SyncEvent::ItemReceived { item_json } => {
+                                if let Ok(item) = Self::deserialize_item(&item_json) {
+                                    obs.on_item_received(item);
+                                }
                             }
-                        }
-                        SyncEvent::ItemDeleted { item_id } => {
-                            obs.on_item_deleted(item_id);
-                        }
-                        SyncEvent::ItemUpdated { item_json } => {
-                            if let Ok(item) = Self::deserialize_item(&item_json) {
-                                obs.on_item_updated(item);
+                            SyncEvent::ItemDeleted { item_id } => {
+                                obs.on_item_deleted(item_id);
                             }
-                        }
-                        SyncEvent::PeerDiscovered { peer } => {
-                            obs.on_peer_discovered(
-                                peer.peer_id,
-                                peer.display_name,
-                                peer.addresses,
-                                peer.is_connected,
-                            );
-                        }
-                        SyncEvent::PeerLost { peer_id } => {
-                            obs.on_peer_lost(peer_id);
-                        }
-                        SyncEvent::PairingRequest { peer_id, display_name, pin } => {
-                            obs.on_pairing_request(peer_id, display_name, pin);
-                        }
-                        SyncEvent::PairingComplete { peer_id, success } => {
-                            obs.on_pairing_complete(peer_id, success);
-                        }
-                        SyncEvent::Listening { address } => {
-                            obs.on_listening(address);
-                        }
-                        SyncEvent::Error { code, message } => {
-                            obs.on_error(code, message);
-                        }
-                        SyncEvent::FileRequestReceived { .. } => {
-                            // Handled by NetworkManager internally
-                        }
-                        SyncEvent::FileChunkReceived { request_id, file_name, file_size, chunk_index, total_chunks, data } => {
-                            obs.on_file_chunk(request_id, file_name, file_size as i64, chunk_index as i32, total_chunks as i32, data);
-                        }
-                        SyncEvent::FileDownloadComplete { request_id, file_path, success } => {
-                            obs.on_file_download_complete(request_id, file_path, success);
+                            SyncEvent::ItemUpdated { item_json } => {
+                                if let Ok(item) = Self::deserialize_item(&item_json) {
+                                    obs.on_item_updated(item);
+                                }
+                            }
+                            SyncEvent::PeerDiscovered { peer } => {
+                                obs.on_peer_discovered(
+                                    peer.peer_id,
+                                    peer.display_name,
+                                    peer.addresses,
+                                    peer.is_connected,
+                                );
+                            }
+                            SyncEvent::PeerLost { peer_id } => {
+                                obs.on_peer_lost(peer_id);
+                            }
+                            SyncEvent::PairingRequest {
+                                peer_id,
+                                display_name,
+                                pin,
+                            } => {
+                                obs.on_pairing_request(peer_id, display_name, pin);
+                            }
+                            SyncEvent::PairingComplete { peer_id, success } => {
+                                obs.on_pairing_complete(peer_id, success);
+                            }
+                            SyncEvent::Listening { address } => {
+                                obs.on_listening(address);
+                            }
+                            SyncEvent::Error { code, message } => {
+                                obs.on_error(code, message);
+                            }
+                            SyncEvent::FileRequestReceived { .. } => {
+                                // Handled by NetworkManager internally
+                            }
+                            SyncEvent::FileChunkReceived {
+                                request_id,
+                                file_name,
+                                file_size,
+                                chunk_index,
+                                total_chunks,
+                                data,
+                            } => {
+                                obs.on_file_chunk(
+                                    request_id,
+                                    file_name,
+                                    file_size as i64,
+                                    chunk_index as i32,
+                                    total_chunks as i32,
+                                    data,
+                                );
+                            }
+                            SyncEvent::FileDownloadComplete {
+                                request_id,
+                                file_path,
+                                success,
+                            } => {
+                                obs.on_file_download_complete(request_id, file_path, success);
+                            }
                         }
                     }
-                }
-            }));
+                }));
         }
 
         // Spawn the network manager in a background thread
@@ -121,7 +148,9 @@ impl SyncEngine {
     // ── Peer management ───────────────────────────────────────────
 
     pub fn add_peer_address(&self, address: &str) {
-        let _ = self.command_tx.send(SyncCommand::AddPeerAddress { address: address.to_string() });
+        let _ = self.command_tx.send(SyncCommand::AddPeerAddress {
+            address: address.to_string(),
+        });
     }
 
     pub fn start_discovery(&self) {
@@ -135,35 +164,50 @@ impl SyncEngine {
     // ── Pairing ───────────────────────────────────────────────────
 
     pub fn request_pairing(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::RequestPairing { peer_id: peer_id.to_string() });
+        let _ = self.command_tx.send(SyncCommand::RequestPairing {
+            peer_id: peer_id.to_string(),
+        });
     }
 
     pub fn accept_pairing(&self, peer_id: &str, pin: &str) {
-        let _ = self.command_tx.send(SyncCommand::AcceptPairing { peer_id: peer_id.to_string(), pin: pin.to_string() });
+        let _ = self.command_tx.send(SyncCommand::AcceptPairing {
+            peer_id: peer_id.to_string(),
+            pin: pin.to_string(),
+        });
     }
 
     pub fn reject_pairing(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::RejectPairing { peer_id: peer_id.to_string() });
+        let _ = self.command_tx.send(SyncCommand::RejectPairing {
+            peer_id: peer_id.to_string(),
+        });
     }
 
     pub fn unpair(&self, peer_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::Unpair { peer_id: peer_id.to_string() });
+        let _ = self.command_tx.send(SyncCommand::Unpair {
+            peer_id: peer_id.to_string(),
+        });
     }
 
     // ── Broadcast ─────────────────────────────────────────────────
 
     pub fn broadcast_item(&self, item: &ClipboardItem) {
         let json = Self::serialize_item(item);
-        let _ = self.command_tx.send(SyncCommand::BroadcastItem { item_json: json });
+        let _ = self
+            .command_tx
+            .send(SyncCommand::BroadcastItem { item_json: json });
     }
 
     pub fn broadcast_deletion(&self, item_id: &str) {
-        let _ = self.command_tx.send(SyncCommand::BroadcastDeletion { item_id: item_id.to_string() });
+        let _ = self.command_tx.send(SyncCommand::BroadcastDeletion {
+            item_id: item_id.to_string(),
+        });
     }
 
     pub fn broadcast_update(&self, item: &ClipboardItem) {
         let json = Self::serialize_item(item);
-        let _ = self.command_tx.send(SyncCommand::BroadcastUpdate { item_json: json });
+        let _ = self
+            .command_tx
+            .send(SyncCommand::BroadcastUpdate { item_json: json });
     }
 
     // ── File transfer ────────────────────────────────────────────
@@ -194,7 +238,10 @@ impl SyncEngine {
                 .iter()
                 .map(|c| maccy_sync::SyncItemContent {
                     content_type: c.content_type.clone(),
-                    value: c.value.as_ref().map(|v| base64::engine::general_purpose::STANDARD.encode(v)),
+                    value: c
+                        .value
+                        .as_ref()
+                        .map(|v| base64::engine::general_purpose::STANDARD.encode(v)),
                 })
                 .collect(),
             sync_timestamp: Self::format_timestamp(item.sync_timestamp),
@@ -218,11 +265,19 @@ impl SyncEngine {
                 .into_iter()
                 .map(|c| ClipboardContent {
                     content_type: c.content_type,
-                    value: c.value.map(|v| base64::engine::general_purpose::STANDARD.decode(v).unwrap_or_default()),
+                    value: c.value.map(|v| {
+                        base64::engine::general_purpose::STANDARD
+                            .decode(v)
+                            .unwrap_or_default()
+                    }),
                 })
                 .collect(),
             sync_timestamp: Self::parse_timestamp(&sync_item.sync_timestamp),
-            sync_source: if sync_item.sync_source.is_empty() { None } else { Some(sync_item.sync_source) },
+            sync_source: if sync_item.sync_source.is_empty() {
+                None
+            } else {
+                Some(sync_item.sync_source)
+            },
             sync_deleted: false,
         })
     }

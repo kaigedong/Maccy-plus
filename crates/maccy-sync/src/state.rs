@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use tokio::sync::mpsc;
 use tokio::runtime::Runtime;
+use tokio::sync::mpsc;
 
 use crate::error::ErrorCode;
 use crate::types::*;
@@ -46,7 +46,10 @@ impl SyncState {
     }
 
     pub fn emit_error(&self, code: ErrorCode, message: String) {
-        self.emit(SyncEvent::Error { code: code as i32, message });
+        self.emit(SyncEvent::Error {
+            code: code as i32,
+            message,
+        });
     }
 }
 
@@ -54,15 +57,37 @@ impl SyncState {
 pub enum SyncCommand {
     StartDiscovery,
     StopDiscovery,
-    RequestPairing { peer_id: String },
-    AcceptPairing { peer_id: String, pin: String },
-    RejectPairing { peer_id: String },
-    BroadcastItem { item_json: String },
-    BroadcastDeletion { item_id: String },
-    BroadcastUpdate { item_json: String },
-    AddPeerAddress { address: String },
-    Unpair { peer_id: String },
+    RequestPairing {
+        peer_id: String,
+    },
+    AcceptPairing {
+        peer_id: String,
+        pin: String,
+    },
+    RejectPairing {
+        peer_id: String,
+    },
+    BroadcastItem {
+        item_json: String,
+    },
+    BroadcastDeletion {
+        item_id: String,
+    },
+    BroadcastUpdate {
+        item_json: String,
+    },
+    AddPeerAddress {
+        address: String,
+    },
+    Unpair {
+        peer_id: String,
+    },
     /// Send a file chunk to a peer.
-    SendFileChunk { peer_id: String, request_id: String, file_path: String, offset: u64 },
+    SendFileChunk {
+        peer_id: String,
+        request_id: String,
+        file_path: String,
+        offset: u64,
+    },
     Shutdown,
 }

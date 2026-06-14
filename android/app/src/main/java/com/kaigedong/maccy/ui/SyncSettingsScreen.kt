@@ -195,7 +195,7 @@ fun SyncSettingsScreen(
                         color = if (syncEnabled) MaterialTheme.colorScheme.onSurface
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
                     IconButton(
-                        onClick = { viewModel.stopSync(); viewModel.startSync(deviceName) },
+                        onClick = { viewModel.refreshDiscovery() },
                         enabled = syncEnabled
                     ) {
                         Icon(Icons.Filled.Refresh, "Refresh discovery")

@@ -1,0 +1,29 @@
+name: Format Check
+
+on:
+  push:
+    branches: [master, feat/p2p-sync, refactor/rust-shared-core, feat/file-sharing]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  format:
+    name: Check formatting
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Rust formatting
+        run: cargo fmt --check
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Check Swift formatting
+        run: swiftformat --lint Maccy/ MaccyTests/ MaccyUITests/
+
+      - name: Check Kotlin formatting
+        run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
+          chmod +x ktlint
+          ./ktlint android/**/*.kt android/**/**/*.kt

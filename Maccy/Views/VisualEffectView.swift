@@ -1,39 +1,39 @@
 import SwiftUI
 
 struct VisualEffectView: NSViewRepresentable {
-  let visualEffectView = NSVisualEffectView()
+    let visualEffectView = NSVisualEffectView()
 
-  var material: NSVisualEffectView.Material = .popover
-  var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
+    var material: NSVisualEffectView.Material = .popover
+    var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
 
-  func makeNSView(context: Context) -> NSVisualEffectView {
-    return visualEffectView
-  }
+    func makeNSView(context _: Context) -> NSVisualEffectView {
+        return visualEffectView
+    }
 
-  func updateNSView(_ view: NSVisualEffectView, context: Context) {
-    visualEffectView.material = material
-    visualEffectView.blendingMode = blendingMode
-  }
+    func updateNSView(_: NSVisualEffectView, context _: Context) {
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
+    }
 }
 
 @available(macOS 26.0, *)
 struct GlassEffectView: NSViewRepresentable {
-  let glassEffectView = NSGlassEffectView()
+    let glassEffectView = NSGlassEffectView()
 
-  var style: NSGlassEffectView.Style = .regular
+    var style: NSGlassEffectView.Style = .regular
 
-  func makeNSView(context: Context) -> NSGlassEffectView {
-    return glassEffectView
-  }
+    func makeNSView(context _: Context) -> NSGlassEffectView {
+        return glassEffectView
+    }
 
-  func updateNSView(_ view: NSGlassEffectView, context: Context) {
-    glassEffectView.style = style
-  }
+    func updateNSView(_: NSGlassEffectView, context _: Context) {
+        glassEffectView.style = style
+    }
 }
 
 #Preview {
-  VisualEffectView(
-    material: .popover,
-    blendingMode: .behindWindow
-  )
+    VisualEffectView(
+        material: .popover,
+        blendingMode: .behindWindow
+    )
 }

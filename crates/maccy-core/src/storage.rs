@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::path::Path;
 
 use crate::model::{ClipboardContent, ClipboardItem, CoreError};
@@ -31,10 +31,10 @@ impl Storage {
 
     fn run_migrations(&self) -> Result<(), CoreError> {
         self.conn
-            .execute_batch("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);")
-            .map_err(|e| CoreError::Storage {
-                msg: e.to_string(),
-            })?;
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);",
+            )
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
 
         let current_version: u32 = self
             .conn
@@ -83,13 +83,15 @@ impl Storage {
         }
 
         if current_version < 2 {
-            self.conn.execute_batch(
-                "CREATE TABLE IF NOT EXISTS sync_pairs (
+            self.conn
+                .execute_batch(
+                    "CREATE TABLE IF NOT EXISTS sync_pairs (
                     peer_id TEXT PRIMARY KEY,
                     display_name TEXT NOT NULL
                 );
                 INSERT INTO schema_version (version) VALUES (2);",
-            ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+                )
+                .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         }
 
         Ok(())
@@ -98,12 +100,15 @@ impl Storage {
     // ── Sync pairs ────────────────────────────────────────────
 
     pub fn get_paired_peers(&self) -> Result<Vec<(String, String)>, CoreError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT peer_id, display_name FROM sync_pairs ORDER BY display_name"
-        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
-        let rows = stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        }).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT peer_id, display_name FROM sync_pairs ORDER BY display_name")
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         let mut result = Vec::new();
         for row in rows {
             result.push(row.map_err(|e| CoreError::Storage { msg: e.to_string() })?);
@@ -112,18 +117,22 @@ impl Storage {
     }
 
     pub fn save_paired_peer(&self, peer_id: &str, display_name: &str) -> Result<(), CoreError> {
-        self.conn.execute(
-            "INSERT OR REPLACE INTO sync_pairs (peer_id, display_name) VALUES (?1, ?2)",
-            rusqlite::params![peer_id, display_name],
-        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO sync_pairs (peer_id, display_name) VALUES (?1, ?2)",
+                rusqlite::params![peer_id, display_name],
+            )
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         Ok(())
     }
 
     pub fn remove_paired_peer(&self, peer_id: &str) -> Result<(), CoreError> {
-        self.conn.execute(
-            "DELETE FROM sync_pairs WHERE peer_id = ?1",
-            rusqlite::params![peer_id],
-        ).map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        self.conn
+            .execute(
+                "DELETE FROM sync_pairs WHERE peer_id = ?1",
+                rusqlite::params![peer_id],
+            )
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         Ok(())
     }
 
@@ -218,16 +227,14 @@ impl Storage {
                 Ok(Some(item))
             }
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(CoreError::Storage {
-                msg: e.to_string(),
-            }),
+            Err(e) => Err(CoreError::Storage { msg: e.to_string() }),
         }
     }
 
     fn get_contents_for_item(&self, item_id: &str) -> Result<Vec<ClipboardContent>, CoreError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT content_type, value FROM history_contents WHERE item_id = ?1",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT content_type, value FROM history_contents WHERE item_id = ?1")?;
 
         let contents = stmt
             .query_map(params![item_id], |row| {
@@ -242,9 +249,10 @@ impl Storage {
     }
 
     pub fn delete_item(&self, id: &str) -> Result<(), CoreError> {
-        let rows = self
-            .conn
-            .execute("DELETE FROM history_contents WHERE item_id = ?1", params![id])?;
+        let rows = self.conn.execute(
+            "DELETE FROM history_contents WHERE item_id = ?1",
+            params![id],
+        )?;
         self.conn
             .execute("DELETE FROM history_items WHERE id = ?1", params![id])?;
         if rows == 0 {
@@ -259,7 +267,9 @@ impl Storage {
             "DELETE FROM history_contents WHERE item_id IN (SELECT id FROM history_items WHERE pin IS NULL)",
             [],
         )?;
-        let rows = self.conn.execute("DELETE FROM history_items WHERE pin IS NULL", [])?;
+        let rows = self
+            .conn
+            .execute("DELETE FROM history_items WHERE pin IS NULL", [])?;
         Ok(rows as u64)
     }
 
@@ -304,11 +314,11 @@ impl Storage {
     }
 
     pub fn count_items(&self) -> Result<i64, CoreError> {
-        let count: i64 = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM history_items WHERE sync_deleted = 0", [], |row| {
-                row.get(0)
-            })?;
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM history_items WHERE sync_deleted = 0",
+            [],
+            |row| row.get(0),
+        )?;
         Ok(count)
     }
 
@@ -317,10 +327,7 @@ impl Storage {
     }
 
     /// Migrate data from SwiftData SQLite (reads Z_HISTORYITEM tables).
-    pub fn migrate_from_swiftdata(
-        &mut self,
-        swiftdata_path: &str,
-    ) -> Result<u64, CoreError> {
+    pub fn migrate_from_swiftdata(&mut self, swiftdata_path: &str) -> Result<u64, CoreError> {
         if !Path::new(swiftdata_path).exists() {
             return Ok(0);
         }
@@ -330,13 +337,15 @@ impl Storage {
         })?;
 
         // Read SwiftData items. SwiftData uses Z_ prefixed table names.
-        let mut item_stmt = sd_conn.prepare(
-            "SELECT Z_PK, ZAPPLICATION, ZFIRSTCOPIEDAT, ZLASTCOPIEDAT, ZNUMBEROFCOPIES,
+        let mut item_stmt = sd_conn
+            .prepare(
+                "SELECT Z_PK, ZAPPLICATION, ZFIRSTCOPIEDAT, ZLASTCOPIEDAT, ZNUMBEROFCOPIES,
                     ZPIN, ZTITLE, ZSYNCID, ZSYNCTIMESTAMP, ZSYNCSOURCE, ZSYNCDELETED
              FROM Z_HISTORYITEM",
-        ).map_err(|e| CoreError::Storage {
-            msg: format!("SwiftData query failed: {}", e),
-        })?;
+            )
+            .map_err(|e| CoreError::Storage {
+                msg: format!("SwiftData query failed: {}", e),
+            })?;
 
         let swiftdata_items = item_stmt
             .query_map([], |row| {
@@ -385,20 +394,27 @@ impl Storage {
         drop(item_stmt);
 
         // Read contents
-        let mut content_stmt = sd_conn.prepare(
-            "SELECT ZITEM, ZTYPE, ZVALUE FROM Z_HISTORYITEMCONTENT",
-        ).map_err(|e| CoreError::Storage {
-            msg: format!("SwiftData content query failed: {}", e),
-        })?;
+        let mut content_stmt = sd_conn
+            .prepare("SELECT ZITEM, ZTYPE, ZVALUE FROM Z_HISTORYITEMCONTENT")
+            .map_err(|e| CoreError::Storage {
+                msg: format!("SwiftData content query failed: {}", e),
+            })?;
 
         let contents_by_pk: std::collections::HashMap<i64, Vec<ClipboardContent>> = {
-            let mut map: std::collections::HashMap<i64, Vec<ClipboardContent>> = std::collections::HashMap::new();
+            let mut map: std::collections::HashMap<i64, Vec<ClipboardContent>> =
+                std::collections::HashMap::new();
             let rows = content_stmt
                 .query_map([], |row| {
                     let item_pk: i64 = row.get(0)?;
                     let content_type: String = row.get(1)?;
                     let value: Option<Vec<u8>> = row.get(2)?;
-                    Ok((item_pk, ClipboardContent { content_type, value }))
+                    Ok((
+                        item_pk,
+                        ClipboardContent {
+                            content_type,
+                            value,
+                        },
+                    ))
                 })
                 .map_err(|e| CoreError::Storage {
                     msg: format!("SwiftData content parse failed: {}", e),

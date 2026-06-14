@@ -35,10 +35,20 @@ pub struct SyncItemContent {
 /// Messages sent over gossipsub.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SyncMessage {
-    ItemAdded { item_json: String },
-    ItemDeleted { id: String, timestamp: String },
-    ItemUpdated { item_json: String },
-    Heartbeat { device_id: String, timestamp: String },
+    ItemAdded {
+        item_json: String,
+    },
+    ItemDeleted {
+        id: String,
+        timestamp: String,
+    },
+    ItemUpdated {
+        item_json: String,
+    },
+    Heartbeat {
+        device_id: String,
+        timestamp: String,
+    },
 }
 
 /// Pairing protocol messages sent over request-response.
@@ -75,7 +85,11 @@ pub enum SyncEvent {
     #[serde(rename = "peer_lost")]
     PeerLost { peer_id: String },
     #[serde(rename = "pairing_request")]
-    PairingRequest { peer_id: String, display_name: String, pin: String },
+    PairingRequest {
+        peer_id: String,
+        display_name: String,
+        pin: String,
+    },
     #[serde(rename = "pairing_complete")]
     PairingComplete { peer_id: String, success: bool },
     #[serde(rename = "item_received")]
@@ -89,11 +103,27 @@ pub enum SyncEvent {
     #[serde(rename = "listening")]
     Listening { address: String },
     #[serde(rename = "file_request")]
-    FileRequestReceived { peer_id: String, request_id: String, file_path: String, offset: u64 },
+    FileRequestReceived {
+        peer_id: String,
+        request_id: String,
+        file_path: String,
+        offset: u64,
+    },
     #[serde(rename = "file_chunk")]
-    FileChunkReceived { request_id: String, file_name: String, file_size: u64, chunk_index: u32, total_chunks: u32, data: Vec<u8> },
+    FileChunkReceived {
+        request_id: String,
+        file_name: String,
+        file_size: u64,
+        chunk_index: u32,
+        total_chunks: u32,
+        data: Vec<u8>,
+    },
     #[serde(rename = "file_complete")]
-    FileDownloadComplete { request_id: String, file_path: String, success: bool },
+    FileDownloadComplete {
+        request_id: String,
+        file_path: String,
+        success: bool,
+    },
 }
 
 /// Gossipsub topic name.

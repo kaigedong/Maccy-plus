@@ -1,7 +1,11 @@
 use crate::model::{ClipboardItem, SortBy};
 
 /// Sort clipboard items by the given criteria, with pinned items at top or bottom.
-pub fn sort_items(items: Vec<ClipboardItem>, sort_by: SortBy, pin_to_top: bool) -> Vec<ClipboardItem> {
+pub fn sort_items(
+    items: Vec<ClipboardItem>,
+    sort_by: SortBy,
+    pin_to_top: bool,
+) -> Vec<ClipboardItem> {
     let mut sorted = items;
 
     // Primary sort

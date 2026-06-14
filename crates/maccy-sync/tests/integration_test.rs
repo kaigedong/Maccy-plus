@@ -1,5 +1,5 @@
-use std::time::Duration;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use maccy_sync::state::{SharedState, SyncCommand, SyncState};
 
@@ -33,12 +33,21 @@ fn spawn_node(
         let mut nm = if port == 31774 {
             maccy_sync::network::NetworkManager::new(cmd_rx, shared_clone.clone(), key).unwrap()
         } else {
-            maccy_sync::network::NetworkManager::new_with_port(cmd_rx, shared_clone.clone(), key, port).unwrap()
+            maccy_sync::network::NetworkManager::new_with_port(
+                cmd_rx,
+                shared_clone.clone(),
+                key,
+                port,
+            )
+            .unwrap()
         };
         rt.block_on(async move { nm.run().await });
     });
 
-    println!("Spawned node '{}' on port {} with peer_id {}", device_name, port, peer_id);
+    println!(
+        "Spawned node '{}' on port {} with peer_id {}",
+        device_name, port, peer_id
+    );
     cmd_tx
 }
 
@@ -77,12 +86,22 @@ fn test_manual_dial_two_nodes() {
 
     let evts = events.lock().unwrap();
     let discovered = evts.iter().any(|e| e.contains("peer_discovered"));
-    let errors: Vec<_> = evts.iter().filter(|e| e.contains("error")).cloned().collect();
+    let errors: Vec<_> = evts
+        .iter()
+        .filter(|e| e.contains("error"))
+        .cloned()
+        .collect();
 
     println!("has_discovered={}, errors={}", discovered, errors.len());
-    for e in &errors { eprintln!("  ERROR: {}", e); }
+    for e in &errors {
+        eprintln!("  ERROR: {}", e);
+    }
 
-    assert!(discovered, "Should discover peer after manual dial. Errors: {:?}", errors);
+    assert!(
+        discovered,
+        "Should discover peer after manual dial. Errors: {:?}",
+        errors
+    );
 
     let _ = cmd_tx_a.send(SyncCommand::Shutdown);
     let _ = cmd_tx_b.send(SyncCommand::Shutdown);

@@ -18,7 +18,13 @@ pub trait ClipboardObserver: Send + Sync + std::fmt::Debug {
     // ── Peer discovery events ─────────────────────────────────────
 
     /// A peer was discovered on the network.
-    fn on_peer_discovered(&self, peer_id: String, display_name: String, addresses: Vec<String>, is_connected: bool);
+    fn on_peer_discovered(
+        &self,
+        peer_id: String,
+        display_name: String,
+        addresses: Vec<String>,
+        is_connected: bool,
+    );
 
     /// A peer disconnected or went offline.
     fn on_peer_lost(&self, peer_id: String);
@@ -42,7 +48,15 @@ pub trait ClipboardObserver: Send + Sync + std::fmt::Debug {
     // ── File transfer ─────────────────────────────────────────
 
     /// A file chunk was received (append to local temp file).
-    fn on_file_chunk(&self, request_id: String, file_name: String, file_size: i64, chunk_index: i32, total_chunks: i32, data: Vec<u8>);
+    fn on_file_chunk(
+        &self,
+        request_id: String,
+        file_name: String,
+        file_size: i64,
+        chunk_index: i32,
+        total_chunks: i32,
+        data: Vec<u8>,
+    );
 
     /// File download completed (or failed).
     fn on_file_download_complete(&self, request_id: String, file_path: String, success: bool);

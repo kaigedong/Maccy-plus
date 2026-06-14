@@ -1,5 +1,5 @@
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use regex::Regex;
 
 use crate::model::{ClipboardItem, MatchRange, SearchMode, SearchResult};
@@ -9,11 +9,7 @@ const FUZZY_SEARCH_LIMIT: usize = 5_000;
 pub struct SearchEngine;
 
 impl SearchEngine {
-    pub fn search(
-        query: &str,
-        items: &[ClipboardItem],
-        mode: SearchMode,
-    ) -> Vec<SearchResult> {
+    pub fn search(query: &str, items: &[ClipboardItem], mode: SearchMode) -> Vec<SearchResult> {
         if query.is_empty() {
             return items
                 .iter()
@@ -40,9 +36,9 @@ impl SearchEngine {
                 let title = &item.title;
                 if let Some(byte_start) = title.to_lowercase().find(&query.to_lowercase()) {
                     let char_start = title[..byte_start].chars().count();
-                    let matched_len = title[byte_start..]
-                        .find(|c: char| !c.is_ascii())
-                        .map_or(query.len(), |_| {
+                    let matched_len = title[byte_start..].find(|c: char| !c.is_ascii()).map_or(
+                        query.len(),
+                        |_| {
                             // Count chars in the matched range
                             let end_byte = byte_start + query.len();
                             if end_byte <= title.len() {
@@ -50,7 +46,8 @@ impl SearchEngine {
                             } else {
                                 title[byte_start..].chars().count()
                             }
-                        });
+                        },
+                    );
                     Some(SearchResult {
                         item: item.clone(),
                         score: None,
@@ -230,10 +227,7 @@ mod tests {
 
     #[test]
     fn test_mixed_search_falls_through() {
-        let items = vec![
-            make_item("1", "Hello World"),
-            make_item("2", "Goodbye"),
-        ];
+        let items = vec![make_item("1", "Hello World"), make_item("2", "Goodbye")];
         // "hlw" won't match exact or regex, but should match fuzzy
         let results = SearchEngine::search("hlw", &items, SearchMode::Mixed);
         assert!(!results.is_empty());
@@ -241,10 +235,7 @@ mod tests {
 
     #[test]
     fn test_empty_query_returns_all() {
-        let items = vec![
-            make_item("1", "Hello"),
-            make_item("2", "World"),
-        ];
+        let items = vec![make_item("1", "Hello"), make_item("2", "World")];
         let results = SearchEngine::search("", &items, SearchMode::Exact);
         assert_eq!(results.len(), 2);
     }

@@ -1,3 +1,5 @@
 extension String: @retroactive Identifiable {
-  public var id: Self { self }
+    public var id: Self {
+        self
+    }
 }

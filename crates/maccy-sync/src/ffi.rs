@@ -12,11 +12,20 @@ pub type MaccySync = Arc<std::sync::Mutex<SyncState>>;
 
 struct StderrLogger;
 impl log::Log for StderrLogger {
-    fn enabled(&self, _metadata: &log::Metadata) -> bool { true }
-    fn log(&self, record: &log::Record) {
-        let _ = writeln!(std::io::stderr(), "[maccy-sync] {} - {}", record.level(), record.args());
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
     }
-    fn flush(&self) { let _ = std::io::stderr().flush(); }
+    fn log(&self, record: &log::Record) {
+        let _ = writeln!(
+            std::io::stderr(),
+            "[maccy-sync] {} - {}",
+            record.level(),
+            record.args()
+        );
+    }
+    fn flush(&self) {
+        let _ = std::io::stderr().flush();
+    }
 }
 static LOGGER: StderrLogger = StderrLogger;
 
@@ -26,7 +35,9 @@ fn ensure_logger() {
 }
 
 fn c_str_to_string(s: *const c_char) -> Option<String> {
-    if s.is_null() { return None; }
+    if s.is_null() {
+        return None;
+    }
     unsafe { CStr::from_ptr(s).to_str().ok().map(String::from) }
 }
 
@@ -61,13 +72,17 @@ pub extern "C" fn maccy_sync_create(
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_destroy(sync: *mut MaccySync) {
     if !sync.is_null() {
-        unsafe { let _ = Arc::from_raw(sync); }
+        unsafe {
+            let _ = Arc::from_raw(sync);
+        }
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_start(sync: *mut MaccySync) -> i32 {
-    if sync.is_null() { return ErrorCode::InvalidArg as i32; }
+    if sync.is_null() {
+        return ErrorCode::InvalidArg as i32;
+    }
 
     with_state(sync, |shared| {
         let local_key = libp2p::identity::Keypair::generate_ed25519();
@@ -98,7 +113,9 @@ pub extern "C" fn maccy_sync_start(sync: *mut MaccySync) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_stop(sync: *mut MaccySync) -> i32 {
-    if sync.is_null() { return ErrorCode::InvalidArg as i32; }
+    if sync.is_null() {
+        return ErrorCode::InvalidArg as i32;
+    }
     with_state(sync, |state| {
         let guard = state.lock().unwrap();
         let _ = guard.command_tx.send(SyncCommand::Shutdown);
@@ -113,7 +130,9 @@ pub extern "C" fn maccy_sync_on_event(
     sync: *mut MaccySync,
     cb: Option<extern "C" fn(event_json: *const c_char)>,
 ) {
-    if sync.is_null() || cb.is_none() { return; }
+    if sync.is_null() || cb.is_none() {
+        return;
+    }
     let cb = cb.unwrap();
     with_state(sync, |state| {
         let mut guard = state.lock().unwrap();
@@ -154,29 +173,50 @@ pub extern "C" fn maccy_sync_add_peer_address(
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_request_pairing(sync: *mut MaccySync, peer_id: *const c_char) -> i32 {
     let pid = match c_str_to_string(peer_id) {
-        Some(s) => s, None => return ErrorCode::InvalidArg as i32,
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
     };
     send_command(sync, SyncCommand::RequestPairing { peer_id: pid })
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_accept_pairing(
-    sync: *mut MaccySync, peer_id: *const c_char, pin: *const c_char,
+    sync: *mut MaccySync,
+    peer_id: *const c_char,
+    pin: *const c_char,
 ) -> i32 {
-    let pid = match c_str_to_string(peer_id) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
-    let p = match c_str_to_string(pin) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
-    send_command(sync, SyncCommand::AcceptPairing { peer_id: pid, pin: p })
+    let pid = match c_str_to_string(peer_id) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
+    let p = match c_str_to_string(pin) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
+    send_command(
+        sync,
+        SyncCommand::AcceptPairing {
+            peer_id: pid,
+            pin: p,
+        },
+    )
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_reject_pairing(sync: *mut MaccySync, peer_id: *const c_char) -> i32 {
-    let pid = match c_str_to_string(peer_id) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
+    let pid = match c_str_to_string(peer_id) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
     send_command(sync, SyncCommand::RejectPairing { peer_id: pid })
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_unpair(sync: *mut MaccySync, peer_id: *const c_char) -> i32 {
-    let pid = match c_str_to_string(peer_id) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
+    let pid = match c_str_to_string(peer_id) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
     send_command(sync, SyncCommand::Unpair { peer_id: pid })
 }
 
@@ -184,26 +224,43 @@ pub extern "C" fn maccy_sync_unpair(sync: *mut MaccySync, peer_id: *const c_char
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_broadcast_item(sync: *mut MaccySync, item_json: *const c_char) -> i32 {
-    let json = match c_str_to_string(item_json) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
+    let json = match c_str_to_string(item_json) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
     send_command(sync, SyncCommand::BroadcastItem { item_json: json })
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn maccy_sync_broadcast_deletion(sync: *mut MaccySync, item_id: *const c_char) -> i32 {
-    let id = match c_str_to_string(item_id) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
+pub extern "C" fn maccy_sync_broadcast_deletion(
+    sync: *mut MaccySync,
+    item_id: *const c_char,
+) -> i32 {
+    let id = match c_str_to_string(item_id) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
     send_command(sync, SyncCommand::BroadcastDeletion { item_id: id })
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn maccy_sync_broadcast_update(sync: *mut MaccySync, item_json: *const c_char) -> i32 {
-    let json = match c_str_to_string(item_json) { Some(s) => s, None => return ErrorCode::InvalidArg as i32 };
+pub extern "C" fn maccy_sync_broadcast_update(
+    sync: *mut MaccySync,
+    item_json: *const c_char,
+) -> i32 {
+    let json = match c_str_to_string(item_json) {
+        Some(s) => s,
+        None => return ErrorCode::InvalidArg as i32,
+    };
     send_command(sync, SyncCommand::BroadcastUpdate { item_json: json })
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
 
 fn send_command(sync: *mut MaccySync, cmd: SyncCommand) -> i32 {
-    if sync.is_null() { return ErrorCode::InvalidArg as i32; }
+    if sync.is_null() {
+        return ErrorCode::InvalidArg as i32;
+    }
     log::info!("send_command: {:?}", cmd);
     with_state(sync, |state| {
         let guard = state.lock().unwrap();
@@ -216,13 +273,19 @@ fn send_command(sync: *mut MaccySync, cmd: SyncCommand) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_get_paired_peers(sync: *mut MaccySync) -> *mut c_char {
-    if sync.is_null() { return ptr::null_mut(); }
+    if sync.is_null() {
+        return ptr::null_mut();
+    }
     CString::new("[]").unwrap().into_raw()
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_free_string(s: *mut c_char) {
-    if !s.is_null() { unsafe { let _ = CString::from_raw(s); } }
+    if !s.is_null() {
+        unsafe {
+            let _ = CString::from_raw(s);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -232,7 +295,9 @@ pub extern "C" fn maccy_sync_is_running(sync: *mut MaccySync) -> bool {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn maccy_sync_get_status(sync: *mut MaccySync) -> *mut c_char {
-    if sync.is_null() { return ptr::null_mut(); }
+    if sync.is_null() {
+        return ptr::null_mut();
+    }
     CString::new(r#"{"running":false}"#).unwrap().into_raw()
 }
 
@@ -241,10 +306,7 @@ pub extern "C" fn maccy_sync_get_status(sync: *mut MaccySync) -> *mut c_char {
 macro_rules! compat_callback {
     ($name:ident) => {
         #[unsafe(no_mangle)]
-        pub extern "C" fn $name(
-            _sync: *mut MaccySync,
-            _cb: Option<extern "C" fn()>,
-        ) {}
+        pub extern "C" fn $name(_sync: *mut MaccySync, _cb: Option<extern "C" fn()>) {}
     };
 }
 

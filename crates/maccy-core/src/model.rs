@@ -78,8 +78,6 @@ pub enum CoreError {
 
 impl From<rusqlite::Error> for CoreError {
     fn from(e: rusqlite::Error) -> Self {
-        CoreError::Storage {
-            msg: e.to_string(),
-        }
+        CoreError::Storage { msg: e.to_string() }
     }
 }

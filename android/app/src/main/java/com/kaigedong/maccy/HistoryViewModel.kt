@@ -138,6 +138,11 @@ class HistoryViewModel : ViewModel() {
         syncObserver = null
     }
 
+    fun refreshDiscovery() {
+        core?.syncRefreshDiscovery()
+        LogManager.d("Sync", "Discovery refreshed")
+    }
+
     fun requestPairing(peerId: String) {
         core?.syncRequestPairing(peerId)
         LogManager.i("Sync", "Pairing requested with $peerId")
