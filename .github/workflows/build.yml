@@ -99,18 +99,18 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - run: cd android && chmod +x gradlew && ./gradlew assembleRelease --stacktrace
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
           name: Maccy-Android
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
 
       - if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/feat/p2p-sync'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-beta
-          files: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          files: android/app/build/outputs/apk/debug/app-debug.apk
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -118,7 +118,7 @@ jobs:
       - if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          files: android/app/build/outputs/apk/debug/app-debug.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
