@@ -16,7 +16,7 @@ class AppState: Sendable {
   var footer: Footer
   var navigator: NavigationManager
   var preview: SlideoutController
-  var syncDevices: [PairedDeviceInfo] = PairedDeviceInfo.loadFromCore()
+  var syncDevices: [PairedDeviceInfo] = []
 
   var searchVisible: Bool {
     if !Defaults[.showSearch] { return false }
