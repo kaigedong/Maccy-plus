@@ -78,7 +78,7 @@ class AppState: Sendable {
     @MainActor
     func togglePin() {
         withTransaction(Transaction()) {
-            for (_, item) in navigator.selection {
+            navigator.selection.forEach { _, item in
                 history.togglePin(item)
             }
         }
@@ -96,7 +96,7 @@ class AppState: Sendable {
         let nextUnselectedItem = history.visibleItems.nearest(to: leadItem) { !$0.isSelected }
 
         withTransaction(Transaction()) {
-            for (_, item) in navigator.selection {
+            navigator.selection.forEach { _, item in
                 history.delete(item)
             }
             navigator.select(item: nextUnselectedItem)

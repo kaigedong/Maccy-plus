@@ -11,10 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.kaigedong.maccy.DiscoveredPeer
 import com.kaigedong.maccy.HistoryViewModel
-import com.kaigedong.maccy.LogManager
-import com.kaigedong.maccy.PairingRequest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,14 +48,19 @@ fun SyncSettingsScreen(
 
     if (showPairingDialog && pairingRequest != null) {
         AlertDialog(
-            onDismissRequest = { showPairingDialog = false; viewModel.dismissPairingRequest() },
+            onDismissRequest = {
+                showPairingDialog = false
+                viewModel.dismissPairingRequest()
+            },
             title = { Text("Pairing Request") },
             text = {
                 Column {
                     Text("Device \"${pairingRequest!!.displayName}\" wants to sync.")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("PIN: ${pairingRequest!!.pin}",
-                        style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "PIN: ${pairingRequest!!.pin}",
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
                 }
             },
             confirmButton = {
@@ -73,7 +75,7 @@ fun SyncSettingsScreen(
                     viewModel.rejectPairing(pairingRequest!!.peerId)
                     showPairingDialog = false
                 }) { Text("Reject") }
-            }
+            },
         )
     }
 
@@ -86,16 +88,17 @@ fun SyncSettingsScreen(
                     IconButton(onClick = { showLogs = true }) {
                         Icon(Icons.Filled.BugReport, "Logs")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ── Enable ──────────────────────────────────────────
             item {
@@ -104,7 +107,7 @@ fun SyncSettingsScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Enable Clipboard Sync")
                     Switch(
@@ -117,14 +120,20 @@ fun SyncSettingsScreen(
                                 viewModel.stopSync()
                                 connectionStatus = null
                             }
-                        }
+                        },
                     )
                 }
                 connectionStatus?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = if (it.contains("error", ignoreCase = true))
-                            MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color =
+                            if (it.contains("error", ignoreCase = true)) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                    )
                 }
             }
 
@@ -136,44 +145,61 @@ fun SyncSettingsScreen(
                     label = { Text("Device Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = syncEnabled
+                    enabled = syncEnabled,
                 )
             }
 
             // ── Paired devices ──────────────────────────────────
             item {
-                Text("Paired Devices", style = MaterialTheme.typography.titleMedium,
-                    color = if (syncEnabled) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                Text(
+                    "Paired Devices",
+                    style = MaterialTheme.typography.titleMedium,
+                    color =
+                        if (syncEnabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
+                )
             }
             val connected = peers.filter { it.isConnected }
             if (connected.isEmpty()) {
                 item {
-                    Text("No paired devices", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "No paired devices",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             } else {
                 items(connected, key = { it.peerId }) { peer ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = if (!syncEnabled)
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        else CardDefaults.cardColors()
+                        colors =
+                            if (!syncEnabled) {
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                )
+                            } else {
+                                CardDefaults.cardColors()
+                            },
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(peer.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("Connected", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    "Connected",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                             }
                             TextButton(
                                 onClick = { viewModel.unpair(peer.peerId) },
-                                enabled = syncEnabled
+                                enabled = syncEnabled,
                             ) {
                                 Text("Unpair", color = MaterialTheme.colorScheme.error)
                             }
@@ -189,14 +215,21 @@ fun SyncSettingsScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Discovered Devices", style = MaterialTheme.typography.titleMedium,
-                        color = if (syncEnabled) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                    Text(
+                        "Discovered Devices",
+                        style = MaterialTheme.typography.titleMedium,
+                        color =
+                            if (syncEnabled) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            },
+                    )
                     IconButton(
                         onClick = { viewModel.refreshDiscovery() },
-                        enabled = syncEnabled
+                        enabled = syncEnabled,
                     ) {
                         Icon(Icons.Filled.Refresh, "Refresh discovery")
                     }
@@ -206,12 +239,15 @@ fun SyncSettingsScreen(
             if (discovered.isEmpty()) {
                 item {
                     Column {
-                        Text("No devices found.", style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "No devices found.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Text(
                             "Make sure devices are on the same WiFi.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                 }
@@ -219,22 +255,29 @@ fun SyncSettingsScreen(
                 items(discovered, key = { it.peerId }) { peer ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = if (!syncEnabled)
-                            CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        else CardDefaults.cardColors()
+                        colors =
+                            if (!syncEnabled) {
+                                CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                )
+                            } else {
+                                CardDefaults.cardColors()
+                            },
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(peer.displayName,
+                            Text(
+                                peer.displayName,
                                 modifier = Modifier.weight(1f),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                             Button(
                                 onClick = { viewModel.requestPairing(peer.peerId) },
-                                enabled = syncEnabled
+                                enabled = syncEnabled,
                             ) { Text("Pair") }
                         }
                     }
@@ -245,15 +288,22 @@ fun SyncSettingsScreen(
             item {
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Manual Connect", style = MaterialTheme.typography.titleMedium,
-                    color = if (syncEnabled) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                Text(
+                    "Manual Connect",
+                    style = MaterialTheme.typography.titleMedium,
+                    color =
+                        if (syncEnabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
+                )
             }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
                         value = manualAddress,
@@ -261,11 +311,11 @@ fun SyncSettingsScreen(
                         label = { Text("IP:Port") },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        enabled = syncEnabled
+                        enabled = syncEnabled,
                     )
                     Button(
                         onClick = { viewModel.addPeerAddress(manualAddress) },
-                        enabled = syncEnabled && manualAddress.isNotEmpty()
+                        enabled = syncEnabled && manualAddress.isNotEmpty(),
                     ) { Text("Connect") }
                 }
             }

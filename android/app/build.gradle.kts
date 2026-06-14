@@ -85,7 +85,7 @@ tasks.register<Exec>("buildRustCoreArm64") {
         "-t", "arm64-v8a",
         "-o", "android/app/src/main/jniLibs",
         "build", "--release",
-        "--package", "maccy-core"
+        "--package", "maccy-core",
     )
 }
 
@@ -102,7 +102,7 @@ tasks.register<Exec>("generateKotlinBindings") {
         "generate",
         "--library", libPath,
         "--language", "kotlin",
-        "--out-dir", outDir
+        "--out-dir", outDir,
     )
 }
 

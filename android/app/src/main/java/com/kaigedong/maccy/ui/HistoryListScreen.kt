@@ -46,9 +46,10 @@ fun HistoryListScreen(viewModel: HistoryViewModel = viewModel()) {
             if (selectedTab == 0) {
                 TopAppBar(
                     title = { Text("Maccy") },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    )
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        ),
                 )
             }
         },
@@ -58,49 +59,51 @@ fun HistoryListScreen(viewModel: HistoryViewModel = viewModel()) {
                     icon = { Icon(Icons.Filled.ContentPaste, "History") },
                     label = { Text("History") },
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 }
+                    onClick = { selectedTab = 0 },
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Sync, "Sync") },
                     label = { Text("Sync") },
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 }
+                    onClick = { selectedTab = 1 },
                 )
             }
-        }
+        },
     ) { padding ->
         when (selectedTab) {
-            0 -> HistoryTab(
-                items = items,
-                searchQuery = searchQuery,
-                onSearchChange = { query ->
-                    searchQuery = query
-                    if (query.isNotEmpty()) viewModel.search(query)
-                },
-                onCopy = { item ->
-                    ClipboardService(context).copyToClipboard(item)
-                    LogManager.d("Maccy", "Copied: ${item.title.take(80)}")
-                },
-                onDelete = { item ->
-                    viewModel.deleteItem(item.id)
-                    LogManager.d("Maccy", "Deleted: ${item.title.take(80)}")
-                },
-                onTogglePin = { item ->
-                    viewModel.togglePin(item.id)
-                },
-                onDownload = { item ->
-                    val peerId = item.syncSource ?: ""
-                    if (peerId.isNotEmpty()) {
-                        viewModel.requestFile(peerId, item.title)
-                        Toast.makeText(context, "Downloading...", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.padding(padding)
-            )
-            1 -> SyncSettingsScreen(
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding)
-            )
+            0 ->
+                HistoryTab(
+                    items = items,
+                    searchQuery = searchQuery,
+                    onSearchChange = { query ->
+                        searchQuery = query
+                        if (query.isNotEmpty()) viewModel.search(query)
+                    },
+                    onCopy = { item ->
+                        ClipboardService(context).copyToClipboard(item)
+                        LogManager.d("Maccy", "Copied: ${item.title.take(80)}")
+                    },
+                    onDelete = { item ->
+                        viewModel.deleteItem(item.id)
+                        LogManager.d("Maccy", "Deleted: ${item.title.take(80)}")
+                    },
+                    onTogglePin = { item ->
+                        viewModel.togglePin(item.id)
+                    },
+                    onDownload = { item ->
+                        val peerId = item.syncSource ?: ""
+                        if (peerId.isNotEmpty()) {
+                            viewModel.requestFile(peerId, item.title)
+                            Toast.makeText(context, "Downloading...", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+            1 ->
+                SyncSettingsScreen(
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding),
+                )
         }
     }
 }
@@ -121,9 +124,10 @@ private fun HistoryTab(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             placeholder = { Text("Search clipboard history...") },
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Search, "Search") },
@@ -133,31 +137,31 @@ private fun HistoryTab(
                         Icon(Icons.Filled.Clear, "Clear")
                     }
                 }
-            }
+            },
         )
 
         if (items.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         Icons.Filled.ContentPaste,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "Clipboard is empty",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         "Copy something to see it here",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     )
                 }
             }
@@ -169,7 +173,7 @@ private fun HistoryTab(
                         onCopy = { onCopy(item) },
                         onDelete = { onDelete(item) },
                         onTogglePin = { onTogglePin(item) },
-                        onDownload = { onDownload(item) }
+                        onDownload = { onDownload(item) },
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
@@ -190,21 +194,24 @@ fun HistoryItemRow(
     val isRemote = !item.syncSource.isNullOrEmpty()
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                if (isFile && isRemote) onDownload()
-                else onCopy()
-            }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable {
+                    if (isFile && isRemote) {
+                        onDownload()
+                    } else {
+                        onCopy()
+                    }
+                }.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.title.ifEmpty { "(no title)" },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isFile) {
@@ -212,13 +219,16 @@ fun HistoryItemRow(
                         Icons.Filled.InsertDriveFile,
                         contentDescription = "File",
                         modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 item.application?.let { app ->
-                    Text(app, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        app,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 if (isRemote) {
                     if (item.application != null) Text(" · ", style = MaterialTheme.typography.bodySmall)
@@ -226,39 +236,55 @@ fun HistoryItemRow(
                         Icons.Filled.Cloud,
                         contentDescription = "Remote",
                         modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                 }
                 if (item.pin != null) {
                     Text(" · ", style = MaterialTheme.typography.bodySmall)
-                    Icon(Icons.Filled.PushPin, "Pinned",
+                    Icon(
+                        Icons.Filled.PushPin,
+                        "Pinned",
                         modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.primary)
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
 
         if (isFile && isRemote) {
             IconButton(onClick = onDownload) {
-                Icon(Icons.Filled.CloudDownload, "Download",
-                    tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    Icons.Filled.CloudDownload,
+                    "Download",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
         IconButton(onClick = onTogglePin) {
             Icon(
                 if (item.pin != null) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                 contentDescription = "Pin",
-                tint = if (item.pin != null) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                tint =
+                    if (item.pin != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
         }
         IconButton(onClick = onCopy) {
-            Icon(Icons.Filled.ContentCopy, "Copy",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                Icons.Filled.ContentCopy,
+                "Copy",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Filled.Delete, "Delete",
-                tint = MaterialTheme.colorScheme.error)
+            Icon(
+                Icons.Filled.Delete,
+                "Delete",
+                tint = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

@@ -8,11 +8,11 @@ import Foundation
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
 #if canImport(MaccyCoreFFI)
-    import MaccyCoreFFI
+import MaccyCoreFFI
 #endif
 
-private extension RustBuffer {
-    /// Allocate a new buffer, copying the contents of a `UInt8` array.
+fileprivate extension RustBuffer {
+    // Allocate a new buffer, copying the contents of a `UInt8` array.
     init(bytes: [UInt8]) {
         let rbuf = bytes.withUnsafeBufferPointer { ptr in
             RustBuffer.from(ptr)
@@ -21,21 +21,21 @@ private extension RustBuffer {
     }
 
     static func empty() -> RustBuffer {
-        RustBuffer(capacity: 0, len: 0, data: nil)
+        RustBuffer(capacity: 0, len:0, data: nil)
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
         try! rustCall { ffi_maccy_core_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
-    /// Frees the buffer in place.
-    /// The buffer must not be used after this is called.
+    // Frees the buffer in place.
+    // The buffer must not be used after this is called.
     func deallocate() {
         try! rustCall { ffi_maccy_core_rustbuffer_free(self, $0) }
     }
 }
 
-private extension ForeignBytes {
+fileprivate extension ForeignBytes {
     init(bufferPointer: UnsafeBufferPointer<UInt8>) {
         self.init(len: Int32(bufferPointer.count), data: bufferPointer.baseAddress)
     }
@@ -48,7 +48,7 @@ private extension ForeignBytes {
 // Helper classes/extensions that don't change.
 // Someday, this will be in a library of its own.
 
-private extension Data {
+fileprivate extension Data {
     init(rustBuffer: RustBuffer) {
         self.init(
             bytesNoCopy: rustBuffer.data!,
@@ -72,15 +72,15 @@ private extension Data {
 //
 // Instead, the read() method and these helper functions input a tuple of data
 
-private func createReader(data: Data) -> (data: Data, offset: Data.Index) {
+fileprivate func createReader(data: Data) -> (data: Data, offset: Data.Index) {
     (data: data, offset: 0)
 }
 
-/// Reads an integer at the current offset, in big-endian order, and advances
-/// the offset on success. Throws if reading the integer would move the
-/// offset past the end of the buffer.
-private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
-    let range = reader.offset ..< reader.offset + MemoryLayout<T>.size
+// Reads an integer at the current offset, in big-endian order, and advances
+// the offset on success. Throws if reading the integer would move the
+// offset past the end of the buffer.
+fileprivate func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
+    let range = reader.offset..<reader.offset + MemoryLayout<T>.size
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
@@ -90,73 +90,73 @@ private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: 
         return value as! T
     }
     var value: T = 0
-    let _ = withUnsafeMutableBytes(of: &value) { reader.data.copyBytes(to: $0, from: range) }
+    let _ = withUnsafeMutableBytes(of: &value, { reader.data.copyBytes(to: $0, from: range)})
     reader.offset = range.upperBound
     return value.bigEndian
 }
 
-/// Reads an arbitrary number of bytes, to be used to read
-/// raw bytes, this is useful when lifting strings
-private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> [UInt8] {
-    let range = reader.offset ..< (reader.offset + count)
+// Reads an arbitrary number of bytes, to be used to read
+// raw bytes, this is useful when lifting strings
+fileprivate func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> Array<UInt8> {
+    let range = reader.offset..<(reader.offset+count)
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
     var value = [UInt8](repeating: 0, count: count)
-    value.withUnsafeMutableBufferPointer { buffer in
+    value.withUnsafeMutableBufferPointer({ buffer in
         reader.data.copyBytes(to: buffer, from: range)
-    }
+    })
     reader.offset = range.upperBound
     return value
 }
 
-/// Reads a float at the current offset.
-private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
-    try Float(bitPattern: readInt(&reader))
+// Reads a float at the current offset.
+fileprivate func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
+    return Float(bitPattern: try readInt(&reader))
 }
 
-/// Reads a float at the current offset.
-private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
-    try Double(bitPattern: readInt(&reader))
+// Reads a float at the current offset.
+fileprivate func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
+    return Double(bitPattern: try readInt(&reader))
 }
 
-/// Indicates if the offset has reached the end of the buffer.
-private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
-    reader.offset < reader.data.count
+// Indicates if the offset has reached the end of the buffer.
+fileprivate func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
+    return reader.offset < reader.data.count
 }
 
 // Define writer functionality.  Normally this would be defined in a class or
 // struct, but we use standalone functions instead in order to make external
 // types work.  See the above discussion on Readers for details.
 
-private func createWriter() -> [UInt8] {
-    []
+fileprivate func createWriter() -> [UInt8] {
+    return []
 }
 
-private func writeBytes(_ writer: inout [UInt8], _ byteArr: some Sequence<UInt8>) {
+fileprivate func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
     writer.append(contentsOf: byteArr)
 }
 
-/// Writes an integer in big-endian order.
-///
-/// Warning: make sure what you are trying to write
-/// is in the correct type!
-private func writeInt(_ writer: inout [UInt8], _ value: some FixedWidthInteger) {
+// Writes an integer in big-endian order.
+//
+// Warning: make sure what you are trying to write
+// is in the correct type!
+fileprivate func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
 }
 
-private func writeFloat(_ writer: inout [UInt8], _ value: Float) {
+fileprivate func writeFloat(_ writer: inout [UInt8], _ value: Float) {
     writeInt(&writer, value.bitPattern)
 }
 
-private func writeDouble(_ writer: inout [UInt8], _ value: Double) {
+fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
     writeInt(&writer, value.bitPattern)
 }
 
-/// Protocol for types that transfer other types across the FFI. This is
-/// analogous to the Rust trait of the same name.
-private protocol FfiConverter {
+// Protocol for types that transfer other types across the FFI. This is
+// analogous to the Rust trait of the same name.
+fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
 
@@ -166,33 +166,33 @@ private protocol FfiConverter {
     static func write(_ value: SwiftType, into buf: inout [UInt8])
 }
 
-/// Types conforming to `Primitive` pass themselves directly over the FFI.
-private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
+// Types conforming to `Primitive` pass themselves directly over the FFI.
+fileprivate protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType { }
 
 extension FfiConverterPrimitive {
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public static func lift(_ value: FfiType) throws -> SwiftType {
-        value
+        return value
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public static func lower(_ value: SwiftType) -> FfiType {
-        value
+        return value
     }
 }
 
-/// Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
-/// Used for complex types where it's hard to write a custom lift/lower.
-private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
+// Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
+// Used for complex types where it's hard to write a custom lift/lower.
+fileprivate protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public static func lift(_ buf: RustBuffer) throws -> SwiftType {
         var reader = createReader(data: Data(rustBuffer: buf))
         let value = try read(from: &reader)
@@ -203,19 +203,18 @@ extension FfiConverterRustBuffer {
         return value
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public static func lower(_ value: SwiftType) -> RustBuffer {
-        var writer = createWriter()
-        write(value, into: &writer)
-        return RustBuffer(bytes: writer)
+          var writer = createWriter()
+          write(value, into: &writer)
+          return RustBuffer(bytes: writer)
     }
 }
-
-/// An error type for FFI errors. These errors occur at the UniFFI level, not
-/// the library level.
-private enum UniffiInternalError: LocalizedError {
+// An error type for FFI errors. These errors occur at the UniFFI level, not
+// the library level.
+fileprivate enum UniffiInternalError: LocalizedError {
     case bufferOverflow
     case incompleteData
     case unexpectedOptionalTag
@@ -226,39 +225,39 @@ private enum UniffiInternalError: LocalizedError {
     case unexpectedStaleHandle
     case rustPanic(_ message: String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
-        case .bufferOverflow: "Reading the requested value would read past the end of the buffer"
-        case .incompleteData: "The buffer still has data after lifting its containing value"
-        case .unexpectedOptionalTag: "Unexpected optional tag; should be 0 or 1"
-        case .unexpectedEnumCase: "Raw enum value doesn't match any cases"
-        case .unexpectedNullPointer: "Raw pointer value was null"
-        case .unexpectedRustCallStatusCode: "Unexpected RustCallStatus code"
-        case .unexpectedRustCallError: "CALL_ERROR but no errorClass specified"
-        case .unexpectedStaleHandle: "The object in the handle map has been dropped already"
-        case let .rustPanic(message): message
+        case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
+        case .incompleteData: return "The buffer still has data after lifting its containing value"
+        case .unexpectedOptionalTag: return "Unexpected optional tag; should be 0 or 1"
+        case .unexpectedEnumCase: return "Raw enum value doesn't match any cases"
+        case .unexpectedNullPointer: return "Raw pointer value was null"
+        case .unexpectedRustCallStatusCode: return "Unexpected RustCallStatus code"
+        case .unexpectedRustCallError: return "CALL_ERROR but no errorClass specified"
+        case .unexpectedStaleHandle: return "The object in the handle map has been dropped already"
+        case let .rustPanic(message): return message
         }
     }
 }
 
-private extension NSLock {
+fileprivate extension NSLock {
     func withLock<T>(f: () throws -> T) rethrows -> T {
-        lock()
+        self.lock()
         defer { self.unlock() }
         return try f()
     }
 }
 
-private let CALL_SUCCESS: Int8 = 0
-private let CALL_ERROR: Int8 = 1
-private let CALL_UNEXPECTED_ERROR: Int8 = 2
-private let CALL_CANCELLED: Int8 = 3
+fileprivate let CALL_SUCCESS: Int8 = 0
+fileprivate let CALL_ERROR: Int8 = 1
+fileprivate let CALL_UNEXPECTED_ERROR: Int8 = 2
+fileprivate let CALL_CANCELLED: Int8 = 3
 
-private extension RustCallStatus {
+fileprivate extension RustCallStatus {
     init() {
         self.init(
             code: CALL_SUCCESS,
-            errorBuf: RustBuffer(
+            errorBuf: RustBuffer.init(
                 capacity: 0,
                 len: 0,
                 data: nil
@@ -272,67 +271,66 @@ private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
     return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private func rustCallWithError<T>(
-    _ errorHandler: @escaping (RustBuffer) throws -> some Swift.Error,
-    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
-) throws -> T {
+private func rustCallWithError<T, E: Swift.Error>(
+    _ errorHandler: @escaping (RustBuffer) throws -> E,
+    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T>(
+private func makeRustCall<T, E: Swift.Error>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
-    errorHandler: ((RustBuffer) throws -> some Swift.Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws -> T {
     uniffiEnsureMaccyCoreInitialized()
-    var callStatus = RustCallStatus()
+    var callStatus = RustCallStatus.init()
     let returnedVal = callback(&callStatus)
     try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: errorHandler)
     return returnedVal
 }
 
-private func uniffiCheckCallStatus(
+private func uniffiCheckCallStatus<E: Swift.Error>(
     callStatus: RustCallStatus,
-    errorHandler: ((RustBuffer) throws -> some Swift.Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws {
     switch callStatus.code {
-    case CALL_SUCCESS:
-        return
+        case CALL_SUCCESS:
+            return
 
-    case CALL_ERROR:
-        if let errorHandler {
-            throw try errorHandler(callStatus.errorBuf)
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.unexpectedRustCallError
-        }
+        case CALL_ERROR:
+            if let errorHandler = errorHandler {
+                throw try errorHandler(callStatus.errorBuf)
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.unexpectedRustCallError
+            }
 
-    case CALL_UNEXPECTED_ERROR:
-        // When the rust code sees a panic, it tries to construct a RustBuffer
-        // with the message.  But if that code panics, then it just sends back
-        // an empty buffer.
-        if callStatus.errorBuf.len > 0 {
-            throw try UniffiInternalError.rustPanic(FfiConverterString.lift(callStatus.errorBuf))
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.rustPanic("Rust panic")
-        }
+        case CALL_UNEXPECTED_ERROR:
+            // When the rust code sees a panic, it tries to construct a RustBuffer
+            // with the message.  But if that code panics, then it just sends back
+            // an empty buffer.
+            if callStatus.errorBuf.len > 0 {
+                throw UniffiInternalError.rustPanic(try FfiConverterString.lift(callStatus.errorBuf))
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.rustPanic("Rust panic")
+            }
 
-    case CALL_CANCELLED:
-        fatalError("Cancellation not supported yet")
+        case CALL_CANCELLED:
+            fatalError("Cancellation not supported yet")
 
-    default:
-        throw UniffiInternalError.unexpectedRustCallStatusCode
+        default:
+            throw UniffiInternalError.unexpectedRustCallStatusCode
     }
 }
 
 private func uniffiTraitInterfaceCall<T>(
     callStatus: UnsafeMutablePointer<RustCallStatus>,
     makeCall: () throws -> T,
-    writeReturn: (T) -> Void
+    writeReturn: (T) -> ()
 ) {
     do {
         try writeReturn(makeCall())
-    } catch {
+    } catch let error {
         callStatus.pointee.code = CALL_UNEXPECTED_ERROR
         callStatus.pointee.errorBuf = FfiConverterString.lower(String(describing: error))
     }
@@ -341,7 +339,7 @@ private func uniffiTraitInterfaceCall<T>(
 private func uniffiTraitInterfaceCallWithError<T, E>(
     callStatus: UnsafeMutablePointer<RustCallStatus>,
     makeCall: () throws -> T,
-    writeReturn: (T) -> Void,
+    writeReturn: (T) -> (),
     lowerError: (E) -> RustBuffer
 ) {
     do {
@@ -354,13 +352,12 @@ private func uniffiTraitInterfaceCallWithError<T, E>(
         callStatus.pointee.errorBuf = FfiConverterString.lower(String(describing: error))
     }
 }
-
-// Initial value and increment amount for handles.
+// Initial value and increment amount for handles. 
 // These ensure that SWIFT handles always have the lowest bit set
-private let UNIFFI_HANDLEMAP_INITIAL: UInt64 = 1
-private let UNIFFI_HANDLEMAP_DELTA: UInt64 = 2
+fileprivate let UNIFFI_HANDLEMAP_INITIAL: UInt64 = 1
+fileprivate let UNIFFI_HANDLEMAP_DELTA: UInt64 = 2
 
-private final class UniffiHandleMap<T>: @unchecked Sendable {
+fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
     // All mutation happens with this lock held, which is why we implement @unchecked Sendable.
     private let lock = NSLock()
     private var map: [UInt64: T] = [:]
@@ -368,11 +365,11 @@ private final class UniffiHandleMap<T>: @unchecked Sendable {
 
     func insert(obj: T) -> UInt64 {
         lock.withLock {
-            doInsert(obj)
+            return doInsert(obj)
         }
     }
 
-    /// Low-level insert function, this assumes `lock` is held.
+    // Low-level insert function, this assumes `lock` is held.
     private func doInsert(_ obj: T) -> UInt64 {
         let handle = currentHandle
         currentHandle += UNIFFI_HANDLEMAP_DELTA
@@ -380,7 +377,7 @@ private final class UniffiHandleMap<T>: @unchecked Sendable {
         return handle
     }
 
-    func get(handle: UInt64) throws -> T {
+     func get(handle: UInt64) throws -> T {
         try lock.withLock {
             guard let obj = map[handle] else {
                 throw UniffiInternalError.unexpectedStaleHandle
@@ -389,7 +386,7 @@ private final class UniffiHandleMap<T>: @unchecked Sendable {
         }
     }
 
-    func clone(handle: UInt64) throws -> UInt64 {
+     func clone(handle: UInt64) throws -> UInt64 {
         try lock.withLock {
             guard let obj = map[handle] else {
                 throw UniffiInternalError.unexpectedStaleHandle
@@ -409,13 +406,16 @@ private final class UniffiHandleMap<T>: @unchecked Sendable {
     }
 
     var count: Int {
-        map.count
+        get {
+            map.count
+        }
     }
 }
 
-/// Public interface members begin here.
-/// Magic number for the Rust proxy to call using the same mechanism as every other method,
-/// to free the callback once it's dropped by Rust.
+
+// Public interface members begin here.
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
 private let IDX_CALLBACK_FREE: Int32 = 0
 // Callback return codes
 private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
@@ -423,101 +423,101 @@ private let UNIFFI_CALLBACK_ERROR: Int32 = 1
 private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterInt32: FfiConverterPrimitive {
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
     typealias FfiType = Int32
     typealias SwiftType = Int32
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
-        try lift(readInt(&buf))
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int32 {
+        return try lift(readInt(&buf))
     }
 
-    static func write(_ value: Int32, into buf: inout [UInt8]) {
+    public static func write(_ value: Int32, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterUInt64: FfiConverterPrimitive {
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
-        try lift(readInt(&buf))
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
     }
 
-    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterInt64: FfiConverterPrimitive {
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
-        try lift(readInt(&buf))
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
     }
 
-    static func write(_ value: Int64, into buf: inout [UInt8]) {
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterDouble: FfiConverterPrimitive {
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
     typealias FfiType = Double
     typealias SwiftType = Double
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
-        try lift(readDouble(&buf))
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
     }
 
-    static func write(_ value: Double, into buf: inout [UInt8]) {
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
         writeDouble(&buf, lower(value))
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterBool: FfiConverter {
+fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
 
-    static func lift(_ value: Int8) throws -> Bool {
-        value != 0
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
     }
 
-    static func lower(_ value: Bool) -> Int8 {
-        value ? 1 : 0
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
-        try lift(readInt(&buf))
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
     }
 
-    static func write(_ value: Bool, into buf: inout [UInt8]) {
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterString: FfiConverter {
+fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
 
-    static func lift(_ value: RustBuffer) throws -> String {
+    public static func lift(_ value: RustBuffer) throws -> String {
         defer {
             value.deallocate()
         }
@@ -528,8 +528,8 @@ private struct FfiConverterString: FfiConverter {
         return String(bytes: bytes, encoding: String.Encoding.utf8)!
     }
 
-    static func lower(_ value: String) -> RustBuffer {
-        value.utf8CString.withUnsafeBufferPointer { ptr in
+    public static func lower(_ value: String) -> RustBuffer {
+        return value.utf8CString.withUnsafeBufferPointer { ptr in
             // The swift string gives us int8_t, we want uint8_t.
             ptr.withMemoryRebound(to: UInt8.self) { ptr in
                 // The swift string gives us a trailing null byte, we don't want it.
@@ -539,12 +539,12 @@ private struct FfiConverterString: FfiConverter {
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
-        return try String(bytes: readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
+        return String(bytes: try readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
     }
 
-    static func write(_ value: String, into buf: inout [UInt8]) {
+    public static func write(_ value: String, into buf: inout [UInt8]) {
         let len = Int32(value.utf8.count)
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
@@ -552,84 +552,88 @@ private struct FfiConverterString: FfiConverter {
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterData: FfiConverterRustBuffer {
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
     typealias SwiftType = Data
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
         let len: Int32 = try readInt(&buf)
-        return try Data(readBytes(&buf, count: Int(len)))
+        return Data(try readBytes(&buf, count: Int(len)))
     }
 
-    static func write(_ value: Data, into buf: inout [UInt8]) {
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         writeBytes(&buf, value)
     }
 }
 
+
+
+
 /**
  * Callback interface that platforms implement to receive sync events.
  * Platforms (Swift/Kotlin) implement this via UniFFI foreign trait.
  */
 public protocol ClipboardObserver: AnyObject, Sendable {
+    
     /**
      * A new clipboard item was received from a synced peer.
      */
-    func onItemReceived(item: ClipboardItem)
-
+    func onItemReceived(item: ClipboardItem) 
+    
     /**
      * An item was deleted by a synced peer.
      */
-    func onItemDeleted(itemId: String)
-
+    func onItemDeleted(itemId: String) 
+    
     /**
      * An item was updated (e.g., appended) by a synced peer.
      */
-    func onItemUpdated(item: ClipboardItem)
-
+    func onItemUpdated(item: ClipboardItem) 
+    
     /**
      * A peer was discovered on the network.
      */
-    func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool)
-
+    func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool) 
+    
     /**
      * A peer disconnected or went offline.
      */
-    func onPeerLost(peerId: String)
-
+    func onPeerLost(peerId: String) 
+    
     /**
      * A pairing request was received from a peer.
      */
-    func onPairingRequest(peerId: String, displayName: String, pin: String)
-
+    func onPairingRequest(peerId: String, displayName: String, pin: String) 
+    
     /**
      * A pairing request completed (accepted or rejected).
      */
-    func onPairingComplete(peerId: String, success: Bool)
-
+    func onPairingComplete(peerId: String, success: Bool) 
+    
     /**
      * Sync is now listening on the given multiaddress.
      */
-    func onListening(address: String)
-
+    func onListening(address: String) 
+    
     /**
      * An error occurred in the sync engine.
      */
-    func onError(code: Int32, message: String)
-
+    func onError(code: Int32, message: String) 
+    
     /**
      * A file chunk was received (append to local temp file).
      */
-    func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data)
-
+    func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data) 
+    
     /**
      * File download completed (or failed).
      */
-    func onFileDownloadComplete(requestId: String, filePath: String, success: Bool)
+    func onFileDownloadComplete(requestId: String, filePath: String, success: Bool) 
+    
 }
-
 /**
  * Callback interface that platforms implement to receive sync events.
  * Platforms (Swift/Kotlin) implement this via UniFFI foreign trait.
@@ -637,10 +641,10 @@ public protocol ClipboardObserver: AnyObject, Sendable {
 open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
     fileprivate let handle: UInt64
 
-    // Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public struct NoHandle {
         public init() {}
     }
@@ -648,10 +652,10 @@ open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public required init(unsafeFromHandle handle: UInt64) {
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
         self.handle = handle
     }
 
@@ -660,20 +664,19 @@ open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
     //
     // - Warning:
     //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public init(noHandle _: NoHandle) {
-        handle = 0
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public func uniffiCloneHandle() -> UInt64 {
-        try! rustCall { uniffi_maccy_core_fn_clone_clipboardobserver(self.handle, $0) }
+        return try! rustCall { uniffi_maccy_core_fn_clone_clipboardobserver(self.handle, $0) }
     }
-
     // No primary constructor declared for this class.
 
     deinit {
@@ -685,161 +688,159 @@ open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
         try! rustCall { uniffi_maccy_core_fn_free_clipboardobserver(handle, $0) }
     }
 
+    
+
+    
     /**
      * A new clipboard item was received from a synced peer.
      */
-    open func onItemReceived(item: ClipboardItem) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_item_received(
-                self.uniffiCloneHandle(),
-                FfiConverterTypeClipboardItem_lower(item), $0
-            )
-        }
-    }
-
+open func onItemReceived(item: ClipboardItem)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_item_received(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardItem_lower(item),$0
+    )
+}
+}
+    
     /**
      * An item was deleted by a synced peer.
      */
-    open func onItemDeleted(itemId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_item_deleted(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(itemId), $0
-            )
-        }
-    }
-
+open func onItemDeleted(itemId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_item_deleted(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(itemId),$0
+    )
+}
+}
+    
     /**
      * An item was updated (e.g., appended) by a synced peer.
      */
-    open func onItemUpdated(item: ClipboardItem) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_item_updated(
-                self.uniffiCloneHandle(),
-                FfiConverterTypeClipboardItem_lower(item), $0
-            )
-        }
-    }
-
+open func onItemUpdated(item: ClipboardItem)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_item_updated(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardItem_lower(item),$0
+    )
+}
+}
+    
     /**
      * A peer was discovered on the network.
      */
-    open func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_peer_discovered(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterString.lower(displayName),
-                FfiConverterSequenceString.lower(addresses),
-                FfiConverterBool.lower(isConnected), $0
-            )
-        }
-    }
-
+open func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_peer_discovered(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(displayName),
+        FfiConverterSequenceString.lower(addresses),
+        FfiConverterBool.lower(isConnected),$0
+    )
+}
+}
+    
     /**
      * A peer disconnected or went offline.
      */
-    open func onPeerLost(peerId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_peer_lost(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId), $0
-            )
-        }
-    }
-
+open func onPeerLost(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_peer_lost(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
     /**
      * A pairing request was received from a peer.
      */
-    open func onPairingRequest(peerId: String, displayName: String, pin: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_request(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterString.lower(displayName),
-                FfiConverterString.lower(pin), $0
-            )
-        }
-    }
-
+open func onPairingRequest(peerId: String, displayName: String, pin: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_request(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(displayName),
+        FfiConverterString.lower(pin),$0
+    )
+}
+}
+    
     /**
      * A pairing request completed (accepted or rejected).
      */
-    open func onPairingComplete(peerId: String, success: Bool) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_complete(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterBool.lower(success), $0
-            )
-        }
-    }
-
+open func onPairingComplete(peerId: String, success: Bool)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_complete(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterBool.lower(success),$0
+    )
+}
+}
+    
     /**
      * Sync is now listening on the given multiaddress.
      */
-    open func onListening(address: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_listening(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(address), $0
-            )
-        }
-    }
-
+open func onListening(address: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_listening(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(address),$0
+    )
+}
+}
+    
     /**
      * An error occurred in the sync engine.
      */
-    open func onError(code: Int32, message: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_error(
-                self.uniffiCloneHandle(),
-                FfiConverterInt32.lower(code),
-                FfiConverterString.lower(message), $0
-            )
-        }
-    }
-
+open func onError(code: Int32, message: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_error(
+            self.uniffiCloneHandle(),
+        FfiConverterInt32.lower(code),
+        FfiConverterString.lower(message),$0
+    )
+}
+}
+    
     /**
      * A file chunk was received (append to local temp file).
      */
-    open func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(requestId),
-                FfiConverterString.lower(fileName),
-                FfiConverterInt64.lower(fileSize),
-                FfiConverterInt32.lower(chunkIndex),
-                FfiConverterInt32.lower(totalChunks),
-                FfiConverterData.lower(data), $0
-            )
-        }
-    }
-
+open func onFileChunk(requestId: String, fileName: String, fileSize: Int64, chunkIndex: Int32, totalChunks: Int32, data: Data)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_file_chunk(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(requestId),
+        FfiConverterString.lower(fileName),
+        FfiConverterInt64.lower(fileSize),
+        FfiConverterInt32.lower(chunkIndex),
+        FfiConverterInt32.lower(totalChunks),
+        FfiConverterData.lower(data),$0
+    )
+}
+}
+    
     /**
      * File download completed (or failed).
      */
-    open func onFileDownloadComplete(requestId: String, filePath: String, success: Bool) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(requestId),
-                FfiConverterString.lower(filePath),
-                FfiConverterBool.lower(success), $0
-            )
-        }
-    }
+open func onFileDownloadComplete(requestId: String, filePath: String, success: Bool)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_clipboardobserver_on_file_download_complete(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(requestId),
+        FfiConverterString.lower(filePath),
+        FfiConverterBool.lower(success),$0
+    )
+}
+}
+    
+
+    
 }
 
-/// Put the implementation in a struct so we don't pollute the top-level namespace
-private enum UniffiCallbackInterfaceClipboardObserver {
-    /// Create the VTable using a series of closures.
-    /// Swift automatically converts these into C callback functions.
-    ///
-    /// Store the vtable directly.
-    static let vtable: UniffiVTableCallbackInterfaceClipboardObserver = .init(
-        uniffiFree: { (uniffiHandle: UInt64) in
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceClipboardObserver {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceClipboardObserver = UniffiVTableCallbackInterfaceClipboardObserver(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
             do {
                 try FfiConverterTypeClipboardObserver.handleMap.remove(handle: uniffiHandle)
             } catch {
@@ -856,19 +857,20 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         onItemReceived: { (
             uniffiHandle: UInt64,
             item: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onItemReceived(
-                    item: FfiConverterTypeClipboardItem_lift(item)
+                return uniffiObj.onItemReceived(
+                     item: try FfiConverterTypeClipboardItem_lift(item)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -879,19 +881,20 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         onItemDeleted: { (
             uniffiHandle: UInt64,
             itemId: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onItemDeleted(
-                    itemId: FfiConverterString.lift(itemId)
+                return uniffiObj.onItemDeleted(
+                     itemId: try FfiConverterString.lift(itemId)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -902,19 +905,20 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         onItemUpdated: { (
             uniffiHandle: UInt64,
             item: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onItemUpdated(
-                    item: FfiConverterTypeClipboardItem_lift(item)
+                return uniffiObj.onItemUpdated(
+                     item: try FfiConverterTypeClipboardItem_lift(item)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -928,22 +932,23 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             displayName: RustBuffer,
             addresses: RustBuffer,
             isConnected: Int8,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onPeerDiscovered(
-                    peerId: FfiConverterString.lift(peerId),
-                    displayName: FfiConverterString.lift(displayName),
-                    addresses: FfiConverterSequenceString.lift(addresses),
-                    isConnected: FfiConverterBool.lift(isConnected)
+                return uniffiObj.onPeerDiscovered(
+                     peerId: try FfiConverterString.lift(peerId),
+                     displayName: try FfiConverterString.lift(displayName),
+                     addresses: try FfiConverterSequenceString.lift(addresses),
+                     isConnected: try FfiConverterBool.lift(isConnected)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -954,19 +959,20 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         onPeerLost: { (
             uniffiHandle: UInt64,
             peerId: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onPeerLost(
-                    peerId: FfiConverterString.lift(peerId)
+                return uniffiObj.onPeerLost(
+                     peerId: try FfiConverterString.lift(peerId)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -979,21 +985,22 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             peerId: RustBuffer,
             displayName: RustBuffer,
             pin: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onPairingRequest(
-                    peerId: FfiConverterString.lift(peerId),
-                    displayName: FfiConverterString.lift(displayName),
-                    pin: FfiConverterString.lift(pin)
+                return uniffiObj.onPairingRequest(
+                     peerId: try FfiConverterString.lift(peerId),
+                     displayName: try FfiConverterString.lift(displayName),
+                     pin: try FfiConverterString.lift(pin)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1005,20 +1012,21 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             uniffiHandle: UInt64,
             peerId: RustBuffer,
             success: Int8,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onPairingComplete(
-                    peerId: FfiConverterString.lift(peerId),
-                    success: FfiConverterBool.lift(success)
+                return uniffiObj.onPairingComplete(
+                     peerId: try FfiConverterString.lift(peerId),
+                     success: try FfiConverterBool.lift(success)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1029,19 +1037,20 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         onListening: { (
             uniffiHandle: UInt64,
             address: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onListening(
-                    address: FfiConverterString.lift(address)
+                return uniffiObj.onListening(
+                     address: try FfiConverterString.lift(address)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1053,20 +1062,21 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             uniffiHandle: UInt64,
             code: Int32,
             message: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onError(
-                    code: FfiConverterInt32.lift(code),
-                    message: FfiConverterString.lift(message)
+                return uniffiObj.onError(
+                     code: try FfiConverterInt32.lift(code),
+                     message: try FfiConverterString.lift(message)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1082,24 +1092,25 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             chunkIndex: Int32,
             totalChunks: Int32,
             data: RustBuffer,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onFileChunk(
-                    requestId: FfiConverterString.lift(requestId),
-                    fileName: FfiConverterString.lift(fileName),
-                    fileSize: FfiConverterInt64.lift(fileSize),
-                    chunkIndex: FfiConverterInt32.lift(chunkIndex),
-                    totalChunks: FfiConverterInt32.lift(totalChunks),
-                    data: FfiConverterData.lift(data)
+                return uniffiObj.onFileChunk(
+                     requestId: try FfiConverterString.lift(requestId),
+                     fileName: try FfiConverterString.lift(fileName),
+                     fileSize: try FfiConverterInt64.lift(fileSize),
+                     chunkIndex: try FfiConverterInt32.lift(chunkIndex),
+                     totalChunks: try FfiConverterInt32.lift(totalChunks),
+                     data: try FfiConverterData.lift(data)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1112,21 +1123,22 @@ private enum UniffiCallbackInterfaceClipboardObserver {
             requestId: RustBuffer,
             filePath: RustBuffer,
             success: Int8,
-            _: UnsafeMutableRawPointer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws in
+                () throws -> () in
                 guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.onFileDownloadComplete(
-                    requestId: FfiConverterString.lift(requestId),
-                    filePath: FfiConverterString.lift(filePath),
-                    success: FfiConverterBool.lift(success)
+                return uniffiObj.onFileDownloadComplete(
+                     requestId: try FfiConverterString.lift(requestId),
+                     filePath: try FfiConverterString.lift(filePath),
+                     success: try FfiConverterBool.lift(success)
                 )
             }
 
+            
             let writeReturn = { () }
             uniffiTraitInterfaceCall(
                 callStatus: uniffiCallStatus,
@@ -1136,8 +1148,8 @@ private enum UniffiCallbackInterfaceClipboardObserver {
         }
     )
 
-    /// Rust stores this pointer for future callback invocations, so it must live
-    /// for the process lifetime (not just for the init function call).
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
     static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceClipboardObserver> = {
         let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceClipboardObserver>.allocate(capacity: 1)
         ptr.initialize(to: vtable)
@@ -1150,7 +1162,7 @@ private func uniffiCallbackInitClipboardObserver() {
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeClipboardObserver: FfiConverter {
     fileprivate static let handleMap = UniffiHandleMap<ClipboardObserver>()
@@ -1159,24 +1171,24 @@ public struct FfiConverterTypeClipboardObserver: FfiConverter {
     typealias SwiftType = ClipboardObserver
 
     public static func lift(_ handle: UInt64) throws -> ClipboardObserver {
-        if (handle & 1) == 0 {
+        if ((handle & 1) == 0) {
             // Rust-generated handle, construct a new class that uses the handle to implement the
             // interface
-            ClipboardObserverImpl(unsafeFromHandle: handle)
+            return ClipboardObserverImpl(unsafeFromHandle: handle)
         } else {
             // Swift-generated handle, get the object from the handle map
-            try handleMap.remove(handle: handle)
+            return try handleMap.remove(handle: handle)
         }
     }
 
     public static func lower(_ value: ClipboardObserver) -> UInt64 {
-        if let rustImpl = value as? ClipboardObserverImpl {
-            // Rust-implemented object.  Clone the handle and return it
-            rustImpl.uniffiCloneHandle()
-        } else {
+         if let rustImpl = value as? ClipboardObserverImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
             // Swift object, generate a new vtable handle and return that.
-            handleMap.insert(obj: value)
-        }
+            return handleMap.insert(obj: value)
+         }
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClipboardObserver {
@@ -1189,120 +1201,127 @@ public struct FfiConverterTypeClipboardObserver: FfiConverter {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardObserver_lift(_ handle: UInt64) throws -> ClipboardObserver {
-    try FfiConverterTypeClipboardObserver.lift(handle)
+    return try FfiConverterTypeClipboardObserver.lift(handle)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardObserver_lower(_ value: ClipboardObserver) -> UInt64 {
-    FfiConverterTypeClipboardObserver.lower(value)
+    return FfiConverterTypeClipboardObserver.lower(value)
 }
+
+
+
+
+
 
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
  */
 public protocol HistoryManagerProtocol: AnyObject, Sendable {
+    
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
      */
-    func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws -> ClipboardItem
-
-    func clearAll() throws -> UInt64
-
-    func clearUnpinned() throws -> UInt64
-
-    func count() throws -> Int64
-
-    func delete(id: String) throws
-
+    func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws  -> ClipboardItem
+    
+    func clearAll() throws  -> UInt64
+    
+    func clearUnpinned() throws  -> UInt64
+    
+    func count() throws  -> Int64
+    
+    func delete(id: String) throws 
+    
     /**
      * Get all paired peers with their display names.
      */
-    func getPairedPeers() -> [String]
-
+    func getPairedPeers()  -> [String]
+    
     /**
      * Load all items from storage.
      */
-    func load() throws -> [ClipboardItem]
-
-    func migrateFromSwiftdata(swiftdataPath: String) throws -> UInt64
-
+    func load() throws  -> [ClipboardItem]
+    
+    func migrateFromSwiftdata(swiftdataPath: String) throws  -> UInt64
+    
     /**
      * Remove a paired peer.
      */
-    func removePairedPeer(peerId: String)
-
+    func removePairedPeer(peerId: String) 
+    
     /**
      * Request a file download from a peer.
      */
-    func requestFile(peerId: String, filePath: String)
-
+    func requestFile(peerId: String, filePath: String) 
+    
     /**
      * Persist a paired peer.
      */
-    func savePairedPeer(peerId: String, displayName: String)
-
-    func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult]
-
-    func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [ClipboardItem]
-
+    func savePairedPeer(peerId: String, displayName: String) 
+    
+    func search(query: String, items: [ClipboardItem], mode: SearchMode)  -> [SearchResult]
+    
+    func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool)  -> [ClipboardItem]
+    
     /**
      * Start the P2P sync engine. The observer receives all sync events.
      */
-    func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver) throws
-
+    func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver) throws 
+    
     /**
      * Stop the sync engine.
      */
-    func stopSync() throws
-
-    func storageSizeBytes(dbPath: String) -> Int64
-
-    func syncAcceptPairing(peerId: String, pin: String)
-
-    func syncAddPeerAddress(address: String)
-
+    func stopSync() throws 
+    
+    func storageSizeBytes(dbPath: String)  -> Int64
+    
+    func syncAcceptPairing(peerId: String, pin: String) 
+    
+    func syncAddPeerAddress(address: String) 
+    
     /**
      * Broadcast a deletion to synced peers.
      */
-    func syncBroadcastDeletion(itemId: String)
-
+    func syncBroadcastDeletion(itemId: String) 
+    
     /**
      * Broadcast a newly copied item to synced peers.
      */
-    func syncBroadcastItem(item: ClipboardItem)
-
+    func syncBroadcastItem(item: ClipboardItem) 
+    
     /**
      * Broadcast an update to synced peers.
      */
-    func syncBroadcastUpdate(item: ClipboardItem)
-
+    func syncBroadcastUpdate(item: ClipboardItem) 
+    
     /**
      * Restart discovery to find new peers.
      */
-    func syncRefreshDiscovery()
-
-    func syncRejectPairing(peerId: String)
-
-    func syncRequestPairing(peerId: String)
-
-    func syncStartDiscovery()
-
-    func syncStopDiscovery()
-
-    func syncUnpair(peerId: String)
-
-    func togglePin(id: String, availablePins: [String]) throws -> ClipboardItem
-
-    func updateItemText(id: String, newText: String) throws -> ClipboardItem
+    func syncRefreshDiscovery() 
+    
+    func syncRejectPairing(peerId: String) 
+    
+    func syncRequestPairing(peerId: String) 
+    
+    func syncStartDiscovery() 
+    
+    func syncStopDiscovery() 
+    
+    func syncUnpair(peerId: String) 
+    
+    func togglePin(id: String, availablePins: [String]) throws  -> ClipboardItem
+    
+    func updateItemText(id: String, newText: String) throws  -> ClipboardItem
+    
 }
-
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
@@ -1310,10 +1329,10 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
 open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
 
-    // Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public struct NoHandle {
         public init() {}
     }
@@ -1321,10 +1340,10 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     // TODO: We'd like this to be `private` but for Swifty reasons,
     // we can't implement `FfiConverter` without making this `required` and we can't
     // make it `required` without making it `public`.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public required init(unsafeFromHandle handle: UInt64) {
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
         self.handle = handle
     }
 
@@ -1333,29 +1352,28 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     //
     // - Warning:
     //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
-    public init(noHandle _: NoHandle) {
-        handle = 0
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
     }
 
-    #if swift(>=5.8)
-        @_documentation(visibility: private)
-    #endif
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
     public func uniffiCloneHandle() -> UInt64 {
-        try! rustCall { uniffi_maccy_core_fn_clone_historymanager(self.handle, $0) }
+        return try! rustCall { uniffi_maccy_core_fn_clone_historymanager(self.handle, $0) }
     }
-
-    public convenience init(dbPath: String) throws {
-        let handle =
-            try rustCallWithError(FfiConverterTypeCoreError_lift) {
-                uniffi_maccy_core_fn_constructor_historymanager_new(
-                    FfiConverterString.lower(dbPath), $0
-                )
-            }
-        self.init(unsafeFromHandle: handle)
-    }
+public convenience init(dbPath: String)throws  {
+    let handle =
+        try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_constructor_historymanager_new(
+        FfiConverterString.lower(dbPath),$0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
 
     deinit {
         if handle == 0 {
@@ -1366,321 +1384,311 @@ open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
         try! rustCall { uniffi_maccy_core_fn_free_historymanager(handle, $0) }
     }
 
+    
+
+    
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
      */
-    open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws -> ClipboardItem {
-        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_add(
-                self.uniffiCloneHandle(),
-                FfiConverterTypeClipboardItem_lower(item),
-                FfiConverterInt32.lower(maxSize),
-                FfiConverterBool.lower(isUnlimited), $0
-            )
-        })
-    }
-
-    open func clearAll() throws -> UInt64 {
-        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_clear_all(
-                self.uniffiCloneHandle(), $0
-            )
-        })
-    }
-
-    open func clearUnpinned() throws -> UInt64 {
-        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_clear_unpinned(
-                self.uniffiCloneHandle(), $0
-            )
-        })
-    }
-
-    open func count() throws -> Int64 {
-        try FfiConverterInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_count(
-                self.uniffiCloneHandle(), $0
-            )
-        })
-    }
-
-    open func delete(id: String) throws {
-        try rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_delete(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(id), $0
-            )
-        }
-    }
-
+open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool)throws  -> ClipboardItem  {
+    return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_add(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardItem_lower(item),
+        FfiConverterInt32.lower(maxSize),
+        FfiConverterBool.lower(isUnlimited),$0
+    )
+})
+}
+    
+open func clearAll()throws  -> UInt64  {
+    return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_clear_all(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func clearUnpinned()throws  -> UInt64  {
+    return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_clear_unpinned(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func count()throws  -> Int64  {
+    return try  FfiConverterInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_count(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func delete(id: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_delete(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),$0
+    )
+}
+}
+    
     /**
      * Get all paired peers with their display names.
      */
-    open func getPairedPeers() -> [String] {
-        try! FfiConverterSequenceString.lift(try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_get_paired_peers(
-                self.uniffiCloneHandle(), $0
-            )
-        })
-    }
-
+open func getPairedPeers() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_get_paired_peers(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
     /**
      * Load all items from storage.
      */
-    open func load() throws -> [ClipboardItem] {
-        try FfiConverterSequenceTypeClipboardItem.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_load(
-                self.uniffiCloneHandle(), $0
-            )
-        })
-    }
-
-    open func migrateFromSwiftdata(swiftdataPath: String) throws -> UInt64 {
-        try FfiConverterUInt64.lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(swiftdataPath), $0
-            )
-        })
-    }
-
+open func load()throws  -> [ClipboardItem]  {
+    return try  FfiConverterSequenceTypeClipboardItem.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_load(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func migrateFromSwiftdata(swiftdataPath: String)throws  -> UInt64  {
+    return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(swiftdataPath),$0
+    )
+})
+}
+    
     /**
      * Remove a paired peer.
      */
-    open func removePairedPeer(peerId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId), $0
-            )
-        }
-    }
-
+open func removePairedPeer(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
     /**
      * Request a file download from a peer.
      */
-    open func requestFile(peerId: String, filePath: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_request_file(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterString.lower(filePath), $0
-            )
-        }
-    }
-
+open func requestFile(peerId: String, filePath: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_request_file(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(filePath),$0
+    )
+}
+}
+    
     /**
      * Persist a paired peer.
      */
-    open func savePairedPeer(peerId: String, displayName: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterString.lower(displayName), $0
-            )
-        }
-    }
-
-    open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult] {
-        try! FfiConverterSequenceTypeSearchResult.lift(try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_search(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(query),
-                FfiConverterSequenceTypeClipboardItem.lower(items),
-                FfiConverterTypeSearchMode_lower(mode), $0
-            )
-        })
-    }
-
-    open func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [ClipboardItem] {
-        try! FfiConverterSequenceTypeClipboardItem.lift(try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sort(
-                self.uniffiCloneHandle(),
-                FfiConverterSequenceTypeClipboardItem.lower(items),
-                FfiConverterTypeSortBy_lower(sortBy),
-                FfiConverterBool.lower(pinToTop), $0
-            )
-        })
-    }
-
+open func savePairedPeer(peerId: String, displayName: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(displayName),$0
+    )
+}
+}
+    
+open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult]  {
+    return try!  FfiConverterSequenceTypeSearchResult.lift(try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_search(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(query),
+        FfiConverterSequenceTypeClipboardItem.lower(items),
+        FfiConverterTypeSearchMode_lower(mode),$0
+    )
+})
+}
+    
+open func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [ClipboardItem]  {
+    return try!  FfiConverterSequenceTypeClipboardItem.lift(try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sort(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceTypeClipboardItem.lower(items),
+        FfiConverterTypeSortBy_lower(sortBy),
+        FfiConverterBool.lower(pinToTop),$0
+    )
+})
+}
+    
     /**
      * Start the P2P sync engine. The observer receives all sync events.
      */
-    open func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver) throws {
-        try rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_start_sync(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(deviceName),
-                FfiConverterString.lower(deviceId),
-                FfiConverterTypeClipboardObserver_lower(observer), $0
-            )
-        }
-    }
-
+open func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_start_sync(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(deviceName),
+        FfiConverterString.lower(deviceId),
+        FfiConverterTypeClipboardObserver_lower(observer),$0
+    )
+}
+}
+    
     /**
      * Stop the sync engine.
      */
-    open func stopSync() throws {
-        try rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_stop_sync(
-                self.uniffiCloneHandle(), $0
-            )
-        }
-    }
-
-    open func storageSizeBytes(dbPath: String) -> Int64 {
-        try! FfiConverterInt64.lift(try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_storage_size_bytes(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(dbPath), $0
-            )
-        })
-    }
-
-    open func syncAcceptPairing(peerId: String, pin: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_accept_pairing(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId),
-                FfiConverterString.lower(pin), $0
-            )
-        }
-    }
-
-    open func syncAddPeerAddress(address: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_add_peer_address(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(address), $0
-            )
-        }
-    }
-
+open func stopSync()throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_stop_sync(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func storageSizeBytes(dbPath: String) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_storage_size_bytes(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(dbPath),$0
+    )
+})
+}
+    
+open func syncAcceptPairing(peerId: String, pin: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_accept_pairing(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),
+        FfiConverterString.lower(pin),$0
+    )
+}
+}
+    
+open func syncAddPeerAddress(address: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_add_peer_address(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(address),$0
+    )
+}
+}
+    
     /**
      * Broadcast a deletion to synced peers.
      */
-    open func syncBroadcastDeletion(itemId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_broadcast_deletion(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(itemId), $0
-            )
-        }
-    }
-
+open func syncBroadcastDeletion(itemId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_deletion(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(itemId),$0
+    )
+}
+}
+    
     /**
      * Broadcast a newly copied item to synced peers.
      */
-    open func syncBroadcastItem(item: ClipboardItem) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_broadcast_item(
-                self.uniffiCloneHandle(),
-                FfiConverterTypeClipboardItem_lower(item), $0
-            )
-        }
-    }
-
+open func syncBroadcastItem(item: ClipboardItem)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_item(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardItem_lower(item),$0
+    )
+}
+}
+    
     /**
      * Broadcast an update to synced peers.
      */
-    open func syncBroadcastUpdate(item: ClipboardItem) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(
-                self.uniffiCloneHandle(),
-                FfiConverterTypeClipboardItem_lower(item), $0
-            )
-        }
-    }
-
+open func syncBroadcastUpdate(item: ClipboardItem)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardItem_lower(item),$0
+    )
+}
+}
+    
     /**
      * Restart discovery to find new peers.
      */
-    open func syncRefreshDiscovery() {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_refresh_discovery(
-                self.uniffiCloneHandle(), $0
-            )
-        }
-    }
+open func syncRefreshDiscovery()  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_refresh_discovery(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func syncRejectPairing(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_reject_pairing(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
+open func syncRequestPairing(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_request_pairing(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
+open func syncStartDiscovery()  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_start_discovery(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func syncStopDiscovery()  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_stop_discovery(
+            self.uniffiCloneHandle(),$0
+    )
+}
+}
+    
+open func syncUnpair(peerId: String)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_sync_unpair(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(peerId),$0
+    )
+}
+}
+    
+open func togglePin(id: String, availablePins: [String])throws  -> ClipboardItem  {
+    return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_toggle_pin(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterSequenceString.lower(availablePins),$0
+    )
+})
+}
+    
+open func updateItemText(id: String, newText: String)throws  -> ClipboardItem  {
+    return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
+    uniffi_maccy_core_fn_method_historymanager_update_item_text(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(id),
+        FfiConverterString.lower(newText),$0
+    )
+})
+}
+    
 
-    open func syncRejectPairing(peerId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_reject_pairing(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId), $0
-            )
-        }
-    }
-
-    open func syncRequestPairing(peerId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_request_pairing(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId), $0
-            )
-        }
-    }
-
-    open func syncStartDiscovery() {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_start_discovery(
-                self.uniffiCloneHandle(), $0
-            )
-        }
-    }
-
-    open func syncStopDiscovery() {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_stop_discovery(
-                self.uniffiCloneHandle(), $0
-            )
-        }
-    }
-
-    open func syncUnpair(peerId: String) {
-        try! rustCall {
-            uniffi_maccy_core_fn_method_historymanager_sync_unpair(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(peerId), $0
-            )
-        }
-    }
-
-    open func togglePin(id: String, availablePins: [String]) throws -> ClipboardItem {
-        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_toggle_pin(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(id),
-                FfiConverterSequenceString.lower(availablePins), $0
-            )
-        })
-    }
-
-    open func updateItemText(id: String, newText: String) throws -> ClipboardItem {
-        try FfiConverterTypeClipboardItem_lift(rustCallWithError(FfiConverterTypeCoreError_lift) {
-            uniffi_maccy_core_fn_method_historymanager_update_item_text(
-                self.uniffiCloneHandle(),
-                FfiConverterString.lower(id),
-                FfiConverterString.lower(newText), $0
-            )
-        })
-    }
+    
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeHistoryManager: FfiConverter {
     typealias FfiType = UInt64
     typealias SwiftType = HistoryManager
 
     public static func lift(_ handle: UInt64) throws -> HistoryManager {
-        HistoryManager(unsafeFromHandle: handle)
+        return HistoryManager(unsafeFromHandle: handle)
     }
 
     public static func lower(_ value: HistoryManager) -> UInt64 {
-        value.uniffiCloneHandle()
+        return value.uniffiCloneHandle()
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HistoryManager {
@@ -1693,19 +1701,23 @@ public struct FfiConverterTypeHistoryManager: FfiConverter {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeHistoryManager_lift(_ handle: UInt64) throws -> HistoryManager {
-    try FfiConverterTypeHistoryManager.lift(handle)
+    return try FfiConverterTypeHistoryManager.lift(handle)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeHistoryManager_lower(_ value: HistoryManager) -> UInt64 {
-    FfiConverterTypeHistoryManager.lower(value)
+    return FfiConverterTypeHistoryManager.lower(value)
 }
+
+
+
 
 /**
  * A single content entry within a clipboard item (e.g., text, image data, file URL).
@@ -1720,33 +1732,37 @@ public struct ClipboardContent: Equatable, Hashable {
      */
     public var value: Data?
 
-    /// Default memberwise initializers are never public by default, so we
-    /// declare one manually.
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
     public init(
-        /*
+        /**
          * UTI string like "public.utf8-plain-text", "public.png", etc.
-         */ contentType: String,
-        /*
-            * Raw bytes of the content value.
-            */ value: Data?
-    ) {
+         */contentType: String, 
+        /**
+         * Raw bytes of the content value.
+         */value: Data?) {
         self.contentType = contentType
         self.value = value
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
-    extension ClipboardContent: Sendable {}
+extension ClipboardContent: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeClipboardContent: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClipboardContent {
-        try ClipboardContent(
-            contentType: FfiConverterString.read(from: &buf),
-            value: FfiConverterOptionData.read(from: &buf)
+        return
+            try ClipboardContent(
+                contentType: FfiConverterString.read(from: &buf), 
+                value: FfiConverterOptionData.read(from: &buf)
         )
     }
 
@@ -1756,19 +1772,21 @@ public struct FfiConverterTypeClipboardContent: FfiConverterRustBuffer {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardContent_lift(_ buf: RustBuffer) throws -> ClipboardContent {
-    try FfiConverterTypeClipboardContent.lift(buf)
+    return try FfiConverterTypeClipboardContent.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardContent_lower(_ value: ClipboardContent) -> RustBuffer {
-    FfiConverterTypeClipboardContent.lower(value)
+    return FfiConverterTypeClipboardContent.lower(value)
 }
+
 
 /**
  * A clipboard history item — the central domain model.
@@ -1798,22 +1816,21 @@ public struct ClipboardItem: Equatable, Hashable {
     public var syncSource: String?
     public var syncDeleted: Bool
 
-    /// Default memberwise initializers are never public by default, so we
-    /// declare one manually.
-    public init(id: String, application: String?,
-                /*
-                    * Unix epoch milliseconds
-                    */ firstCopiedAt: Int64,
-                /*
-                    * Unix epoch milliseconds
-                    */ lastCopiedAt: Int64, numberOfCopies: Int32,
-                /*
-                    * Pin key character (e.g., "b", "c"), or None if unpinned
-                    */ pin: String?, title: String, contents: [ClipboardContent],
-                /*
-                    * Unix epoch milliseconds
-                    */ syncTimestamp: Int64, syncSource: String?, syncDeleted: Bool)
-    {
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, application: String?, 
+        /**
+         * Unix epoch milliseconds
+         */firstCopiedAt: Int64, 
+        /**
+         * Unix epoch milliseconds
+         */lastCopiedAt: Int64, numberOfCopies: Int32, 
+        /**
+         * Pin key character (e.g., "b", "c"), or None if unpinned
+         */pin: String?, title: String, contents: [ClipboardContent], 
+        /**
+         * Unix epoch milliseconds
+         */syncTimestamp: Int64, syncSource: String?, syncDeleted: Bool) {
         self.id = id
         self.application = application
         self.firstCopiedAt = firstCopiedAt
@@ -1826,29 +1843,34 @@ public struct ClipboardItem: Equatable, Hashable {
         self.syncSource = syncSource
         self.syncDeleted = syncDeleted
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
-    extension ClipboardItem: Sendable {}
+extension ClipboardItem: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeClipboardItem: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClipboardItem {
-        try ClipboardItem(
-            id: FfiConverterString.read(from: &buf),
-            application: FfiConverterOptionString.read(from: &buf),
-            firstCopiedAt: FfiConverterInt64.read(from: &buf),
-            lastCopiedAt: FfiConverterInt64.read(from: &buf),
-            numberOfCopies: FfiConverterInt32.read(from: &buf),
-            pin: FfiConverterOptionString.read(from: &buf),
-            title: FfiConverterString.read(from: &buf),
-            contents: FfiConverterSequenceTypeClipboardContent.read(from: &buf),
-            syncTimestamp: FfiConverterInt64.read(from: &buf),
-            syncSource: FfiConverterOptionString.read(from: &buf),
-            syncDeleted: FfiConverterBool.read(from: &buf)
+        return
+            try ClipboardItem(
+                id: FfiConverterString.read(from: &buf), 
+                application: FfiConverterOptionString.read(from: &buf), 
+                firstCopiedAt: FfiConverterInt64.read(from: &buf), 
+                lastCopiedAt: FfiConverterInt64.read(from: &buf), 
+                numberOfCopies: FfiConverterInt32.read(from: &buf), 
+                pin: FfiConverterOptionString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                contents: FfiConverterSequenceTypeClipboardContent.read(from: &buf), 
+                syncTimestamp: FfiConverterInt64.read(from: &buf), 
+                syncSource: FfiConverterOptionString.read(from: &buf), 
+                syncDeleted: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -1867,19 +1889,21 @@ public struct FfiConverterTypeClipboardItem: FfiConverterRustBuffer {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardItem_lift(_ buf: RustBuffer) throws -> ClipboardItem {
-    try FfiConverterTypeClipboardItem.lift(buf)
+    return try FfiConverterTypeClipboardItem.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeClipboardItem_lower(_ value: ClipboardItem) -> RustBuffer {
-    FfiConverterTypeClipboardItem.lower(value)
+    return FfiConverterTypeClipboardItem.lower(value)
 }
+
 
 /**
  * Byte range for search result highlighting.
@@ -1888,26 +1912,31 @@ public struct MatchRange: Equatable, Hashable {
     public var start: Int64
     public var end: Int64
 
-    /// Default memberwise initializers are never public by default, so we
-    /// declare one manually.
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
     public init(start: Int64, end: Int64) {
         self.start = start
         self.end = end
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
-    extension MatchRange: Sendable {}
+extension MatchRange: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeMatchRange: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatchRange {
-        try MatchRange(
-            start: FfiConverterInt64.read(from: &buf),
-            end: FfiConverterInt64.read(from: &buf)
+        return
+            try MatchRange(
+                start: FfiConverterInt64.read(from: &buf), 
+                end: FfiConverterInt64.read(from: &buf)
         )
     }
 
@@ -1917,19 +1946,21 @@ public struct FfiConverterTypeMatchRange: FfiConverterRustBuffer {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeMatchRange_lift(_ buf: RustBuffer) throws -> MatchRange {
-    try FfiConverterTypeMatchRange.lift(buf)
+    return try FfiConverterTypeMatchRange.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeMatchRange_lower(_ value: MatchRange) -> RustBuffer {
-    FfiConverterTypeMatchRange.lower(value)
+    return FfiConverterTypeMatchRange.lower(value)
 }
+
 
 /**
  * Result of a search operation.
@@ -1945,35 +1976,39 @@ public struct SearchResult: Equatable, Hashable {
      */
     public var ranges: [MatchRange]
 
-    /// Default memberwise initializers are never public by default, so we
-    /// declare one manually.
-    public init(item: ClipboardItem,
-                /*
-                    * Fuzzy match score (lower is better). None for exact/regex matches.
-                    */ score: Double?,
-                /*
-                    * Character ranges in the title that match the query.
-                    */ ranges: [MatchRange])
-    {
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(item: ClipboardItem, 
+        /**
+         * Fuzzy match score (lower is better). None for exact/regex matches.
+         */score: Double?, 
+        /**
+         * Character ranges in the title that match the query.
+         */ranges: [MatchRange]) {
         self.item = item
         self.score = score
         self.ranges = ranges
     }
+
+    
+
+    
 }
 
 #if compiler(>=6)
-    extension SearchResult: Sendable {}
+extension SearchResult: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeSearchResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SearchResult {
-        try SearchResult(
-            item: FfiConverterTypeClipboardItem.read(from: &buf),
-            score: FfiConverterOptionDouble.read(from: &buf),
-            ranges: FfiConverterSequenceTypeMatchRange.read(from: &buf)
+        return
+            try SearchResult(
+                item: FfiConverterTypeClipboardItem.read(from: &buf), 
+                score: FfiConverterOptionDouble.read(from: &buf), 
+                ranges: FfiConverterSequenceTypeMatchRange.read(from: &buf)
         )
     }
 
@@ -1984,37 +2019,52 @@ public struct FfiConverterTypeSearchResult: FfiConverterRustBuffer {
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchResult_lift(_ buf: RustBuffer) throws -> SearchResult {
-    try FfiConverterTypeSearchResult.lift(buf)
+    return try FfiConverterTypeSearchResult.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchResult_lower(_ value: SearchResult) -> RustBuffer {
-    FfiConverterTypeSearchResult.lower(value)
+    return FfiConverterTypeSearchResult.lower(value)
 }
 
-public enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
-    case Storage(msg: String)
-    case NotFound(id: String)
-    case InvalidArg(msg: String)
-    case Sync(msg: String)
 
+public enum CoreError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case Storage(msg: String
+    )
+    case NotFound(id: String
+    )
+    case InvalidArg(msg: String
+    )
+    case Sync(msg: String
+    )
+
+    
+
+    
+
+    
     public var errorDescription: String? {
         String(reflecting: self)
     }
+    
 }
 
 #if compiler(>=6)
-    extension CoreError: Sendable {}
+extension CoreError: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
     typealias SwiftType = CoreError
@@ -2022,73 +2072,94 @@ public struct FfiConverterTypeCoreError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoreError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return try .Storage(
-                msg: FfiConverterString.read(from: &buf)
+
+        
+
+        
+        case 1: return .Storage(
+            msg: try FfiConverterString.read(from: &buf)
             )
-        case 2: return try .NotFound(
-                id: FfiConverterString.read(from: &buf)
+        case 2: return .NotFound(
+            id: try FfiConverterString.read(from: &buf)
             )
-        case 3: return try .InvalidArg(
-                msg: FfiConverterString.read(from: &buf)
+        case 3: return .InvalidArg(
+            msg: try FfiConverterString.read(from: &buf)
             )
-        case 4: return try .Sync(
-                msg: FfiConverterString.read(from: &buf)
+        case 4: return .Sync(
+            msg: try FfiConverterString.read(from: &buf)
             )
-        default: throw UniffiInternalError.unexpectedEnumCase
+
+         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: CoreError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
+        
+        
         case let .Storage(msg):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(msg, into: &buf)
-
+            
+        
         case let .NotFound(id):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(id, into: &buf)
-
+            
+        
         case let .InvalidArg(msg):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(msg, into: &buf)
-
+            
+        
         case let .Sync(msg):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(msg, into: &buf)
+            
         }
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeCoreError_lift(_ buf: RustBuffer) throws -> CoreError {
-    try FfiConverterTypeCoreError.lift(buf)
+    return try FfiConverterTypeCoreError.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeCoreError_lower(_ value: CoreError) -> RustBuffer {
-    FfiConverterTypeCoreError.lower(value)
+    return FfiConverterTypeCoreError.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum SearchMode: Equatable, Hashable {
+    
     case exact
     case fuzzy
     case regexp
     case mixed
+
+
+
+
+
 }
 
 #if compiler(>=6)
-    extension SearchMode: Sendable {}
+extension SearchMode: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeSearchMode: FfiConverterRustBuffer {
     typealias SwiftType = SearchMode
@@ -2096,64 +2167,79 @@ public struct FfiConverterTypeSearchMode: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SearchMode {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+        
         case 1: return .exact
-
+        
         case 2: return .fuzzy
-
+        
         case 3: return .regexp
-
+        
         case 4: return .mixed
-
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: SearchMode, into buf: inout [UInt8]) {
         switch value {
+        
+        
         case .exact:
             writeInt(&buf, Int32(1))
-
+        
+        
         case .fuzzy:
             writeInt(&buf, Int32(2))
-
+        
+        
         case .regexp:
             writeInt(&buf, Int32(3))
-
+        
+        
         case .mixed:
             writeInt(&buf, Int32(4))
+        
         }
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchMode_lift(_ buf: RustBuffer) throws -> SearchMode {
-    try FfiConverterTypeSearchMode.lift(buf)
+    return try FfiConverterTypeSearchMode.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSearchMode_lower(_ value: SearchMode) -> RustBuffer {
-    FfiConverterTypeSearchMode.lower(value)
+    return FfiConverterTypeSearchMode.lower(value)
 }
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum SortBy: Equatable, Hashable {
+    
     case lastCopiedAt
     case firstCopiedAt
     case numberOfCopies
+
+
+
+
+
 }
 
 #if compiler(>=6)
-    extension SortBy: Sendable {}
+extension SortBy: Sendable {}
 #endif
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public struct FfiConverterTypeSortBy: FfiConverterRustBuffer {
     typealias SwiftType = SortBy
@@ -2161,52 +2247,60 @@ public struct FfiConverterTypeSortBy: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SortBy {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+        
         case 1: return .lastCopiedAt
-
+        
         case 2: return .firstCopiedAt
-
+        
         case 3: return .numberOfCopies
-
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: SortBy, into buf: inout [UInt8]) {
         switch value {
+        
+        
         case .lastCopiedAt:
             writeInt(&buf, Int32(1))
-
+        
+        
         case .firstCopiedAt:
             writeInt(&buf, Int32(2))
-
+        
+        
         case .numberOfCopies:
             writeInt(&buf, Int32(3))
+        
         }
     }
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSortBy_lift(_ buf: RustBuffer) throws -> SortBy {
-    try FfiConverterTypeSortBy.lift(buf)
+    return try FfiConverterTypeSortBy.lift(buf)
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
 public func FfiConverterTypeSortBy_lower(_ value: SortBy) -> RustBuffer {
-    FfiConverterTypeSortBy.lower(value)
+    return FfiConverterTypeSortBy.lower(value)
 }
 
+
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterOptionDouble: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
     typealias SwiftType = Double?
 
-    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value else {
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
             writeInt(&buf, Int8(0))
             return
         }
@@ -2214,7 +2308,7 @@ private struct FfiConverterOptionDouble: FfiConverterRustBuffer {
         FfiConverterDouble.write(value, into: &buf)
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterDouble.read(from: &buf)
@@ -2224,13 +2318,13 @@ private struct FfiConverterOptionDouble: FfiConverterRustBuffer {
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterOptionString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
-    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value else {
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
             writeInt(&buf, Int8(0))
             return
         }
@@ -2238,7 +2332,7 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
         FfiConverterString.write(value, into: &buf)
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
@@ -2248,13 +2342,13 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterOptionData: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data?
 
-    static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value else {
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
             writeInt(&buf, Int8(0))
             return
         }
@@ -2262,7 +2356,7 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
         FfiConverterData.write(value, into: &buf)
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterData.read(from: &buf)
@@ -2272,12 +2366,12 @@ private struct FfiConverterOptionData: FfiConverterRustBuffer {
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
-    static func write(_ value: [String], into buf: inout [UInt8]) {
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -2285,24 +2379,24 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
         let len: Int32 = try readInt(&buf)
         var seq = [String]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterString.read(from: &buf))
+            seq.append(try FfiConverterString.read(from: &buf))
         }
         return seq
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceTypeClipboardContent: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceTypeClipboardContent: FfiConverterRustBuffer {
     typealias SwiftType = [ClipboardContent]
 
-    static func write(_ value: [ClipboardContent], into buf: inout [UInt8]) {
+    public static func write(_ value: [ClipboardContent], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -2310,24 +2404,24 @@ private struct FfiConverterSequenceTypeClipboardContent: FfiConverterRustBuffer 
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ClipboardContent] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ClipboardContent] {
         let len: Int32 = try readInt(&buf)
         var seq = [ClipboardContent]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeClipboardContent.read(from: &buf))
+            seq.append(try FfiConverterTypeClipboardContent.read(from: &buf))
         }
         return seq
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceTypeClipboardItem: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceTypeClipboardItem: FfiConverterRustBuffer {
     typealias SwiftType = [ClipboardItem]
 
-    static func write(_ value: [ClipboardItem], into buf: inout [UInt8]) {
+    public static func write(_ value: [ClipboardItem], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -2335,24 +2429,24 @@ private struct FfiConverterSequenceTypeClipboardItem: FfiConverterRustBuffer {
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ClipboardItem] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ClipboardItem] {
         let len: Int32 = try readInt(&buf)
         var seq = [ClipboardItem]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeClipboardItem.read(from: &buf))
+            seq.append(try FfiConverterTypeClipboardItem.read(from: &buf))
         }
         return seq
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceTypeMatchRange: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceTypeMatchRange: FfiConverterRustBuffer {
     typealias SwiftType = [MatchRange]
 
-    static func write(_ value: [MatchRange], into buf: inout [UInt8]) {
+    public static func write(_ value: [MatchRange], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -2360,24 +2454,24 @@ private struct FfiConverterSequenceTypeMatchRange: FfiConverterRustBuffer {
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatchRange] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatchRange] {
         let len: Int32 = try readInt(&buf)
         var seq = [MatchRange]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeMatchRange.read(from: &buf))
+            seq.append(try FfiConverterTypeMatchRange.read(from: &buf))
         }
         return seq
     }
 }
 
 #if swift(>=5.8)
-    @_documentation(visibility: private)
+@_documentation(visibility: private)
 #endif
-private struct FfiConverterSequenceTypeSearchResult: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceTypeSearchResult: FfiConverterRustBuffer {
     typealias SwiftType = [SearchResult]
 
-    static func write(_ value: [SearchResult], into buf: inout [UInt8]) {
+    public static func write(_ value: [SearchResult], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
@@ -2385,12 +2479,12 @@ private struct FfiConverterSequenceTypeSearchResult: FfiConverterRustBuffer {
         }
     }
 
-    static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SearchResult] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SearchResult] {
         let len: Int32 = try readInt(&buf)
         var seq = [SearchResult]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterTypeSearchResult.read(from: &buf))
+            seq.append(try FfiConverterTypeSearchResult.read(from: &buf))
         }
         return seq
     }
@@ -2401,9 +2495,8 @@ private enum InitializationResult {
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-
-/// Use a global variable to perform the versioning checks. Swift ensures that
-/// the code inside is only computed once.
+// Use a global variable to perform the versioning checks. Swift ensures that
+// the code inside is only computed once.
 private let initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 30
@@ -2412,127 +2505,127 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_add() != 6845 {
+    if (uniffi_maccy_core_checksum_method_historymanager_add() != 6845) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_clear_all() != 29384 {
+    if (uniffi_maccy_core_checksum_method_historymanager_clear_all() != 29384) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_clear_unpinned() != 56824 {
+    if (uniffi_maccy_core_checksum_method_historymanager_clear_unpinned() != 56824) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_count() != 19248 {
+    if (uniffi_maccy_core_checksum_method_historymanager_count() != 19248) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_delete() != 58087 {
+    if (uniffi_maccy_core_checksum_method_historymanager_delete() != 58087) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889 {
+    if (uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_load() != 48972 {
+    if (uniffi_maccy_core_checksum_method_historymanager_load() != 48972) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172 {
+    if (uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer() != 4944 {
+    if (uniffi_maccy_core_checksum_method_historymanager_remove_paired_peer() != 4944) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982 {
+    if (uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295 {
+    if (uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_search() != 8895 {
+    if (uniffi_maccy_core_checksum_method_historymanager_search() != 8895) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sort() != 26534 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sort() != 26534) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_start_sync() != 43846 {
+    if (uniffi_maccy_core_checksum_method_historymanager_start_sync() != 43846) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_stop_sync() != 64538 {
+    if (uniffi_maccy_core_checksum_method_historymanager_stop_sync() != 64538) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_storage_size_bytes() != 58578 {
+    if (uniffi_maccy_core_checksum_method_historymanager_storage_size_bytes() != 58578) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_accept_pairing() != 38992 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_accept_pairing() != 38992) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_add_peer_address() != 1469 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_add_peer_address() != 1469) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_deletion() != 39274 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_deletion() != 39274) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_item() != 12075 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_item() != 12075) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update() != 36600 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update() != 36600) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_refresh_discovery() != 54971 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_refresh_discovery() != 54971) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing() != 56440 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing() != 56440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_request_pairing() != 46899 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_request_pairing() != 46899) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_start_discovery() != 59896 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_start_discovery() != 59896) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_stop_discovery() != 10308 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_stop_discovery() != 10308) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_sync_unpair() != 28545 {
+    if (uniffi_maccy_core_checksum_method_historymanager_sync_unpair() != 28545) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_toggle_pin() != 29832 {
+    if (uniffi_maccy_core_checksum_method_historymanager_toggle_pin() != 29832) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_historymanager_update_item_text() != 36793 {
+    if (uniffi_maccy_core_checksum_method_historymanager_update_item_text() != 36793) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_item_received() != 7199 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_received() != 7199) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_item_deleted() != 26805 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_deleted() != 26805) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_item_updated() != 48215 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_updated() != 48215) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_discovered() != 39193 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_discovered() != 39193) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_lost() != 15095 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_lost() != 15095) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_request() != 60103 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_request() != 60103) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_complete() != 9759 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_complete() != 9759) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_listening() != 28289 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_listening() != 28289) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_error() != 6485 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_error() != 6485) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk() != 45171 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_file_chunk() != 45171) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete() != 27812 {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_file_download_complete() != 27812) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_maccy_core_checksum_constructor_historymanager_new() != 54344 {
+    if (uniffi_maccy_core_checksum_constructor_historymanager_new() != 54344) {
         return InitializationResult.apiChecksumMismatch
     }
 
@@ -2540,8 +2633,8 @@ private let initializationResult: InitializationResult = {
     return InitializationResult.ok
 }()
 
-/// Make the ensure init function public so that other modules which have external type references to
-/// our types can call it.
+// Make the ensure init function public so that other modules which have external type references to
+// our types can call it.
 public func uniffiEnsureMaccyCoreInitialized() {
     switch initializationResult {
     case .ok:

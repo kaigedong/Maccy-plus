@@ -47,76 +47,88 @@ class HistoryViewModel : ViewModel() {
 
     // ── Sync ─────────────────────────────────────────────────────
 
-    fun startSync(deviceName: String, deviceId: String? = null) {
+    fun startSync(
+        deviceName: String,
+        deviceId: String? = null,
+    ) {
         val core = this.core ?: return
         val id = deviceId ?: getOrCreateDeviceId(appContext!!)
-        syncObserver = MaccyClipboardObserver(
-            onItemReceivedCb = { item ->
-                LogManager.i("Sync", "Received item: ${item.title.take(80)}")
-                viewModelScope.launch {
-                    try {
-                        core.add(item, maxSize = 500, isUnlimited = false)
-                        loadItems()
-                    } catch (e: Exception) {
-                        LogManager.e("Sync", "Failed to add synced item", e)
+        syncObserver =
+            MaccyClipboardObserver(
+                onItemReceivedCb = { item ->
+                    LogManager.i("Sync", "Received item: ${item.title.take(80)}")
+                    viewModelScope.launch {
+                        try {
+                            core.add(item, maxSize = 500, isUnlimited = false)
+                            loadItems()
+                        } catch (e: Exception) {
+                            LogManager.e("Sync", "Failed to add synced item", e)
+                        }
                     }
-                }
-            },
-            onItemDeletedCb = { itemId ->
-                LogManager.d("Sync", "Remote delete: $itemId")
-                viewModelScope.launch {
-                    try { core.delete(itemId); loadItems() }
-                    catch (e: Exception) { LogManager.e("Sync", "Failed to delete synced item", e) }
-                }
-            },
-            onItemUpdatedCb = { item ->
-                LogManager.d("Sync", "Remote update: ${item.title.take(80)}")
-                viewModelScope.launch {
-                    try {
-                        core.add(item, maxSize = 500, isUnlimited = false)
-                        loadItems()
-                    } catch (e: Exception) { LogManager.e("Sync", "Failed to update synced item", e) }
-                }
-            },
-            onPeerDiscoveredCb = { peerId, displayName, addresses, isConnected ->
-                LogManager.i("Sync", "Peer: $displayName (connected=$isConnected)")
-                val list = _peers.value.toMutableList()
-                // Deduplicate by display name — replace old entry with same name
-                list.removeAll { it.displayName == displayName }
-                list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected))
-                _peers.value = list
-            },
-            onPeerLostCb = { peerId ->
-                _peers.value = _peers.value.filter { it.peerId != peerId }
-            },
-            onPairingRequestCb = { peerId, displayName, pin ->
-                LogManager.i("Sync", "Pairing request from $displayName (pin=$pin)")
-                _pairingRequest.value = PairingRequest(peerId, displayName, pin)
-            },
-            onPairingCompleteCb = { peerId, success ->
-                LogManager.i("Sync", "Pairing complete: peer=$peerId success=$success")
-                if (success) {
-                    val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
-                    core?.savePairedPeer(peerId, name)
-                }
-                _pairingRequest.value = null
-            },
-            onListeningCb = { address ->
-                LogManager.i("Sync", "Listening on $address")
-            },
-            onErrorCb = { code, message ->
-                LogManager.e("Sync", "Error $code: $message")
-                _syncError.value = "Sync error: $message"
-            },
-            onFileChunkCb = { requestId, fileName, fileSize, chunkIndex, totalChunks, data ->
-                LogManager.d("FileTransfer", "Chunk $chunkIndex/$totalChunks of $fileName")
-                FileDownloadManager.receiveChunk(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
-            },
-            onFileDownloadCompleteCb = { requestId, filePath, success ->
-                LogManager.i("FileTransfer", "Download complete: $filePath success=$success")
-                FileDownloadManager.complete(requestId, filePath, success)
-            }
-        )
+                },
+                onItemDeletedCb = { itemId ->
+                    LogManager.d("Sync", "Remote delete: $itemId")
+                    viewModelScope.launch {
+                        try {
+                            core.delete(itemId)
+                            loadItems()
+                        } catch (
+                            e: Exception,
+                        ) {
+                            LogManager.e("Sync", "Failed to delete synced item", e)
+                        }
+                    }
+                },
+                onItemUpdatedCb = { item ->
+                    LogManager.d("Sync", "Remote update: ${item.title.take(80)}")
+                    viewModelScope.launch {
+                        try {
+                            core.add(item, maxSize = 500, isUnlimited = false)
+                            loadItems()
+                        } catch (e: Exception) {
+                            LogManager.e("Sync", "Failed to update synced item", e)
+                        }
+                    }
+                },
+                onPeerDiscoveredCb = { peerId, displayName, addresses, isConnected ->
+                    LogManager.i("Sync", "Peer: $displayName (connected=$isConnected)")
+                    val list = _peers.value.toMutableList()
+                    // Deduplicate by display name — replace old entry with same name
+                    list.removeAll { it.displayName == displayName }
+                    list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected))
+                    _peers.value = list
+                },
+                onPeerLostCb = { peerId ->
+                    _peers.value = _peers.value.filter { it.peerId != peerId }
+                },
+                onPairingRequestCb = { peerId, displayName, pin ->
+                    LogManager.i("Sync", "Pairing request from $displayName (pin=$pin)")
+                    _pairingRequest.value = PairingRequest(peerId, displayName, pin)
+                },
+                onPairingCompleteCb = { peerId, success ->
+                    LogManager.i("Sync", "Pairing complete: peer=$peerId success=$success")
+                    if (success) {
+                        val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
+                        core?.savePairedPeer(peerId, name)
+                    }
+                    _pairingRequest.value = null
+                },
+                onListeningCb = { address ->
+                    LogManager.i("Sync", "Listening on $address")
+                },
+                onErrorCb = { code, message ->
+                    LogManager.e("Sync", "Error $code: $message")
+                    _syncError.value = "Sync error: $message"
+                },
+                onFileChunkCb = { requestId, fileName, fileSize, chunkIndex, totalChunks, data ->
+                    LogManager.d("FileTransfer", "Chunk $chunkIndex/$totalChunks of $fileName")
+                    FileDownloadManager.receiveChunk(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
+                },
+                onFileDownloadCompleteCb = { requestId, filePath, success ->
+                    LogManager.i("FileTransfer", "Download complete: $filePath success=$success")
+                    FileDownloadManager.complete(requestId, filePath, success)
+                },
+            )
 
         try {
             core.startSync(deviceName, id, syncObserver!!)
@@ -148,7 +160,10 @@ class HistoryViewModel : ViewModel() {
         LogManager.i("Sync", "Pairing requested with $peerId")
     }
 
-    fun acceptPairing(peerId: String, pin: String) {
+    fun acceptPairing(
+        peerId: String,
+        pin: String,
+    ) {
         core?.syncAcceptPairing(peerId, pin)
         LogManager.i("Sync", "Pairing accepted: $peerId")
     }
@@ -165,7 +180,10 @@ class HistoryViewModel : ViewModel() {
         _peers.value = _peers.value.filter { it.peerId != peerId }
     }
 
-    fun requestFile(peerId: String, filePath: String) {
+    fun requestFile(
+        peerId: String,
+        filePath: String,
+    ) {
         core?.requestFile(peerId, filePath)
         LogManager.i("FileTransfer", "Requesting file: $filePath from $peerId")
     }
@@ -233,7 +251,10 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun search(query: String, mode: SearchMode = SearchMode.MIXED) {
+    fun search(
+        query: String,
+        mode: SearchMode = SearchMode.MIXED,
+    ) {
         viewModelScope.launch {
             core?.let { manager ->
                 try {
@@ -268,7 +289,10 @@ class HistoryViewModel : ViewModel() {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             var id = prefs.getString(KEY_DEVICE_ID, null)
             if (id == null) {
-                id = java.util.UUID.randomUUID().toString()
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString()
                 prefs.edit().putString(KEY_DEVICE_ID, id).apply()
                 LogManager.i("Sync", "Created persistent device ID: $id")
             }
@@ -283,13 +307,13 @@ data class DiscoveredPeer(
     val peerId: String,
     val displayName: String,
     val addresses: List<String>,
-    val isConnected: Boolean
+    val isConnected: Boolean,
 )
 
 data class PairingRequest(
     val peerId: String,
     val displayName: String,
-    val pin: String
+    val pin: String,
 )
 
 // ── ClipboardObserver UniFFI implementation ──────────────────────
@@ -304,22 +328,61 @@ class MaccyClipboardObserver(
     private val onPairingCompleteCb: (peerId: String, success: Boolean) -> Unit,
     private val onListeningCb: (String) -> Unit,
     private val onErrorCb: (code: Int, message: String) -> Unit,
-    private val onFileChunkCb: (requestId: String, fileName: String, fileSize: Long, chunkIndex: Int, totalChunks: Int, data: ByteArray) -> Unit,
+    private val onFileChunkCb: (
+        requestId: String,
+        fileName: String,
+        fileSize: Long,
+        chunkIndex: Int,
+        totalChunks: Int,
+        data: ByteArray,
+    ) -> Unit,
     private val onFileDownloadCompleteCb: (requestId: String, filePath: String, success: Boolean) -> Unit,
 ) : ClipboardObserver {
     override fun onItemReceived(item: ClipboardItem) = onItemReceivedCb(item)
+
     override fun onItemDeleted(itemId: String) = onItemDeletedCb(itemId)
+
     override fun onItemUpdated(item: ClipboardItem) = onItemUpdatedCb(item)
-    override fun onPeerDiscovered(peerId: String, displayName: String, addresses: List<String>, isConnected: Boolean) =
-        onPeerDiscoveredCb(peerId, displayName, addresses, isConnected)
+
+    override fun onPeerDiscovered(
+        peerId: String,
+        displayName: String,
+        addresses: List<String>,
+        isConnected: Boolean,
+    ) = onPeerDiscoveredCb(peerId, displayName, addresses, isConnected)
+
     override fun onPeerLost(peerId: String) = onPeerLostCb(peerId)
-    override fun onPairingRequest(peerId: String, displayName: String, pin: String) =
-        onPairingRequestCb(peerId, displayName, pin)
-    override fun onPairingComplete(peerId: String, success: Boolean) = onPairingCompleteCb(peerId, success)
+
+    override fun onPairingRequest(
+        peerId: String,
+        displayName: String,
+        pin: String,
+    ) = onPairingRequestCb(peerId, displayName, pin)
+
+    override fun onPairingComplete(
+        peerId: String,
+        success: Boolean,
+    ) = onPairingCompleteCb(peerId, success)
+
     override fun onListening(address: String) = onListeningCb(address)
-    override fun onError(code: Int, message: String) = onErrorCb(code, message)
-    override fun onFileChunk(requestId: String, fileName: String, fileSize: Long, chunkIndex: Int, totalChunks: Int, data: ByteArray) =
-        onFileChunkCb(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
-    override fun onFileDownloadComplete(requestId: String, filePath: String, success: Boolean) =
-        onFileDownloadCompleteCb(requestId, filePath, success)
+
+    override fun onError(
+        code: Int,
+        message: String,
+    ) = onErrorCb(code, message)
+
+    override fun onFileChunk(
+        requestId: String,
+        fileName: String,
+        fileSize: Long,
+        chunkIndex: Int,
+        totalChunks: Int,
+        data: ByteArray,
+    ) = onFileChunkCb(requestId, fileName, fileSize, chunkIndex, totalChunks, data)
+
+    override fun onFileDownloadComplete(
+        requestId: String,
+        filePath: String,
+        success: Boolean,
+    ) = onFileDownloadCompleteCb(requestId, filePath, success)
 }

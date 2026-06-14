@@ -24,9 +24,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogScreen(
-    onBack: () -> Unit
-) {
+fun LogScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val logs by LogManager.logs.collectAsState()
     val listState = rememberLazyListState()
@@ -53,9 +51,12 @@ fun LogScreen(
                     // Auto-scroll toggle
                     IconButton(onClick = { autoScroll = !autoScroll }) {
                         Icon(
-                            if (autoScroll) Icons.Filled.VerticalAlignBottom
-                            else Icons.Filled.Pause,
-                            contentDescription = if (autoScroll) "Auto-scroll ON" else "Auto-scroll OFF"
+                            if (autoScroll) {
+                                Icons.Filled.VerticalAlignBottom
+                            } else {
+                                Icons.Filled.Pause
+                            },
+                            contentDescription = if (autoScroll) "Auto-scroll ON" else "Auto-scroll OFF",
                         )
                     }
                     // Copy to clipboard
@@ -93,31 +94,34 @@ fun LogScreen(
                         Icon(Icons.Filled.ArrowDownward, "Scroll to bottom")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
             )
-        }
+        },
     ) { padding ->
         if (logs.isEmpty()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     "No logs yet",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
             ) {
                 items(logs, key = { "${it.timestamp}_${it.message.hashCode()}" }) { entry ->
                     LogEntryRow(entry)
@@ -129,33 +133,37 @@ fun LogScreen(
 
 @Composable
 private fun LogEntryRow(entry: LogManager.LogEntry) {
-    val levelColor = when (entry.level) {
-        "ERROR" -> MaterialTheme.colorScheme.error
-        "WARN"  -> MaterialTheme.colorScheme.tertiary
-        "INFO"  -> MaterialTheme.colorScheme.primary
-        else    -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val levelColor =
+        when (entry.level) {
+            "ERROR" -> MaterialTheme.colorScheme.error
+            "WARN" -> MaterialTheme.colorScheme.tertiary
+            "INFO" -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (entry.level == "ERROR")
-            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        else MaterialTheme.colorScheme.surface,
-        tonalElevation = if (entry.level == "ERROR") 1.dp else 0.dp
+        color =
+            if (entry.level == "ERROR") {
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+        tonalElevation = if (entry.level == "ERROR") 1.dp else 0.dp,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
                     text = entry.level,
                     color = levelColor,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(end = 8.dp),
                 )
                 Text(
                     text = entry.tag,
@@ -164,30 +172,36 @@ private fun LogEntryRow(entry: LogManager.LogEntry) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US)
-                        .format(java.util.Date(entry.timestamp)),
+                    text =
+                        java.text
+                            .SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US)
+                            .format(java.util.Date(entry.timestamp)),
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
             }
             Text(
                 text = entry.message,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
-                color = if (entry.level == "ERROR") levelColor
-                        else MaterialTheme.colorScheme.onSurface,
+                color =
+                    if (entry.level == "ERROR") {
+                        levelColor
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
                 maxLines = 20,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
     HorizontalDivider(
         modifier = Modifier.padding(horizontal = 12.dp),
         thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
     )
 }

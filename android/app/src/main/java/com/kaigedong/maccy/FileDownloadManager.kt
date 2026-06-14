@@ -9,18 +9,29 @@ object FileDownloadManager {
         val requestId: String,
         val fileName: String,
         val totalSize: Long,
-        val chunks: MutableList<ByteArray> = mutableListOf()
+        val chunks: MutableList<ByteArray> = mutableListOf(),
     )
 
     private val downloads = mutableMapOf<String, Download>()
 
     @Synchronized
-    fun receiveChunk(requestId: String, fileName: String, fileSize: Long, chunkIndex: Int, totalChunks: Int, data: ByteArray) {
+    fun receiveChunk(
+        requestId: String,
+        fileName: String,
+        fileSize: Long,
+        chunkIndex: Int,
+        totalChunks: Int,
+        data: ByteArray,
+    ) {
         downloads.getOrPut(requestId) { Download(requestId, fileName, fileSize) }.chunks.add(data)
     }
 
     @Synchronized
-    fun complete(requestId: String, filePath: String, success: Boolean) {
+    fun complete(
+        requestId: String,
+        filePath: String,
+        success: Boolean,
+    ) {
         val dl = downloads.remove(requestId) ?: return
         if (!success) {
             LogManager.e("FileTransfer", "Download failed: ${dl.fileName}")
@@ -31,7 +42,9 @@ object FileDownloadManager {
             val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val file = File(dir, dl.fileName)
             file.outputStream().use { out ->
-                for (chunk in dl.chunks) { out.write(chunk) }
+                for (chunk in dl.chunks) {
+                    out.write(chunk)
+                }
             }
             LogManager.i("FileTransfer", "Downloaded ${dl.fileName} (${dl.chunks.sumOf { it.size }} bytes) to ${file.absolutePath}")
         } catch (e: Exception) {
