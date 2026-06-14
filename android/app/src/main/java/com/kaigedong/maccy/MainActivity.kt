@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.kaigedong.maccy.ui.HistoryListScreen
 import com.kaigedong.maccy.ui.theme.MaccyTheme
 
 class MainActivity : ComponentActivity() {

@@ -63,23 +63,23 @@ pub enum SortBy {
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum CoreError {
-    #[error("Storage error: {msg}")]
-    Storage { msg: String },
+    #[error("Storage error: {message}")]
+    Storage { message: String },
 
     #[error("Item not found: {id}")]
     NotFound { id: String },
 
-    #[error("Invalid argument: {msg}")]
-    InvalidArg { msg: String },
+    #[error("Invalid argument: {message}")]
+    InvalidArg { message: String },
 
-    #[error("Sync error: {msg}")]
-    Sync { msg: String },
+    #[error("Sync error: {message}")]
+    Sync { message: String },
 }
 
 impl From<rusqlite::Error> for CoreError {
     fn from(e: rusqlite::Error) -> Self {
         CoreError::Storage {
-            msg: e.to_string(),
+            message: e.to_string(),
         }
     }
 }

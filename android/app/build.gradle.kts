@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -57,53 +56,33 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
-    // JNI for Rust FFI
-    implementation("net.java.dev.jna:jna:5.16.0@aar")
-
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// Build Rust for Android using cargo-ndk.
-// Requires: cargo install cargo-ndk, rustup target add aarch64-linux-android, Android NDK
-tasks.register<Exec>("buildRustCoreArm64") {
-    workingDir = file("../..")
+// Build Rust and generate Kotlin bindings before compiling
+tasks.register<Exec>("buildRustCore") {
     commandLine(
-        "cargo", "ndk",
-        "-t", "arm64-v8a",
-        "-o", "android/app/src/main/jniLibs",
-        "build", "--release",
-        "--package", "maccy-core"
+        "cargo", "build", "--release",
+        "--target", "aarch64-linux-android",
+        "--package", "maccy-core",
+        "--manifest-path", file("../../Cargo.toml").absolutePath
     )
+    onlyIf { !file("../../target/aarch64-linux-android/release/libmaccy_core.so").exists() }
 }
 
 tasks.register<Exec>("generateKotlinBindings") {
-    dependsOn("buildRustCoreArm64")
-    workingDir = file("../..")
-    // Read .so from jniLibs (cargo ndk -o copies it there)
-    val libPath = file("src/main/jniLibs/arm64-v8a/libmaccy_core.so").absolutePath
-    val outDir = file("src/main/java").absolutePath
+    dependsOn("buildRustCore")
     commandLine(
         "cargo", "run", "--release",
         "--bin", "uniffi-bindgen",
         "--package", "maccy-core",
         "generate",
-        "--library", libPath,
+        "--library", file("../../target/aarchy64-linux-android/release/libmaccy_core.so").absolutePath,
         "--language", "kotlin",
-        "--out-dir", outDir
+        "--out-dir", file("src/main/java").absolutePath
     )
 }
 
-tasks.register("fixUniffiCode") {
-    dependsOn("generateKotlinBindings")
-    doLast {
-        val f = file("src/main/java/com/kaigedong/maccy/maccy_core.kt")
-        var text = f.readText()
-        // CoreError subclasses have 'val `message`' that conflicts with Throwable.message
-        text = text.replace("val `message`: kotlin.String", "`message`: kotlin.String")
-        f.writeText(text)
-    }
-}
-
 tasks.named("preBuild") {
-    dependsOn("fixUniffiCode")
+    dependsOn("generateKotlinBindings")
 }

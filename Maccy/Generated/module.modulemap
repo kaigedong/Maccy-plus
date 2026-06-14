@@ -5,3 +5,8 @@ module MaccyCoreFFI {
     use "_Builtin_stdbool"
     use "_Builtin_stdint"
 }
+
+module MaccyCore {
+    header "MaccyCoreFFI.h"
+    export *
+}

@@ -1,41 +1,21 @@
 use crate::model::ClipboardItem;
 
 /// Callback interface that platforms implement to receive sync events.
-/// Platforms (Swift/Kotlin) implement this via UniFFI foreign trait.
+/// UniFFI generates a protocol in Swift and an interface in Kotlin.
 #[uniffi::export(with_foreign)]
 pub trait ClipboardObserver: Send + Sync + std::fmt::Debug {
-    // ── Clipboard events ──────────────────────────────────────────
-
-    /// A new clipboard item was received from a synced peer.
+    /// Called when a new clipboard item is received via P2P sync.
     fn on_item_received(&self, item: ClipboardItem);
 
-    /// An item was deleted by a synced peer.
+    /// Called when an item is deleted via sync.
     fn on_item_deleted(&self, item_id: String);
 
-    /// An item was updated (e.g., appended) by a synced peer.
+    /// Called when an item is updated via sync.
     fn on_item_updated(&self, item: ClipboardItem);
 
-    // ── Peer discovery events ─────────────────────────────────────
+    /// Called when a peer is discovered on the network.
+    fn on_peer_discovered(&self, peer_id: String, display_name: String);
 
-    /// A peer was discovered on the network.
-    fn on_peer_discovered(&self, peer_id: String, display_name: String, addresses: Vec<String>, is_connected: bool);
-
-    /// A peer disconnected or went offline.
+    /// Called when a peer disconnects.
     fn on_peer_lost(&self, peer_id: String);
-
-    // ── Pairing events ────────────────────────────────────────────
-
-    /// A pairing request was received from a peer.
-    fn on_pairing_request(&self, peer_id: String, display_name: String, pin: String);
-
-    /// A pairing request completed (accepted or rejected).
-    fn on_pairing_complete(&self, peer_id: String, success: bool);
-
-    // ── Status events ─────────────────────────────────────────────
-
-    /// Sync is now listening on the given multiaddress.
-    fn on_listening(&self, address: String);
-
-    /// An error occurred in the sync engine.
-    fn on_error(&self, code: i32, message: String);
 }

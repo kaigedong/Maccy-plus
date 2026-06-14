@@ -574,59 +574,39 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 /**
  * Callback interface that platforms implement to receive sync events.
- * Platforms (Swift/Kotlin) implement this via UniFFI foreign trait.
+ * UniFFI generates a protocol in Swift and an interface in Kotlin.
  */
 public protocol ClipboardObserver: AnyObject, Sendable {
     
     /**
-     * A new clipboard item was received from a synced peer.
+     * Called when a new clipboard item is received via P2P sync.
      */
     func onItemReceived(item: ClipboardItem) 
     
     /**
-     * An item was deleted by a synced peer.
+     * Called when an item is deleted via sync.
      */
     func onItemDeleted(itemId: String) 
     
     /**
-     * An item was updated (e.g., appended) by a synced peer.
+     * Called when an item is updated via sync.
      */
     func onItemUpdated(item: ClipboardItem) 
     
     /**
-     * A peer was discovered on the network.
+     * Called when a peer is discovered on the network.
      */
-    func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool) 
+    func onPeerDiscovered(peerId: String, displayName: String) 
     
     /**
-     * A peer disconnected or went offline.
+     * Called when a peer disconnects.
      */
     func onPeerLost(peerId: String) 
-    
-    /**
-     * A pairing request was received from a peer.
-     */
-    func onPairingRequest(peerId: String, displayName: String, pin: String) 
-    
-    /**
-     * A pairing request completed (accepted or rejected).
-     */
-    func onPairingComplete(peerId: String, success: Bool) 
-    
-    /**
-     * Sync is now listening on the given multiaddress.
-     */
-    func onListening(address: String) 
-    
-    /**
-     * An error occurred in the sync engine.
-     */
-    func onError(code: Int32, message: String) 
     
 }
 /**
  * Callback interface that platforms implement to receive sync events.
- * Platforms (Swift/Kotlin) implement this via UniFFI foreign trait.
+ * UniFFI generates a protocol in Swift and an interface in Kotlin.
  */
 open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -682,7 +662,7 @@ open class ClipboardObserverImpl: ClipboardObserver, @unchecked Sendable {
 
     
     /**
-     * A new clipboard item was received from a synced peer.
+     * Called when a new clipboard item is received via P2P sync.
      */
 open func onItemReceived(item: ClipboardItem)  {try! rustCall() {
     uniffi_maccy_core_fn_method_clipboardobserver_on_item_received(
@@ -693,7 +673,7 @@ open func onItemReceived(item: ClipboardItem)  {try! rustCall() {
 }
     
     /**
-     * An item was deleted by a synced peer.
+     * Called when an item is deleted via sync.
      */
 open func onItemDeleted(itemId: String)  {try! rustCall() {
     uniffi_maccy_core_fn_method_clipboardobserver_on_item_deleted(
@@ -704,7 +684,7 @@ open func onItemDeleted(itemId: String)  {try! rustCall() {
 }
     
     /**
-     * An item was updated (e.g., appended) by a synced peer.
+     * Called when an item is updated via sync.
      */
 open func onItemUpdated(item: ClipboardItem)  {try! rustCall() {
     uniffi_maccy_core_fn_method_clipboardobserver_on_item_updated(
@@ -715,74 +695,24 @@ open func onItemUpdated(item: ClipboardItem)  {try! rustCall() {
 }
     
     /**
-     * A peer was discovered on the network.
+     * Called when a peer is discovered on the network.
      */
-open func onPeerDiscovered(peerId: String, displayName: String, addresses: [String], isConnected: Bool)  {try! rustCall() {
+open func onPeerDiscovered(peerId: String, displayName: String)  {try! rustCall() {
     uniffi_maccy_core_fn_method_clipboardobserver_on_peer_discovered(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(peerId),
-        FfiConverterString.lower(displayName),
-        FfiConverterSequenceString.lower(addresses),
-        FfiConverterBool.lower(isConnected),$0
+        FfiConverterString.lower(displayName),$0
     )
 }
 }
     
     /**
-     * A peer disconnected or went offline.
+     * Called when a peer disconnects.
      */
 open func onPeerLost(peerId: String)  {try! rustCall() {
     uniffi_maccy_core_fn_method_clipboardobserver_on_peer_lost(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(peerId),$0
-    )
-}
-}
-    
-    /**
-     * A pairing request was received from a peer.
-     */
-open func onPairingRequest(peerId: String, displayName: String, pin: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_request(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),
-        FfiConverterString.lower(displayName),
-        FfiConverterString.lower(pin),$0
-    )
-}
-}
-    
-    /**
-     * A pairing request completed (accepted or rejected).
-     */
-open func onPairingComplete(peerId: String, success: Bool)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_clipboardobserver_on_pairing_complete(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),
-        FfiConverterBool.lower(success),$0
-    )
-}
-}
-    
-    /**
-     * Sync is now listening on the given multiaddress.
-     */
-open func onListening(address: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_clipboardobserver_on_listening(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
-    )
-}
-}
-    
-    /**
-     * An error occurred in the sync engine.
-     */
-open func onError(code: Int32, message: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_clipboardobserver_on_error(
-            self.uniffiCloneHandle(),
-        FfiConverterInt32.lower(code),
-        FfiConverterString.lower(message),$0
     )
 }
 }
@@ -891,8 +821,6 @@ fileprivate struct UniffiCallbackInterfaceClipboardObserver {
             uniffiHandle: UInt64,
             peerId: RustBuffer,
             displayName: RustBuffer,
-            addresses: RustBuffer,
-            isConnected: Int8,
             uniffiOutReturn: UnsafeMutableRawPointer,
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
@@ -903,9 +831,7 @@ fileprivate struct UniffiCallbackInterfaceClipboardObserver {
                 }
                 return uniffiObj.onPeerDiscovered(
                      peerId: try FfiConverterString.lift(peerId),
-                     displayName: try FfiConverterString.lift(displayName),
-                     addresses: try FfiConverterSequenceString.lift(addresses),
-                     isConnected: try FfiConverterBool.lift(isConnected)
+                     displayName: try FfiConverterString.lift(displayName)
                 )
             }
 
@@ -930,110 +856,6 @@ fileprivate struct UniffiCallbackInterfaceClipboardObserver {
                 }
                 return uniffiObj.onPeerLost(
                      peerId: try FfiConverterString.lift(peerId)
-                )
-            }
-
-            
-            let writeReturn = { () }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        onPairingRequest: { (
-            uniffiHandle: UInt64,
-            peerId: RustBuffer,
-            displayName: RustBuffer,
-            pin: RustBuffer,
-            uniffiOutReturn: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> () in
-                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.onPairingRequest(
-                     peerId: try FfiConverterString.lift(peerId),
-                     displayName: try FfiConverterString.lift(displayName),
-                     pin: try FfiConverterString.lift(pin)
-                )
-            }
-
-            
-            let writeReturn = { () }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        onPairingComplete: { (
-            uniffiHandle: UInt64,
-            peerId: RustBuffer,
-            success: Int8,
-            uniffiOutReturn: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> () in
-                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.onPairingComplete(
-                     peerId: try FfiConverterString.lift(peerId),
-                     success: try FfiConverterBool.lift(success)
-                )
-            }
-
-            
-            let writeReturn = { () }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        onListening: { (
-            uniffiHandle: UInt64,
-            address: RustBuffer,
-            uniffiOutReturn: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> () in
-                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.onListening(
-                     address: try FfiConverterString.lift(address)
-                )
-            }
-
-            
-            let writeReturn = { () }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        onError: { (
-            uniffiHandle: UInt64,
-            code: Int32,
-            message: RustBuffer,
-            uniffiOutReturn: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> () in
-                guard let uniffiObj = try? FfiConverterTypeClipboardObserver.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.onError(
-                     code: try FfiConverterInt32.lift(code),
-                     message: try FfiConverterString.lift(message)
                 )
             }
 
@@ -1122,21 +944,35 @@ public func FfiConverterTypeClipboardObserver_lower(_ value: ClipboardObserver) 
 
 /**
  * Central coordinator for clipboard history management.
- * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ * Delegates to Storage for persistence, SearchEngine for queries,
+ * and optionally a sync engine for P2P sync.
  */
 public protocol HistoryManagerProtocol: AnyObject, Sendable {
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Returns the resulting item (which may be an updated existing item if deduplicated).
      */
     func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool) throws  -> ClipboardItem
     
+    /**
+     * Delete all items (including pinned).
+     */
     func clearAll() throws  -> UInt64
     
+    /**
+     * Delete all unpinned items.
+     */
     func clearUnpinned() throws  -> UInt64
     
+    /**
+     * Get total item count.
+     */
     func count() throws  -> Int64
     
+    /**
+     * Delete an item by ID.
+     */
     func delete(id: String) throws 
     
     /**
@@ -1144,61 +980,46 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
      */
     func load() throws  -> [ClipboardItem]
     
+    /**
+     * Migrate from SwiftData database.
+     */
     func migrateFromSwiftdata(swiftdataPath: String) throws  -> UInt64
     
+    /**
+     * Search items.
+     */
     func search(query: String, items: [ClipboardItem], mode: SearchMode)  -> [SearchResult]
     
+    /**
+     * Register a clipboard observer for sync events.
+     */
+    func setObserver(observer: ClipboardObserver) 
+    
+    /**
+     * Sort items.
+     */
     func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool)  -> [ClipboardItem]
     
     /**
-     * Start the P2P sync engine. The observer receives all sync events.
+     * Get the database file size in bytes.
      */
-    func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver) throws 
-    
-    /**
-     * Stop the sync engine.
-     */
-    func stopSync() throws 
-    
     func storageSizeBytes(dbPath: String)  -> Int64
     
-    func syncAcceptPairing(peerId: String, pin: String) 
-    
-    func syncAddPeerAddress(address: String) 
-    
     /**
-     * Broadcast a deletion to synced peers.
+     * Toggle pin on an item. If pinning, assigns the first available pin from the list.
      */
-    func syncBroadcastDeletion(itemId: String) 
-    
-    /**
-     * Broadcast a newly copied item to synced peers.
-     */
-    func syncBroadcastItem(item: ClipboardItem) 
-    
-    /**
-     * Broadcast an update to synced peers.
-     */
-    func syncBroadcastUpdate(item: ClipboardItem) 
-    
-    func syncRejectPairing(peerId: String) 
-    
-    func syncRequestPairing(peerId: String) 
-    
-    func syncStartDiscovery() 
-    
-    func syncStopDiscovery() 
-    
-    func syncUnpair(peerId: String) 
-    
     func togglePin(id: String, availablePins: [String]) throws  -> ClipboardItem
     
+    /**
+     * Update an item's text content.
+     */
     func updateItemText(id: String, newText: String) throws  -> ClipboardItem
     
 }
 /**
  * Central coordinator for clipboard history management.
- * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ * Delegates to Storage for persistence, SearchEngine for queries,
+ * and optionally a sync engine for P2P sync.
  */
 open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -1263,6 +1084,7 @@ public convenience init(dbPath: String)throws  {
     
     /**
      * Add a new clipboard item. Handles deduplication and size limiting.
+     * Returns the resulting item (which may be an updated existing item if deduplicated).
      */
 open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool)throws  -> ClipboardItem  {
     return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
@@ -1275,6 +1097,9 @@ open func add(item: ClipboardItem, maxSize: Int32, isUnlimited: Bool)throws  -> 
 })
 }
     
+    /**
+     * Delete all items (including pinned).
+     */
 open func clearAll()throws  -> UInt64  {
     return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_clear_all(
@@ -1283,6 +1108,9 @@ open func clearAll()throws  -> UInt64  {
 })
 }
     
+    /**
+     * Delete all unpinned items.
+     */
 open func clearUnpinned()throws  -> UInt64  {
     return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_clear_unpinned(
@@ -1291,6 +1119,9 @@ open func clearUnpinned()throws  -> UInt64  {
 })
 }
     
+    /**
+     * Get total item count.
+     */
 open func count()throws  -> Int64  {
     return try  FfiConverterInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_count(
@@ -1299,6 +1130,9 @@ open func count()throws  -> Int64  {
 })
 }
     
+    /**
+     * Delete an item by ID.
+     */
 open func delete(id: String)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_delete(
             self.uniffiCloneHandle(),
@@ -1318,6 +1152,9 @@ open func load()throws  -> [ClipboardItem]  {
 })
 }
     
+    /**
+     * Migrate from SwiftData database.
+     */
 open func migrateFromSwiftdata(swiftdataPath: String)throws  -> UInt64  {
     return try  FfiConverterUInt64.lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_migrate_from_swiftdata(
@@ -1327,6 +1164,9 @@ open func migrateFromSwiftdata(swiftdataPath: String)throws  -> UInt64  {
 })
 }
     
+    /**
+     * Search items.
+     */
 open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [SearchResult]  {
     return try!  FfiConverterSequenceTypeSearchResult.lift(try! rustCall() {
     uniffi_maccy_core_fn_method_historymanager_search(
@@ -1338,6 +1178,20 @@ open func search(query: String, items: [ClipboardItem], mode: SearchMode) -> [Se
 })
 }
     
+    /**
+     * Register a clipboard observer for sync events.
+     */
+open func setObserver(observer: ClipboardObserver)  {try! rustCall() {
+    uniffi_maccy_core_fn_method_historymanager_set_observer(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeClipboardObserver_lower(observer),$0
+    )
+}
+}
+    
+    /**
+     * Sort items.
+     */
 open func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [ClipboardItem]  {
     return try!  FfiConverterSequenceTypeClipboardItem.lift(try! rustCall() {
     uniffi_maccy_core_fn_method_historymanager_sort(
@@ -1350,28 +1204,8 @@ open func sort(items: [ClipboardItem], sortBy: SortBy, pinToTop: Bool) -> [Clipb
 }
     
     /**
-     * Start the P2P sync engine. The observer receives all sync events.
+     * Get the database file size in bytes.
      */
-open func startSync(deviceName: String, deviceId: String, observer: ClipboardObserver)throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
-    uniffi_maccy_core_fn_method_historymanager_start_sync(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(deviceName),
-        FfiConverterString.lower(deviceId),
-        FfiConverterTypeClipboardObserver_lower(observer),$0
-    )
-}
-}
-    
-    /**
-     * Stop the sync engine.
-     */
-open func stopSync()throws   {try rustCallWithError(FfiConverterTypeCoreError_lift) {
-    uniffi_maccy_core_fn_method_historymanager_stop_sync(
-            self.uniffiCloneHandle(),$0
-    )
-}
-}
-    
 open func storageSizeBytes(dbPath: String) -> Int64  {
     return try!  FfiConverterInt64.lift(try! rustCall() {
     uniffi_maccy_core_fn_method_historymanager_storage_size_bytes(
@@ -1381,94 +1215,9 @@ open func storageSizeBytes(dbPath: String) -> Int64  {
 })
 }
     
-open func syncAcceptPairing(peerId: String, pin: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_accept_pairing(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),
-        FfiConverterString.lower(pin),$0
-    )
-}
-}
-    
-open func syncAddPeerAddress(address: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_add_peer_address(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
-    )
-}
-}
-    
     /**
-     * Broadcast a deletion to synced peers.
+     * Toggle pin on an item. If pinning, assigns the first available pin from the list.
      */
-open func syncBroadcastDeletion(itemId: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_deletion(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(itemId),$0
-    )
-}
-}
-    
-    /**
-     * Broadcast a newly copied item to synced peers.
-     */
-open func syncBroadcastItem(item: ClipboardItem)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_item(
-            self.uniffiCloneHandle(),
-        FfiConverterTypeClipboardItem_lower(item),$0
-    )
-}
-}
-    
-    /**
-     * Broadcast an update to synced peers.
-     */
-open func syncBroadcastUpdate(item: ClipboardItem)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_broadcast_update(
-            self.uniffiCloneHandle(),
-        FfiConverterTypeClipboardItem_lower(item),$0
-    )
-}
-}
-    
-open func syncRejectPairing(peerId: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_reject_pairing(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),$0
-    )
-}
-}
-    
-open func syncRequestPairing(peerId: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_request_pairing(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),$0
-    )
-}
-}
-    
-open func syncStartDiscovery()  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_start_discovery(
-            self.uniffiCloneHandle(),$0
-    )
-}
-}
-    
-open func syncStopDiscovery()  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_stop_discovery(
-            self.uniffiCloneHandle(),$0
-    )
-}
-}
-    
-open func syncUnpair(peerId: String)  {try! rustCall() {
-    uniffi_maccy_core_fn_method_historymanager_sync_unpair(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(peerId),$0
-    )
-}
-}
-    
 open func togglePin(id: String, availablePins: [String])throws  -> ClipboardItem  {
     return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_toggle_pin(
@@ -1479,6 +1228,9 @@ open func togglePin(id: String, availablePins: [String])throws  -> ClipboardItem
 })
 }
     
+    /**
+     * Update an item's text content.
+     */
 open func updateItemText(id: String, newText: String)throws  -> ClipboardItem  {
     return try  FfiConverterTypeClipboardItem_lift(try rustCallWithError(FfiConverterTypeCoreError_lift) {
     uniffi_maccy_core_fn_method_historymanager_update_item_text(
@@ -2323,103 +2075,58 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_add() != 6845) {
+    if (uniffi_maccy_core_checksum_method_historymanager_add() != 34778) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_clear_all() != 29384) {
+    if (uniffi_maccy_core_checksum_method_historymanager_clear_all() != 40008) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_clear_unpinned() != 56824) {
+    if (uniffi_maccy_core_checksum_method_historymanager_clear_unpinned() != 12942) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_count() != 19248) {
+    if (uniffi_maccy_core_checksum_method_historymanager_count() != 56536) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_delete() != 58087) {
+    if (uniffi_maccy_core_checksum_method_historymanager_delete() != 60949) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_load() != 48972) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 14172) {
+    if (uniffi_maccy_core_checksum_method_historymanager_migrate_from_swiftdata() != 28561) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_search() != 8895) {
+    if (uniffi_maccy_core_checksum_method_historymanager_search() != 22593) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sort() != 26534) {
+    if (uniffi_maccy_core_checksum_method_historymanager_set_observer() != 11167) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_start_sync() != 43846) {
+    if (uniffi_maccy_core_checksum_method_historymanager_sort() != 37249) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_stop_sync() != 64538) {
+    if (uniffi_maccy_core_checksum_method_historymanager_storage_size_bytes() != 9936) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_storage_size_bytes() != 58578) {
+    if (uniffi_maccy_core_checksum_method_historymanager_toggle_pin() != 7801) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_accept_pairing() != 38992) {
+    if (uniffi_maccy_core_checksum_method_historymanager_update_item_text() != 36469) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_add_peer_address() != 1469) {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_received() != 19631) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_deletion() != 39274) {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_deleted() != 49235) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_item() != 12075) {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_updated() != 37556) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_broadcast_update() != 36600) {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_discovered() != 60905) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_reject_pairing() != 56440) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_request_pairing() != 46899) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_start_discovery() != 59896) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_stop_discovery() != 10308) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_sync_unpair() != 28545) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_toggle_pin() != 29832) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_historymanager_update_item_text() != 36793) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_received() != 7199) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_deleted() != 26805) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_item_updated() != 48215) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_discovered() != 39193) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_lost() != 15095) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_request() != 60103) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_pairing_complete() != 9759) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_listening() != 28289) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_error() != 6485) {
+    if (uniffi_maccy_core_checksum_method_clipboardobserver_on_peer_lost() != 56450) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_constructor_historymanager_new() != 54344) {
