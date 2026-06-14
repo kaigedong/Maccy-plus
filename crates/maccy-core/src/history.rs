@@ -222,7 +222,17 @@ impl HistoryManager {
         device_id: String,
         observer: Arc<dyn ClipboardObserver>,
     ) -> Result<(), CoreError> {
-        let engine = SyncEngine::start(&device_name, &device_id, observer)?;
+        let stored_keypair = self
+            .storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
+            .get_config("libp2p_keypair");
+        let (engine, keypair_bytes) =
+            SyncEngine::start(&device_name, &device_id, observer, stored_keypair)?;
+        self.storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?
+            .set_config("libp2p_keypair", &keypair_bytes)?;
         let mut guard = self
             .sync_engine
             .lock()

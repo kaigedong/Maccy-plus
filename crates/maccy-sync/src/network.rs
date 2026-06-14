@@ -524,7 +524,8 @@ impl NetworkManager {
                 }
             }
             SyncCommand::AcceptPairing { peer_id, .. } => {
-                if let Ok(peer) = peer_id.parse::<PeerId>() {
+                match peer_id.parse::<PeerId>() {
+                    Ok(peer) => {
                     log::info!("Accepting pairing with {}", peer);
                     self.paired_peers.insert(peer);
                     // Notify the requester via gossipsub
@@ -539,6 +540,8 @@ impl NetworkManager {
                         peer_id: peer.to_string(),
                         success: true,
                     });
+                }
+                    Err(e) => log::error!("Failed to parse peer_id '{}' in AcceptPairing: {:?}", peer_id, e),
                 }
             }
             SyncCommand::RejectPairing { peer_id } => {

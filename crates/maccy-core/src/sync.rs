@@ -21,11 +21,13 @@ pub struct SyncEngine {
 impl SyncEngine {
     /// Create and start the sync engine.
     /// Spawns a background thread with its own tokio runtime for the libp2p network.
+    /// `keypair_bytes` is persisted between restarts for stable peer ID.
     pub fn start(
         device_name: &str,
         device_id: &str,
         observer: Arc<dyn ClipboardObserver>,
-    ) -> Result<Self, CoreError> {
+        stored_keypair: Option<Vec<u8>>,
+    ) -> Result<(Self, Vec<u8>), CoreError> {
         let sync_state = SyncState::new(device_name, device_id).map_err(|e| CoreError::Sync {
             msg: format!("Failed to create sync state: {:?}", e),
         })?;
@@ -119,7 +121,20 @@ impl SyncEngine {
         }
 
         // Spawn the network manager in a background thread
-        let local_key = libp2p::identity::Keypair::generate_ed25519();
+        let local_key = if let Some(ref bytes) = stored_keypair {
+            libp2p::identity::Keypair::from_protobuf_encoding(bytes).map_err(|e| {
+                CoreError::Sync {
+                    msg: format!("Invalid stored keypair: {}", e),
+                }
+            })?
+        } else {
+            libp2p::identity::Keypair::generate_ed25519()
+        };
+        let keypair_bytes = local_key
+            .to_protobuf_encoding()
+            .map_err(|e| CoreError::Sync {
+                msg: format!("Failed to encode keypair: {}", e),
+            })?;
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let net_state = state.clone();
 
@@ -138,12 +153,15 @@ impl SyncEngine {
         // Send StartDiscovery so peers can find us
         let _ = command_tx.send(SyncCommand::StartDiscovery);
 
-        Ok(SyncEngine {
-            state,
-            command_tx,
-            observer: obs,
-            connected_peers: connected,
-        })
+        Ok((
+            SyncEngine {
+                state,
+                command_tx,
+                observer: obs,
+                connected_peers: connected,
+            },
+            keypair_bytes,
+        ))
     }
 
     /// Stop the sync engine.

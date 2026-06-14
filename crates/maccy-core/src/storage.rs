@@ -165,6 +165,28 @@ impl Storage {
         Ok(())
     }
 
+    // ── Sync config ───────────────────────────────────────────
+
+    pub fn get_config(&self, key: &str) -> Option<Vec<u8>> {
+        self.conn
+            .query_row(
+                "SELECT value FROM sync_config WHERE key = ?1",
+                rusqlite::params![key],
+                |row| row.get(0),
+            )
+            .ok()
+    }
+
+    pub fn set_config(&self, key: &str, value: &[u8]) -> Result<(), CoreError> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO sync_config (key, value) VALUES (?1, ?2)",
+                rusqlite::params![key, value],
+            )
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        Ok(())
+    }
+
     pub fn insert_item(&self, item: &ClipboardItem) -> Result<(), CoreError> {
         self.conn.execute(
             "INSERT INTO history_items (id, application, first_copied_at, last_copied_at, number_of_copies, pin, title, sync_timestamp, sync_source, sync_deleted)
