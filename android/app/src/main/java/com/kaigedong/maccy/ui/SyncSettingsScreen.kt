@@ -1,14 +1,17 @@
 package com.kaigedong.maccy.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kaigedong.maccy.HistoryViewModel
@@ -192,17 +195,30 @@ fun SyncSettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(peer.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    "Connected",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(6.dp)
+                                                .background(
+                                                    if (peer.isConnected) Color(0xFF4CAF50) else Color.Gray,
+                                                    CircleShape,
+                                                ),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        if (peer.isConnected) "Connected" else "Offline",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
-                            TextButton(
-                                onClick = { viewModel.unpair(peer.peerId) },
-                                enabled = syncEnabled,
-                            ) {
-                                Text("Unpair", color = MaterialTheme.colorScheme.error)
+                            if (peer.isAdmin) {
+                                TextButton(
+                                    onClick = { viewModel.unpair(peer.peerId) },
+                                ) {
+                                    Text("Unpair", color = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }
@@ -236,7 +252,7 @@ fun SyncSettingsScreen(
                     }
                 }
             }
-            val discovered = peers.filter { !it.isConnected }
+            val discovered = peers.filter { p -> paired.none { it.peerId == p.peerId } }
             if (discovered.isEmpty()) {
                 item {
                     Column {

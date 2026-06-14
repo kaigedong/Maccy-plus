@@ -13,7 +13,9 @@ pub struct SyncEngine {
     state: SharedState,
     command_tx: mpsc::UnboundedSender<SyncCommand>,
     #[allow(dead_code)]
-    observer: Arc<dyn ClipboardObserver>, // kept alive so the callback's clone stays valid
+    observer: Arc<dyn ClipboardObserver>,
+    /// Live set of currently connected peer IDs (updated from events).
+    connected_peers: Arc<std::sync::Mutex<std::collections::HashSet<String>>>,
 }
 
 impl SyncEngine {
@@ -29,6 +31,9 @@ impl SyncEngine {
         })?;
         let state = Arc::new(std::sync::Mutex::new(sync_state));
         let obs = observer.clone();
+
+        let connected = Arc::new(std::sync::Mutex::new(std::collections::HashSet::new()));
+        let connected_clone = connected.clone();
 
         // Register the unified event callback — dispatches to observer trait methods
         {
@@ -137,6 +142,7 @@ impl SyncEngine {
             state,
             command_tx,
             observer: obs,
+            connected_peers: connected,
         })
     }
 
@@ -220,6 +226,11 @@ impl SyncEngine {
             file_path: file_path.to_string(),
             offset: 0,
         });
+    }
+
+    /// Check if a peer is currently connected.
+    pub fn is_peer_connected(&self, peer_id: &str) -> bool {
+        self.connected_peers.lock().unwrap().contains(peer_id)
     }
 
     // ── Serialization ────────────────────────────────────────────

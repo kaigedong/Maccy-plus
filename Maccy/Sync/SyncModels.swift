@@ -10,6 +10,7 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
     var icon: String
     var connectedAt: Date
     var isConnected: Bool
+    var isAdmin: Bool
 
     /// Load paired devices from Rust core (SQLite), not UserDefaults.
     static func loadFromCore() -> [PairedDeviceInfo] {
@@ -24,7 +25,8 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
                 nickname: name,
                 icon: "💻",
                 connectedAt: Date(),
-                isConnected: true
+                isConnected: dict["isOnline"] == "true",
+                isAdmin: dict["isAdmin"] == "true"
             )
         }
     }

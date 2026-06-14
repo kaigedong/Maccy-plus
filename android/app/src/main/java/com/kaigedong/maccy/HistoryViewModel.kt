@@ -99,7 +99,7 @@ class HistoryViewModel : ViewModel() {
                     val list = _peers.value.toMutableList()
                     // Deduplicate by display name — replace old entry with same name
                     list.removeAll { it.displayName == displayName }
-                    list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected))
+                    list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected, false))
                     _peers.value = list
                 },
                 onPeerLostCb = { peerId ->
@@ -113,7 +113,7 @@ class HistoryViewModel : ViewModel() {
                     LogManager.i("Sync", "Pairing complete: peer=$peerId success=$success")
                     if (success) {
                         val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
-                        core?.savePairedPeer(peerId, name)
+                        core?.savePairedPeer(peerId, name, false) // responder is not admin
                         loadPairedPeers()
                     }
                     _pairingRequest.value = null
@@ -168,8 +168,9 @@ class HistoryViewModel : ViewModel() {
                     val obj = org.json.JSONObject(json)
                     val peerId = obj.getString("peerId")
                     val name = obj.getString("displayName")
-                    val connected = _peers.value.any { it.peerId == peerId && it.isConnected }
-                    DiscoveredPeer(peerId, name, emptyList(), connected)
+                    val isAdmin = obj.optBoolean("isAdmin", false)
+                    val isOnline = obj.optBoolean("isOnline", false)
+                    DiscoveredPeer(peerId, name, emptyList(), isOnline, isAdmin)
                 } catch (_: Exception) {
                     null
                 }
@@ -330,6 +331,7 @@ data class DiscoveredPeer(
     val displayName: String,
     val addresses: List<String>,
     val isConnected: Boolean,
+    val isAdmin: Boolean = false,
 )
 
 data class PairingRequest(

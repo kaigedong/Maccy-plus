@@ -9,6 +9,14 @@ use crate::sync::SyncEngine;
 
 /// Central coordinator for clipboard history management.
 /// Owns persistence (Storage), sync (SyncEngine), and search/sort.
+///
+/// # Sync Group & Permissions
+///
+/// Devices that pair form a **group**. Rules:
+/// - Only one admin per group. The first device to pair becomes admin.
+/// - Admin can transfer admin role to any member (promote_to_admin).
+/// - Admin can remove members; regular members cannot remove anyone.
+/// - A device belongs to at most one group; must leave before joining another.
 #[derive(uniffi::Object)]
 pub struct HistoryManager {
     storage: Mutex<Storage>,
@@ -341,27 +349,37 @@ impl HistoryManager {
 
     // ── Peer management (persisted in Rust, UI just displays) ─
 
-    /// Get all paired peers with their display names.
+    /// Get all paired peers with their metadata (ID, name, admin status, online status).
+    /// Returns JSON strings — each is `{"peerId":..., "displayName":..., "isAdmin":..., "isOnline":...}`.
     pub fn get_paired_peers(&self) -> Vec<String> {
-        self.storage
-            .lock()
-            .map(|s| s.get_paired_peers().unwrap_or_default())
-            .unwrap_or_default()
+        let storage = self.storage.lock().unwrap();
+        let db_peers = storage.get_paired_peers().unwrap_or_default();
+        // Online status comes from live NetworkManager state, not cached DB column
+        drop(storage);
+        db_peers
             .into_iter()
-            .map(|(peer_id, display_name)| {
+            .map(|(peer_id, display_name, is_admin)| {
+                let is_online = if let Ok(guard) = self.sync_engine.lock() {
+                    guard
+                        .as_ref()
+                        .map(|e| e.is_peer_connected(&peer_id))
+                        .unwrap_or(false)
+                } else {
+                    false
+                };
                 serde_json::to_string(&serde_json::json!({
                     "peerId": peer_id,
-                    "displayName": display_name
+                    "displayName": display_name,
+                    "isAdmin": is_admin,
+                    "isOnline": is_online
                 }))
                 .unwrap_or_default()
             })
             .collect()
     }
-
-    /// Persist a paired peer.
-    pub fn save_paired_peer(&self, peer_id: String, display_name: String) {
+    pub fn save_paired_peer(&self, peer_id: String, display_name: String, is_admin: bool) {
         if let Ok(s) = self.storage.lock() {
-            let _ = s.save_paired_peer(&peer_id, &display_name);
+            let _ = s.save_paired_peer(&peer_id, &display_name, is_admin);
         }
     }
 

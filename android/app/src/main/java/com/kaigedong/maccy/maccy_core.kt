@@ -845,7 +845,7 @@ external fun uniffi_maccy_core_fn_method_historymanager_remove_paired_peer(`ptr`
 ): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_request_file(`ptr`: Long,`peerId`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
-external fun uniffi_maccy_core_fn_method_historymanager_save_paired_peer(`ptr`: Long,`peerId`: RustBuffer.ByValue,`displayName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+external fun uniffi_maccy_core_fn_method_historymanager_save_paired_peer(`ptr`: Long,`peerId`: RustBuffer.ByValue,`displayName`: RustBuffer.ByValue,`isAdmin`: Byte,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 external fun uniffi_maccy_core_fn_method_historymanager_search(`ptr`: Long,`query`: RustBuffer.ByValue,`items`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1045,7 +1045,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_maccy_core_checksum_method_historymanager_delete() != 58087.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889.toShort()) {
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 27905.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_load() != 48972.toShort()) {
@@ -1060,7 +1060,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295.toShort()) {
+    if (lib.uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 47723.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_maccy_core_checksum_method_historymanager_search() != 8895.toShort()) {
@@ -2294,6 +2294,14 @@ public object FfiConverterTypeClipboardObserver: FfiConverter<ClipboardObserver,
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ *
+ * # Sync Group & Permissions
+ *
+ * Devices that pair form a **group**. Rules:
+ * - Only one admin per group. The first device to pair becomes admin.
+ * - Admin can transfer admin role to any member (promote_to_admin).
+ * - Admin can remove members; regular members cannot remove anyone.
+ * - A device belongs to at most one group; must leave before joining another.
  */
 public interface HistoryManagerInterface {
     
@@ -2312,7 +2320,8 @@ public interface HistoryManagerInterface {
     fun `delete`(`id`: kotlin.String)
     
     /**
-     * Get all paired peers with their display names.
+     * Get all paired peers with their metadata (ID, name, admin status, online status).
+     * Returns JSON strings — each is `{"peerId":..., "displayName":..., "isAdmin":..., "isOnline":...}`.
      */
     fun `getPairedPeers`(): List<kotlin.String>
     
@@ -2333,10 +2342,7 @@ public interface HistoryManagerInterface {
      */
     fun `requestFile`(`peerId`: kotlin.String, `filePath`: kotlin.String)
     
-    /**
-     * Persist a paired peer.
-     */
-    fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String)
+    fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String, `isAdmin`: kotlin.Boolean)
     
     fun `search`(`query`: kotlin.String, `items`: List<ClipboardItem>, `mode`: SearchMode): List<SearchResult>
     
@@ -2398,6 +2404,14 @@ public interface HistoryManagerInterface {
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ *
+ * # Sync Group & Permissions
+ *
+ * Devices that pair form a **group**. Rules:
+ * - Only one admin per group. The first device to pair becomes admin.
+ * - Admin can transfer admin role to any member (promote_to_admin).
+ * - Admin can remove members; regular members cannot remove anyone.
+ * - A device belongs to at most one group; must leave before joining another.
  */
 open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
 {
@@ -2578,7 +2592,8 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
 
     
     /**
-     * Get all paired peers with their display names.
+     * Get all paired peers with their metadata (ID, name, admin status, online status).
+     * Returns JSON strings — each is `{"peerId":..., "displayName":..., "isAdmin":..., "isOnline":...}`.
      */override fun `getPairedPeers`(): List<kotlin.String> {
             return FfiConverterSequenceString.lift(
     callWithHandle {
@@ -2653,16 +2668,13 @@ open class HistoryManager: Disposable, AutoCloseable, HistoryManagerInterface
     
     
 
-    
-    /**
-     * Persist a paired peer.
-     */override fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String)
+    override fun `savePairedPeer`(`peerId`: kotlin.String, `displayName`: kotlin.String, `isAdmin`: kotlin.Boolean)
         = 
     callWithHandle {
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
         it,
-        FfiConverterString.lower(`peerId`),FfiConverterString.lower(`displayName`),_status)
+        FfiConverterString.lower(`peerId`),FfiConverterString.lower(`displayName`),FfiConverterBoolean.lower(`isAdmin`),_status)
 }
     }
     

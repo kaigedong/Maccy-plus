@@ -65,7 +65,7 @@ class MaccySyncObserver: ClipboardObserver {
         DispatchQueue.main.async {
             if success {
                 SyncBridge.shared.recordPeerName(peerId, peerId) // name will be updated by peer_discovered
-                AppState.shared.history.core.savePairedPeer(peerId: peerId, displayName: peerId)
+                AppState.shared.history.core.savePairedPeer(peerId: peerId, displayName: peerId, isAdmin: true)
             }
             NotificationCenter.default.post(name: .syncPairingComplete, object: nil, userInfo: [
                 "peerID": peerId,

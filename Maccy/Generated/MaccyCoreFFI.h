@@ -406,7 +406,7 @@ void uniffi_maccy_core_fn_method_historymanager_request_file(uint64_t ptr, RustB
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
 #define UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SAVE_PAIRED_PEER
-void uniffi_maccy_core_fn_method_historymanager_save_paired_peer(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, RustCallStatus *_Nonnull out_status
+void uniffi_maccy_core_fn_method_historymanager_save_paired_peer(uint64_t ptr, RustBuffer peer_id, RustBuffer display_name, int8_t is_admin, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MACCY_CORE_FN_METHOD_HISTORYMANAGER_SEARCH

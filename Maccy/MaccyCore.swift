@@ -1224,6 +1224,14 @@ public func FfiConverterTypeClipboardObserver_lower(_ value: ClipboardObserver) 
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ *
+ * # Sync Group & Permissions
+ *
+ * Devices that pair form a **group**. Rules:
+ * - Only one admin per group. The first device to pair becomes admin.
+ * - Admin can transfer admin role to any member (promote_to_admin).
+ * - Admin can remove members; regular members cannot remove anyone.
+ * - A device belongs to at most one group; must leave before joining another.
  */
 public protocol HistoryManagerProtocol: AnyObject, Sendable {
     
@@ -1242,7 +1250,8 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
     func delete(id: String) throws 
     
     /**
-     * Get all paired peers with their display names.
+     * Get all paired peers with their metadata (ID, name, admin status, online status).
+     * Returns JSON strings — each is `{"peerId":..., "displayName":..., "isAdmin":..., "isOnline":...}`.
      */
     func getPairedPeers()  -> [String]
     
@@ -1263,10 +1272,7 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
      */
     func requestFile(peerId: String, filePath: String) 
     
-    /**
-     * Persist a paired peer.
-     */
-    func savePairedPeer(peerId: String, displayName: String) 
+    func savePairedPeer(peerId: String, displayName: String, isAdmin: Bool) 
     
     func search(query: String, items: [ClipboardItem], mode: SearchMode)  -> [SearchResult]
     
@@ -1326,6 +1332,14 @@ public protocol HistoryManagerProtocol: AnyObject, Sendable {
 /**
  * Central coordinator for clipboard history management.
  * Owns persistence (Storage), sync (SyncEngine), and search/sort.
+ *
+ * # Sync Group & Permissions
+ *
+ * Devices that pair form a **group**. Rules:
+ * - Only one admin per group. The first device to pair becomes admin.
+ * - Admin can transfer admin role to any member (promote_to_admin).
+ * - Admin can remove members; regular members cannot remove anyone.
+ * - A device belongs to at most one group; must leave before joining another.
  */
 open class HistoryManager: HistoryManagerProtocol, @unchecked Sendable {
     fileprivate let handle: UInt64
@@ -1436,7 +1450,8 @@ open func delete(id: String)throws   {try rustCallWithError(FfiConverterTypeCore
 }
     
     /**
-     * Get all paired peers with their display names.
+     * Get all paired peers with their metadata (ID, name, admin status, online status).
+     * Returns JSON strings — each is `{"peerId":..., "displayName":..., "isAdmin":..., "isOnline":...}`.
      */
 open func getPairedPeers() -> [String]  {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
@@ -1489,14 +1504,12 @@ open func requestFile(peerId: String, filePath: String)  {try! rustCall() {
 }
 }
     
-    /**
-     * Persist a paired peer.
-     */
-open func savePairedPeer(peerId: String, displayName: String)  {try! rustCall() {
+open func savePairedPeer(peerId: String, displayName: String, isAdmin: Bool)  {try! rustCall() {
     uniffi_maccy_core_fn_method_historymanager_save_paired_peer(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(peerId),
-        FfiConverterString.lower(displayName),$0
+        FfiConverterString.lower(displayName),
+        FfiConverterBool.lower(isAdmin),$0
     )
 }
 }
@@ -2522,7 +2535,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_maccy_core_checksum_method_historymanager_delete() != 58087) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 47889) {
+    if (uniffi_maccy_core_checksum_method_historymanager_get_paired_peers() != 27905) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_load() != 48972) {
@@ -2537,7 +2550,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_maccy_core_checksum_method_historymanager_request_file() != 1982) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 50295) {
+    if (uniffi_maccy_core_checksum_method_historymanager_save_paired_peer() != 47723) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_maccy_core_checksum_method_historymanager_search() != 8895) {

@@ -164,17 +164,19 @@ struct SyncSettingsPane: View {
                 }
             }
             Spacer()
-            Button { editingDevice = device; editingNickname = device.nickname; editingIcon = device.icon }
-                label: { Image(systemName: "pencil") }
-                .buttonStyle(.borderless)
+            if device.isAdmin {
+                Button { editingDevice = device; editingNickname = device.nickname; editingIcon = device.icon }
+                    label: { Image(systemName: "pencil") }
+                    .buttonStyle(.borderless)
+                    .controlSize(.small)
+                Button("Unpair") {
+                    SyncBridge.shared.unpair(peerID: device.peerID)
+                    AppState.shared.history.core.removePairedPeer(peerId: device.peerID)
+                    pairedDevices = PairedDeviceInfo.loadFromCore()
+                }
+                .buttonStyle(.bordered)
                 .controlSize(.small)
-            Button("Unpair") {
-                SyncBridge.shared.unpair(peerID: device.peerID)
-                AppState.shared.history.core.removePairedPeer(peerId: device.peerID)
-                pairedDevices = PairedDeviceInfo.loadFromCore()
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
     }
 
@@ -192,7 +194,7 @@ struct SyncSettingsPane: View {
             HStack {
                 Button("Cancel") { editingDevice = nil }.keyboardShortcut(.cancelAction)
                 Button("Save") {
-                    AppState.shared.history.core.savePairedPeer(peerId: device.peerID, displayName: editingNickname)
+                    AppState.shared.history.core.savePairedPeer(peerId: device.peerID, displayName: editingNickname, isAdmin: false)
                     pairedDevices = PairedDeviceInfo.loadFromCore()
                     editingDevice = nil
                 }
@@ -238,7 +240,9 @@ struct SyncSettingsPane: View {
         guard let peerID = notification.userInfo?["peerID"] as? String,
               let name = notification.userInfo?["displayName"] as? String else { return }
         SyncBridge.shared.recordPeerName(peerID, name)
-        // Deduplicate by display name — same device reconnecting gets a new peerID
+        // Skip if already paired
+        if pairedDevices.contains(where: { $0.peerID == peerID }) { return }
+        // Deduplicate by display name
         discoveredPeers.removeAll { $0.displayName == name }
         discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))
     }

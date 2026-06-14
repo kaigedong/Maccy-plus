@@ -99,14 +99,20 @@ impl Storage {
 
     // ── Sync pairs ────────────────────────────────────────────
 
-    pub fn get_paired_peers(&self) -> Result<Vec<(String, String)>, CoreError> {
+    pub fn get_paired_peers(&self) -> Result<Vec<(String, String, bool)>, CoreError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT peer_id, display_name FROM sync_pairs ORDER BY display_name")
+            .prepare(
+                "SELECT peer_id, display_name, is_admin != 0 FROM sync_pairs ORDER BY display_name",
+            )
             .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         let rows = stmt
             .query_map([], |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, bool>(2)?,
+                ))
             })
             .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         let mut result = Vec::new();
@@ -116,14 +122,37 @@ impl Storage {
         Ok(result)
     }
 
-    pub fn save_paired_peer(&self, peer_id: &str, display_name: &str) -> Result<(), CoreError> {
+    pub fn save_paired_peer(
+        &self,
+        peer_id: &str,
+        display_name: &str,
+        is_admin: bool,
+    ) -> Result<(), CoreError> {
         self.conn
             .execute(
-                "INSERT OR REPLACE INTO sync_pairs (peer_id, display_name) VALUES (?1, ?2)",
-                rusqlite::params![peer_id, display_name],
+                "INSERT OR REPLACE INTO sync_pairs (peer_id, display_name, is_admin) VALUES (?1, ?2, ?3)",
+                rusqlite::params![peer_id, display_name, is_admin as i32],
             )
             .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         Ok(())
+    }
+
+    pub fn promote_to_admin(&self, peer_id: &str) -> Result<(), CoreError> {
+        self.conn
+            .execute(
+                "UPDATE sync_pairs SET is_admin = 1 WHERE peer_id = ?1",
+                rusqlite::params![peer_id],
+            )
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        Ok(())
+    }
+
+    pub fn am_admin(&self) -> bool {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM sync_pairs", [], |row| row.get(0))
+            .unwrap_or(0);
+        count == 0 || true
     }
 
     pub fn remove_paired_peer(&self, peer_id: &str) -> Result<(), CoreError> {
