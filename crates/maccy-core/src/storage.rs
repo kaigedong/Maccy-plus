@@ -94,6 +94,18 @@ impl Storage {
                 .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
         }
 
+        if current_version < 3 {
+            self.conn
+                .execute_batch(
+                    "CREATE TABLE IF NOT EXISTS sync_config (
+                    key TEXT PRIMARY KEY,
+                    value BLOB
+                );
+                INSERT INTO schema_version (version) VALUES (3);",
+                )
+                .map_err(|e| CoreError::Storage { msg: e.to_string() })?;
+        }
+
         Ok(())
     }
 

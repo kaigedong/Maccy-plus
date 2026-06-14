@@ -8,8 +8,6 @@ use libp2p::mdns;
 use libp2p::request_response::{self, ProtocolSupport};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{PeerId, SwarmBuilder};
-use std::fs;
-use std::io::Read;
 use tokio::sync::mpsc;
 
 use crate::error::ErrorCode;
@@ -37,6 +35,9 @@ pub struct NetworkManager {
     seen_pairing_sessions: HashSet<String>,
     listen_port: u16,
     local_peer_id: PeerId,
+    /// IP:port strings of our own listen addresses (collected from NewListenAddr).
+    /// Used to avoid dialing ourselves when mDNS returns self-reflected addresses.
+    local_addrs: HashSet<String>,
 }
 
 impl NetworkManager {
@@ -135,6 +136,7 @@ impl NetworkManager {
             seen_pairing_sessions: HashSet::new(),
             listen_port,
             local_peer_id,
+            local_addrs: HashSet::new(),
         })
     }
 
@@ -190,6 +192,14 @@ impl NetworkManager {
             SwarmEvent::Behaviour(MaccyBehaviourEvent::Mdns(mdns::Event::Discovered(peers))) => {
                 for (peer_id, addr) in peers {
                     if peer_id == self.local_peer_id {
+                        continue;
+                    }
+                    // Skip if the discovered address matches one of our own listen addresses.
+                    // This can happen when mDNS reflects our own advertisement back to us
+                    // (some routers/APs do this), or when a remote peer's mDNS incorrectly
+                    // advertises our IP. Dialing ourselves causes EADDRINUSE on macOS.
+                    if is_own_addr(&addr, &self.local_addrs) {
+                        log::debug!("Skipping self-dial: {}", addr);
                         continue;
                     }
                     let info = PeerInfo {
@@ -301,6 +311,7 @@ impl NetworkManager {
 
             SwarmEvent::NewListenAddr { address, .. } => {
                 log::info!("Listening on {}", address);
+                self.local_addrs.insert(address.to_string());
                 self.state_emit(SyncEvent::Listening {
                     address: address.to_string(),
                 });
@@ -526,22 +537,26 @@ impl NetworkManager {
             SyncCommand::AcceptPairing { peer_id, .. } => {
                 match peer_id.parse::<PeerId>() {
                     Ok(peer) => {
-                    log::info!("Accepting pairing with {}", peer);
-                    self.paired_peers.insert(peer);
-                    // Notify the requester via gossipsub
-                    let accept = PairingMessage::Accept {
-                        session_id: String::new(),
-                    };
-                    if let Ok(data) = serde_json::to_vec(&accept) {
-                        let topic = IdentTopic::new(PAIRING_TOPIC);
-                        let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+                        log::info!("Accepting pairing with {}", peer);
+                        self.paired_peers.insert(peer);
+                        // Notify the requester via gossipsub
+                        let accept = PairingMessage::Accept {
+                            session_id: String::new(),
+                        };
+                        if let Ok(data) = serde_json::to_vec(&accept) {
+                            let topic = IdentTopic::new(PAIRING_TOPIC);
+                            let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
+                        }
+                        self.state_emit(SyncEvent::PairingComplete {
+                            peer_id: peer.to_string(),
+                            success: true,
+                        });
                     }
-                    self.state_emit(SyncEvent::PairingComplete {
-                        peer_id: peer.to_string(),
-                        success: true,
-                    });
-                }
-                    Err(e) => log::error!("Failed to parse peer_id '{}' in AcceptPairing: {:?}", peer_id, e),
+                    Err(e) => log::error!(
+                        "Failed to parse peer_id '{}' in AcceptPairing: {:?}",
+                        peer_id,
+                        e
+                    ),
                 }
             }
             SyncCommand::RejectPairing { peer_id } => {
@@ -616,6 +631,17 @@ impl NetworkManager {
             let _ = self.swarm.behaviour_mut().gossipsub.publish(topic, data);
         }
     }
+}
+
+/// Check whether `addr` matches one of our own listen addresses.
+/// Strips `/p2p/PEERID` suffix before comparing, since mDNS may append it.
+fn is_own_addr(addr: &libp2p::Multiaddr, local_addrs: &HashSet<String>) -> bool {
+    let addr_str = addr.to_string();
+    let transport_addr = match addr_str.find("/p2p/") {
+        Some(pos) => &addr_str[..pos],
+        None => &addr_str,
+    };
+    local_addrs.contains(transport_addr)
 }
 
 fn parse_host_port_to_multiaddr(input: &str) -> String {
