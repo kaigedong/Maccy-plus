@@ -17,16 +17,21 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
         guard let jsonList = try? AppState.shared.history.core.getPairedPeers() else { return [] }
         return jsonList.compactMap { json in
             guard let data = json.data(using: .utf8),
-                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-                  let peerId = dict["peerId"],
-                  let name = dict["displayName"] else { return nil }
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let peerId = dict["peerId"] as? String,
+                  let name = dict["displayName"] as? String else { return nil }
+            // isAdmin/isOnline are JSON booleans from the Rust core, not strings.
+            let boolValue = { (key: String) -> Bool in
+                if let v = dict[key] as? Bool { return v }
+                return (dict[key] as? String) == "true"
+            }
             return PairedDeviceInfo(
                 peerID: peerId,
                 nickname: name,
                 icon: "💻",
                 connectedAt: Date(),
-                isConnected: dict["isOnline"] == "true",
-                isAdmin: dict["isAdmin"] == "true"
+                isConnected: boolValue("isOnline"),
+                isAdmin: boolValue("isAdmin")
             )
         }
     }

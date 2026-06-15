@@ -27,6 +27,7 @@ impl SyncEngine {
         device_id: &str,
         observer: Arc<dyn ClipboardObserver>,
         stored_keypair: Option<Vec<u8>>,
+        initial_paired_peer_ids: Vec<String>,
     ) -> Result<(Self, Vec<u8>), CoreError> {
         let sync_state = SyncState::new(device_name, device_id).map_err(|e| CoreError::Sync {
             msg: format!("Failed to create sync state: {:?}", e),
@@ -153,6 +154,8 @@ impl SyncEngine {
                 Ok(m) => m,
                 Err(_) => return,
             };
+            // Restore paired peers so incoming sync messages aren't dropped after restart.
+            mgr.set_initial_paired_peers(initial_paired_peer_ids);
             rt.block_on(mgr.run());
         });
 

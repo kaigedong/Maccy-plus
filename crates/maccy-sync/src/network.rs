@@ -140,6 +140,19 @@ impl NetworkManager {
         })
     }
 
+    /// Restore the in-memory paired-peer set from the persisted DB on startup.
+    /// Without this, the `paired_peers` gate (which controls whether incoming
+    /// sync messages are handled) is empty after a restart, so already-paired
+    /// peers silently can't sync until they pair again.
+    pub fn set_initial_paired_peers(&mut self, peer_ids: Vec<String>) {
+        for id in peer_ids {
+            if let Ok(peer) = id.parse::<PeerId>() {
+                self.paired_peers.insert(peer);
+            }
+        }
+        log::info!("Restored {} paired peer(s) from DB", self.paired_peers.len());
+    }
+
     pub async fn run(&mut self) {
         let sync_topic = IdentTopic::new(TOPIC_NAME);
         if let Err(e) = self.swarm.behaviour_mut().gossipsub.subscribe(&sync_topic) {

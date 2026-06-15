@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kaigedong.maccy.HistoryViewModel
@@ -22,7 +23,11 @@ fun SyncSettingsScreen(
     viewModel: HistoryViewModel,
     modifier: Modifier = Modifier,
 ) {
-    var deviceName by remember { mutableStateOf("Android Device") }
+    val context = LocalContext.current
+    var deviceName by remember {
+        val prefs = context.getSharedPreferences("maccy_sync", android.content.Context.MODE_PRIVATE)
+        mutableStateOf(prefs.getString("device_name", "Android Device") ?: "Android Device")
+    }
     var manualAddress by remember { mutableStateOf("") }
     var showPairingDialog by remember { mutableStateOf(false) }
     var showLogs by remember { mutableStateOf(false) }

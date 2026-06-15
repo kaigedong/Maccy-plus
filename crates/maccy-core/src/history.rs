@@ -227,8 +227,23 @@ impl HistoryManager {
             .lock()
             .map_err(|e| CoreError::Storage { msg: e.to_string() })?
             .get_config("libp2p_keypair");
-        let (engine, keypair_bytes) =
-            SyncEngine::start(&device_name, &device_id, observer, stored_keypair)?;
+        // Load persisted paired peer IDs so the engine can restore the in-memory
+        // paired set (otherwise sync messages from them get dropped after restart).
+        let initial_paired_peer_ids: Vec<String> = self
+            .storage
+            .lock()
+            .map_err(|e| CoreError::Storage { msg: e.to_string() })
+            .ok()
+            .and_then(|s| s.get_paired_peers().ok())
+            .map(|peers| peers.into_iter().map(|(id, _, _)| id).collect())
+            .unwrap_or_default();
+        let (engine, keypair_bytes) = SyncEngine::start(
+            &device_name,
+            &device_id,
+            observer,
+            stored_keypair,
+            initial_paired_peer_ids,
+        )?;
         self.storage
             .lock()
             .map_err(|e| CoreError::Storage { msg: e.to_string() })?

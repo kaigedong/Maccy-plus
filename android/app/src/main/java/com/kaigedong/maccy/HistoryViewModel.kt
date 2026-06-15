@@ -46,6 +46,15 @@ class HistoryViewModel : ViewModel() {
         } catch (e: Exception) {
             LogManager.e("History", "Failed to create HistoryManager", e)
         }
+
+        // Auto-start sync if it was enabled before, so users don't have to toggle
+        // the switch every time the app is reopened.
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_SYNC_ENABLED, false)) {
+            val name = prefs.getString(KEY_DEVICE_NAME, "Android Device") ?: "Android Device"
+            LogManager.i("Sync", "Auto-starting sync (was enabled) as \"$name\"")
+            startSync(name)
+        }
     }
 
     // ── Sync ─────────────────────────────────────────────────────
@@ -140,6 +149,15 @@ class HistoryViewModel : ViewModel() {
         try {
             core.startSync(deviceName, id, syncObserver!!)
             _syncEnabled.value = true
+            // Persist so sync auto-starts on next launch.
+            appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.edit()
+                ?.putBoolean(KEY_SYNC_ENABLED, true)
+                ?.putString(KEY_DEVICE_NAME, deviceName)
+                ?.apply()
+            // mDNS uses multicast; on Android we must hold a MulticastLock or the
+            // WiFi driver drops the packets and we never discover peers.
+            acquireMulticastLock()
             LogManager.i("Sync", "Sync started (via HistoryManager)")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to start sync", e)
@@ -150,11 +168,46 @@ class HistoryViewModel : ViewModel() {
         try {
             core?.stopSync()
             _syncEnabled.value = false
+            appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ?.edit()
+                ?.putBoolean(KEY_SYNC_ENABLED, false)
+                ?.apply()
+            releaseMulticastLock()
             LogManager.i("Sync", "Sync stopped")
         } catch (e: Exception) {
             LogManager.e("Sync", "Failed to stop sync", e)
         }
         syncObserver = null
+    }
+
+    // ── Multicast lock (required for mDNS on Android) ────────────
+
+    private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
+
+    private fun acquireMulticastLock() {
+        val ctx = appContext ?: return
+        val wifi = ctx.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        multicastLock = wifi?.createMulticastLock("maccy-mdns")?.apply {
+            setReferenceCounted(false)
+            try {
+                acquire()
+                LogManager.i("Sync", "MulticastLock acquired")
+            } catch (e: Exception) {
+                LogManager.e("Sync", "Failed to acquire MulticastLock", e)
+            }
+        }
+    }
+
+    private fun releaseMulticastLock() {
+        multicastLock?.let { lock ->
+            try {
+                if (lock.isHeld) lock.release()
+                LogManager.i("Sync", "MulticastLock released")
+            } catch (e: Exception) {
+                LogManager.e("Sync", "Failed to release MulticastLock", e)
+            }
+        }
+        multicastLock = null
     }
 
     fun refreshDiscovery() {
@@ -309,6 +362,8 @@ class HistoryViewModel : ViewModel() {
     companion object {
         private const val PREFS_NAME = "maccy_sync"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_SYNC_ENABLED = "sync_enabled"
+        private const val KEY_DEVICE_NAME = "device_name"
 
         fun getOrCreateDeviceId(context: Context): String {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
