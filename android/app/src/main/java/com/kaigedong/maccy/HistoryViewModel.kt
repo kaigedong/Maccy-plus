@@ -110,9 +110,13 @@ class HistoryViewModel : ViewModel() {
                     list.removeAll { it.displayName == displayName }
                     list.add(DiscoveredPeer(peerId, displayName, addresses, isConnected, false))
                     _peers.value = list
+                    // Refresh paired-devices list so online/offline status updates live
+                    // (isOnline is computed from the engine's connected set at read time).
+                    loadPairedPeers()
                 },
                 onPeerLostCb = { peerId ->
                     _peers.value = _peers.value.filter { it.peerId != peerId }
+                    loadPairedPeers()
                 },
                 onPairingRequestCb = { peerId, displayName, pin ->
                     LogManager.i("Sync", "Pairing request from $displayName (pin=$pin)")
@@ -291,7 +295,12 @@ class HistoryViewModel : ViewModel() {
             core?.let { manager ->
                 try {
                     val result = manager.add(item, maxSize = 500, isUnlimited = false)
-                    manager.syncBroadcastItem(result)
+                    // Only broadcast genuinely-new items. core.add returns the same id
+                    // for a new item but a different (existing) id when it deduped —
+                    // rebroadcasting the deduped item would loop the same item to peers.
+                    if (result.id == item.id) {
+                        manager.syncBroadcastItem(result)
+                    }
                     LogManager.d("History", "Added item: ${item.id.take(8)}...")
                 } catch (e: Exception) {
                     LogManager.e("History", "Failed to add item", e)

@@ -240,8 +240,15 @@ struct SyncSettingsPane: View {
         guard let peerID = notification.userInfo?["peerID"] as? String,
               let name = notification.userInfo?["displayName"] as? String else { return }
         SyncBridge.shared.recordPeerName(peerID, name)
-        // Skip if already paired
-        if pairedDevices.contains(where: { $0.peerID == peerID }) { return }
+        // If already paired, take the chance to fix its display name: pairing saves
+        // the raw peerID as the name, but the friendly name only arrives via discovery.
+        if let paired = pairedDevices.first(where: { $0.peerID == peerID }) {
+            if !name.isEmpty, name != peerID, paired.nickname != name {
+                AppState.shared.history.core.savePairedPeer(peerId: peerID, displayName: name, isAdmin: paired.isAdmin)
+                pairedDevices = PairedDeviceInfo.loadFromCore()
+            }
+            return
+        }
         // Deduplicate by display name
         discoveredPeers.removeAll { $0.displayName == name }
         discoveredPeers.append(DiscoveredPeer(peerID: peerID, displayName: name))

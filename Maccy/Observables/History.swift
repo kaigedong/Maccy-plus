@@ -244,12 +244,20 @@ class History: ItemsContainer {
         sessionLog[Clipboard.shared.changeCount] = result
 
         var itemDecorator: HistoryItemDecorator
-        if let pin = result.pin {
-            itemDecorator = HistoryItemDecorator(result, shortcuts: KeyShortcut.create(character: pin))
+        if isNew {
+            if let pin = result.pin {
+                itemDecorator = HistoryItemDecorator(result, shortcuts: KeyShortcut.create(character: pin))
+            } else {
+                itemDecorator = HistoryItemDecorator(result)
+            }
             all.insert(itemDecorator, at: 0)
         } else {
-            itemDecorator = HistoryItemDecorator(result)
-            all.insert(itemDecorator, at: 0)
+            // core.add merged this into an existing item (dedup). Refresh the
+            // existing decorator in place instead of inserting a duplicate —
+            // otherwise every re-receipt of the same item spawns a new row.
+            itemDecorator = all.first(where: { $0.item.id == result.id }) ?? HistoryItemDecorator(result)
+            itemDecorator.item = result
+            itemDecorator.title = result.title
         }
 
         // Re-sort all items

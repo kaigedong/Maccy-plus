@@ -11,7 +11,7 @@ class ClipboardService(
 ) {
     private val clipboardManager =
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    private var lastClipHash: Int = 0
+    private var lastClipSig: String = ""
     private val handler = Handler(Looper.getMainLooper())
     private var pollingRunnable: Runnable? = null
 
@@ -23,17 +23,36 @@ class ClipboardService(
             object : Runnable {
                 override fun run() {
                     val clip = clipboardManager.primaryClip
-                    if (clip != null && clip.hashCode() != lastClipHash) {
-                        lastClipHash = clip.hashCode()
-                        val item = clipToItem(clip)
-                        if (item != null) {
-                            onNewClip(item)
+                    if (clip != null && clip.itemCount > 0) {
+                        // Compare actual content, not ClipData identity. ClipData does
+                        // not override hashCode(), so the old `clip.hashCode()` check
+                        // used the identity hash, which differs on every getPrimaryClip()
+                        // call — making the poll fire every interval and re-broadcast the
+                        // same clip in a ~0.5s loop.
+                        val sig = clipSignature(clip)
+                        if (sig.isNotEmpty() && sig != lastClipSig) {
+                            lastClipSig = sig
+                            val item = clipToItem(clip)
+                            if (item != null) {
+                                onNewClip(item)
+                            }
                         }
                     }
                     handler.postDelayed(this, intervalMs)
                 }
             }
         handler.post(pollingRunnable!!)
+    }
+
+    private fun clipSignature(clip: android.content.ClipData): String {
+        val sb = StringBuilder()
+        sb.append(clip.itemCount).append('|')
+        for (i in 0 until clip.itemCount) {
+            val item = clip.getItemAt(i)
+            val repr = item.text?.toString() ?: item.uri?.toString() ?: ""
+            sb.append(repr).append('')
+        }
+        return sb.toString()
     }
 
     fun stopPolling() {
