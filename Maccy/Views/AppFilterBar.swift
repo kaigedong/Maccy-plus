@@ -66,7 +66,14 @@ struct AppFilterIcon: View {
     @State private var isHovered = false
 
     var body: some View {
-        Image(nsImage: isUnknown ? NSImage(systemSymbolName: "app.badge.questionmark", accessibilityDescription: "Unknown")! : appImage.nsImage)
+        // "app.badge.questionmark" is not a valid SF Symbol on all macOS versions
+        // (returns nil → the previous force-unwrap trapped at launch for items with
+        // an empty source app, e.g. anything synced from Android where application=null).
+        // Fall back through known-good symbols, then the app's own image — never trap.
+        let unknownImage = NSImage(systemSymbolName: "questionmark.app.dashed", accessibilityDescription: "Unknown")
+            ?? NSImage(systemSymbolName: "questionmark", accessibilityDescription: "Unknown")
+            ?? appImage.nsImage
+        Image(nsImage: isUnknown ? unknownImage : appImage.nsImage)
             .resizable()
             .frame(width: 18, height: 18)
             .contentShape(Rectangle())
