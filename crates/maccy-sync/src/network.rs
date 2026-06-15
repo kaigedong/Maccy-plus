@@ -199,12 +199,11 @@ impl NetworkManager {
                     if peer_id == self.local_peer_id {
                         continue;
                     }
-                    // Skip if the discovered address matches one of our own listen addresses.
-                    // This can happen when mDNS reflects our own advertisement back to us
-                    // (some routers/APs do this), or when a remote peer's mDNS incorrectly
-                    // advertises our IP. Dialing ourselves causes EADDRINUSE on macOS.
-                    if is_own_addr(&addr, &self.local_addrs) {
-                        log::debug!("Skipping self-dial: {}", addr);
+                    // Skip self-dial only for NEW peers — known peers may have
+                    // correct addresses from Identify that differ from the mDNS addr.
+                    let is_known = self.discovered_peers.contains_key(&peer_id);
+                    if !is_known && is_own_addr(&addr, &self.local_addrs) {
+                        log::debug!("Skipping self-dial for new peer {}: {}", peer_id, addr);
                         continue;
                     }
                     let info = PeerInfo {
@@ -543,9 +542,15 @@ impl NetworkManager {
                             log::warn!("Failed to publish pairing request: {:?}", e);
                         }
                     }
-                    // Optimistically add — the remote will respond with Accept
+                    // Optimistically add — the remote will respond with Accept/Reject.
+                    // Emit PairingComplete so the platform persists the peer to DB now,
+                    // otherwise if the gossipsub Accept is lost we'd never save it.
                     self.paired_peers.insert(peer);
                     self.seen_pairing_sessions.insert(session_id);
+                    self.state_emit(SyncEvent::PairingComplete {
+                        peer_id: peer.to_string(),
+                        success: true,
+                    });
                     log::info!("Sent pairing request to {}", peer);
                 }
             }

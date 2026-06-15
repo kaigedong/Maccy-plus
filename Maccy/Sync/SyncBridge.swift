@@ -11,8 +11,12 @@ import Foundation
 class MaccySyncObserver: ClipboardObserver {
     func onItemReceived(item: ClipboardItem) {
         Task { @MainActor in
+            // MUST set this before add(): add() reads it to decide whether to
+            // rebroadcast. Setting it afterwards (as it used to be) let every
+            // received item be echoed back, causing runaway duplicate broadcasts.
+            History.shared.syncBroadcastToPeers = false
+            NSLog("[Sync] onItemReceived id=\(item.id) title=\(item.title.prefix(40)) contents=\(item.contents.map { "\($0.contentType):\($0.value?.count ?? 0)" })")
             _ = History.shared.add(item, shouldAppend: false)
-            History.shared.syncBroadcastToPeers = false // don't echo back
         }
     }
 
@@ -66,6 +70,8 @@ class MaccySyncObserver: ClipboardObserver {
             if success {
                 SyncBridge.shared.recordPeerName(peerId, peerId) // name will be updated by peer_discovered
                 AppState.shared.history.core.savePairedPeer(peerId: peerId, displayName: peerId, isAdmin: true)
+            } else {
+                AppState.shared.history.core.removePairedPeer(peerId: peerId)
             }
             NotificationCenter.default.post(name: .syncPairingComplete, object: nil, userInfo: [
                 "peerID": peerId,

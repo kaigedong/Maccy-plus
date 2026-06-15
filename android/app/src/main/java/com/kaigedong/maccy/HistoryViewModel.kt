@@ -114,8 +114,10 @@ class HistoryViewModel : ViewModel() {
                     if (success) {
                         val name = _peers.value.find { it.peerId == peerId }?.displayName ?: peerId
                         core?.savePairedPeer(peerId, name, false) // responder is not admin
-                        loadPairedPeers()
+                    } else {
+                        core?.removePairedPeer(peerId)
                     }
+                    loadPairedPeers()
                     _pairingRequest.value = null
                 },
                 onListeningCb = { address ->

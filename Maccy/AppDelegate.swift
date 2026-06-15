@@ -38,6 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         AppState.shared.appDelegate = self
 
         Clipboard.shared.onNewCopy { item, isAppend in
+            NSLog("[Clipboard] local copy id=\(item.id) title=\(item.title.prefix(40)) contents=\(item.contents.map { "\($0.contentType):\($0.value?.count ?? 0)" })")
             History.shared.add(item, shouldAppend: isAppend)
         }
         Clipboard.shared.start()
