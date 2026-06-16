@@ -324,6 +324,16 @@ impl NetworkManager {
                         if let Ok(sync_msg) = serde_json::from_slice::<SyncMessage>(&message.data) {
                             self.handle_sync_message(sync_msg);
                         }
+                    } else {
+                        // NOTE: no `log` backend is installed on macOS/Android (the C FFI's
+                        // StderrLogger isn't used via UniFFI), so use eprintln! to guarantee
+                        // this surfaces in the terminal when diagnosing dropped messages.
+                        eprintln!(
+                            "[sync] DROPPED message from unpaired peer {} (have {} paired: {:?})",
+                            propagation_source,
+                            self.paired_peers.len(),
+                            self.paired_peers
+                        );
                     }
                 }
             }

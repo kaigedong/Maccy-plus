@@ -300,6 +300,9 @@ class HistoryViewModel : ViewModel() {
                     // rebroadcasting the deduped item would loop the same item to peers.
                     if (result.id == item.id) {
                         manager.syncBroadcastItem(result)
+                        LogManager.i("Sync", "Broadcast new item id=${item.id.take(8)} title=${item.title.take(40)}")
+                    } else {
+                        LogManager.i("Sync", "Skipped broadcast (dedup of ${result.id.take(8)}): ${item.title.take(40)}")
                     }
                     LogManager.d("History", "Added item: ${item.id.take(8)}...")
                 } catch (e: Exception) {
