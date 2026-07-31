@@ -27,7 +27,11 @@ struct SyncSettingsPane: View {
                     Text("Enable Clipboard Sync")
                 }
                 .onChange(of: syncEnabled) { _, newValue in
-                    if newValue { SyncBridge.shared.start() } else { SyncBridge.shared.stop() }
+                    if newValue {
+                        SyncBridge.shared.start()
+                    } else {
+                        SyncBridge.shared.stop()
+                    }
                 }
                 Toggle(isOn: $syncDiscoverable) {
                     Text("Allow Discovery")

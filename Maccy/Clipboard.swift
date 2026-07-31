@@ -310,7 +310,9 @@ class Clipboard {
                 let url = URL(dataRepresentation: value, relativeTo: nil, isAbsolute: true)
                 return url?.absoluteString.removingPercentEncoding
             }
-            if !urls.isEmpty { return urls.joined(separator: "\n") }
+            if !urls.isEmpty {
+                return urls.joined(separator: "\n")
+            }
         }
 
         if let text = getText(from: item), !text.isEmpty {

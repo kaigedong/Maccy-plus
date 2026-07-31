@@ -30,7 +30,9 @@ struct ActionIconButton: View {
     }
 
     private var backgroundColor: Color {
-        if !isHovered { return .clear }
+        if !isHovered {
+            return .clear
+        }
         // Use opaque colors that stand out against glass background
         if icon == "trash" {
             // Delete button: red tint

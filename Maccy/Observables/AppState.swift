@@ -19,7 +19,9 @@ class AppState: Sendable {
     var syncDevices: [PairedDeviceInfo] = []
 
     var searchVisible: Bool {
-        if !Defaults[.showSearch] { return false }
+        if !Defaults[.showSearch] {
+            return false
+        }
         switch Defaults[.searchVisibility] {
         case .always: return true
         case .duringSearch: return !history.searchQuery.isEmpty

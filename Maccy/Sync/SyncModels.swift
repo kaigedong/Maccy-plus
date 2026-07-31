@@ -22,7 +22,9 @@ struct PairedDeviceInfo: Codable, Identifiable, Equatable {
                   let name = dict["displayName"] as? String else { return nil }
             // isAdmin/isOnline are JSON booleans from the Rust core, not strings.
             let boolValue = { (key: String) -> Bool in
-                if let v = dict[key] as? Bool { return v }
+                if let v = dict[key] as? Bool {
+                    return v
+                }
                 return (dict[key] as? String) == "true"
             }
             return PairedDeviceInfo(

@@ -1634,6 +1634,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Maccy/Generated",
+				);
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Maccy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Maccy";
 			};
@@ -1658,6 +1662,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Maccy/Generated",
+				);
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Maccy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Maccy";
 			};
@@ -1830,7 +1838,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_INCLUDE_PATHS = "$(inherited) /Users/bobo/Documents/bobo/Maccy-plus/Maccy/Generated $(SRCROOT)/Maccy/Generated $(SRCROOT)/Maccy/Generated";
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Maccy/Generated",
+				);
 				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1885,7 +1896,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.kaigedong.MaccyPlus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(SRCROOT)/Maccy/Generated $(SRCROOT)/Maccy/Generated";
+				SWIFT_INCLUDE_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/Maccy/Generated",
+				);
 				SWIFT_OBJC_BRIDGING_HEADER = "Maccy/Maccy-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
