@@ -248,17 +248,28 @@ class SearchTests: XCTestCase {
     }
 
     @MainActor
-    private func historyItemWithTitle(_ value: String?) -> HistoryItem {
+    private func historyItemWithTitle(_ value: String?) -> ClipboardItem {
         let contents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: value?.data(using: .utf8)
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.title = item.generateTitle()
+        let copiedAt = Int64(Date().timeIntervalSince1970 * 1000)
+        var item = ClipboardItem(
+            id: UUID().uuidString,
+            application: nil,
+            firstCopiedAt: copiedAt,
+            lastCopiedAt: copiedAt,
+            numberOfCopies: 1,
+            pin: nil,
+            title: "",
+            contents: contents,
+            syncTimestamp: copiedAt,
+            syncSource: nil,
+            syncDeleted: false
+        )
+        item.title = Clipboard.shared.generateTitle(for: item)
 
         return item
     }

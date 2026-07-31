@@ -20,14 +20,12 @@ struct AppFilterBar: View {
                     ForEach(apps, id: \.bundleId) { app in
                         AppFilterIcon(
                             appImage: app.image,
-                            isExcluded: appState.history.excludedApps.contains(app.bundleId),
+                            isSelected: appState.history.selectedApp == app.bundleId,
+                            isDimmed: appState.history.selectedApp != nil
+                                && appState.history.selectedApp != app.bundleId,
                             isUnknown: app.bundleId.isEmpty
                         ) {
-                            if appState.history.excludedApps.contains(app.bundleId) {
-                                appState.history.excludedApps.remove(app.bundleId)
-                            } else {
-                                appState.history.excludedApps.insert(app.bundleId)
-                            }
+                            appState.history.toggleAppSelection(app.bundleId)
                         }
                     }
 
@@ -59,7 +57,8 @@ struct AppFilterBar: View {
 
 struct AppFilterIcon: View {
     let appImage: ApplicationImage
-    let isExcluded: Bool
+    let isSelected: Bool
+    let isDimmed: Bool
     var isUnknown: Bool = false
     let action: () -> Void
 
@@ -77,11 +76,11 @@ struct AppFilterIcon: View {
             .resizable()
             .frame(width: 18, height: 18)
             .contentShape(Rectangle())
-            .opacity(isExcluded ? 0.3 : 1.0)
+            .opacity(isDimmed ? 0.45 : 1.0)
             .overlay(
                 Group {
-                    if isExcluded {
-                        Color.red.opacity(0.3)
+                    if isSelected {
+                        Color.accentColor.opacity(0.2)
                     } else if isHovered {
                         Color.primary.opacity(0.08)
                     }
@@ -90,7 +89,7 @@ struct AppFilterIcon: View {
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(isExcluded ? Color.red.opacity(0.5) : .clear, lineWidth: 1)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.8) : .clear, lineWidth: 1)
             )
             .onHover { hovering in
                 isHovered = hovering

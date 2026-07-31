@@ -45,7 +45,7 @@ class ClipboardTests: XCTestCase {
 
     func testChangesListenerAndAddHooks() {
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -57,7 +57,7 @@ class ClipboardTests: XCTestCase {
     func testIgnoreStringWithOnlySpaces() {
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -69,7 +69,7 @@ class ClipboardTests: XCTestCase {
     func testIgnoreStringWithOnlyNewlines() {
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -80,7 +80,7 @@ class ClipboardTests: XCTestCase {
 
     func testDoesNotIgnoreRTF() {
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -95,7 +95,7 @@ class ClipboardTests: XCTestCase {
 
     func testDoesNotIgnoreHTML() {
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -109,7 +109,7 @@ class ClipboardTests: XCTestCase {
 
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -124,7 +124,7 @@ class ClipboardTests: XCTestCase {
 
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -136,12 +136,13 @@ class ClipboardTests: XCTestCase {
         XCTAssertFalse(Defaults[.ignoreOnlyNextEvent])
     }
 
-    func testIgnoreApplication() {
-        Defaults[.ignoredApps] = ["com.apple.dt.Xcode", "com.apple.finder"] // Finder is on Bitrise
+    func testIgnoreApplication() throws {
+        let frontmostApp = try XCTUnwrap(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
+        Defaults[.ignoredApps] = [frontmostApp]
 
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -150,12 +151,13 @@ class ClipboardTests: XCTestCase {
         waitForExpectations(timeout: 2)
     }
 
-    func testIgnoreAllApplicationsExcept() {
+    func testIgnoreAllApplicationsExcept() throws {
+        let frontmostApp = try XCTUnwrap(NSWorkspace.shared.frontmostApplication?.bundleIdentifier)
         Defaults[.ignoreAllAppsExceptListed] = true
-        Defaults[.ignoredApps] = ["com.apple.dt.Xcode", "com.apple.finder"] // Finder is on Bitrise
+        Defaults[.ignoredApps] = [frontmostApp]
 
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -167,7 +169,7 @@ class ClipboardTests: XCTestCase {
     func testIgnoreTransientTypes() {
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -181,7 +183,7 @@ class ClipboardTests: XCTestCase {
 
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -193,7 +195,7 @@ class ClipboardTests: XCTestCase {
     func testIgnoreCopiesWithUnknownTypes() {
         let hookExpectation = expectation(description: "Hook is called")
         hookExpectation.isInverted = true
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -206,14 +208,11 @@ class ClipboardTests: XCTestCase {
     func testCopy() throws {
         let imageData = try XCTUnwrap(image.tiffRepresentation)
         let contents = try [
-            HistoryItemContent(type: stringType.rawValue, value: XCTUnwrap("foo".data(using: .utf8))),
-            HistoryItemContent(type: tiffType.rawValue, value: imageData),
-            HistoryItemContent(type: fileURLType.rawValue, value: XCTUnwrap("file://foo.bar".data(using: .utf8))),
+            ClipboardContent(contentType: stringType.rawValue, value: XCTUnwrap("foo".data(using: .utf8))),
+            ClipboardContent(contentType: tiffType.rawValue, value: imageData),
+            ClipboardContent(contentType: fileURLType.rawValue, value: XCTUnwrap("file://foo.bar".data(using: .utf8))),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.application = "com.foo.bar"
+        let item = clipboardItem(contents: contents, application: "com.foo.bar")
         clipboard.copy(item)
         XCTAssertEqual(pasteboard.string(forType: .string), "foo")
         XCTAssertEqual(pasteboard.data(forType: .tiff), imageData)
@@ -225,16 +224,13 @@ class ClipboardTests: XCTestCase {
     @MainActor
     func testCopyWithoutFormatting() throws {
         let contents = try [
-            HistoryItemContent(type: stringType.rawValue, value: XCTUnwrap("foo".data(using: .utf8))),
-            HistoryItemContent(type: fileURLType.rawValue, value: XCTUnwrap("file://foo.bar".data(using: .utf8))),
-            HistoryItemContent(type: rtfType.rawValue,
-                               value: coloredString.rtf(from: NSRange(location: 0, length: coloredString.length),
-                                                        documentAttributes: [:])),
+            ClipboardContent(contentType: stringType.rawValue, value: XCTUnwrap("foo".data(using: .utf8))),
+            ClipboardContent(contentType: fileURLType.rawValue, value: XCTUnwrap("file://foo.bar".data(using: .utf8))),
+            ClipboardContent(contentType: rtfType.rawValue,
+                             value: coloredString.rtf(from: NSRange(location: 0, length: coloredString.length),
+                                                      documentAttributes: [:])),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.application = "com.foo.bar"
+        let item = clipboardItem(contents: contents, application: "com.foo.bar")
         clipboard.copy(item, removeFormatting: true)
         XCTAssertEqual(pasteboard.string(forType: .string), "foo")
         XCTAssertEqual(pasteboard.string(forType: .fromMaccy), "")
@@ -246,7 +242,7 @@ class ClipboardTests: XCTestCase {
     func testHandlesItemsWithoutData() {
         let hookExpectation = expectation(description: "Hook is called")
         pasteboard.clearContents()
-        clipboard.onNewCopy { (_: HistoryItem) in
+        clipboard.onNewCopy { (_: ClipboardItem, _: Bool) in
             hookExpectation.fulfill()
         }
         clipboard.start()
@@ -258,9 +254,9 @@ class ClipboardTests: XCTestCase {
 
     func testMergesMultipleItems() throws {
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (item: HistoryItem) in
+        clipboard.onNewCopy { (item: ClipboardItem, _: Bool) in
             XCTAssertEqual(
-                Set(item.contents.map(\.type)),
+                Set(item.contents.map(\.contentType)),
                 Set([self.tiffType.rawValue, self.stringType.rawValue])
             )
             hookExpectation.fulfill()
@@ -282,8 +278,8 @@ class ClipboardTests: XCTestCase {
         Defaults[.enabledPasteboardTypes] = [.fileURL]
 
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (item: HistoryItem) in
-            XCTAssertEqual(item.contents.map(\.type), [self.fileURLType.rawValue])
+        clipboard.onNewCopy { (item: ClipboardItem, _: Bool) in
+            XCTAssertEqual(item.contents.map(\.contentType), [self.fileURLType.rawValue])
             hookExpectation.fulfill()
         }
 
@@ -301,8 +297,8 @@ class ClipboardTests: XCTestCase {
 
     func testRemovesDynamicTypes() throws {
         let hookExpectation = expectation(description: "Hook is called")
-        clipboard.onNewCopy { (item: HistoryItem) in
-            XCTAssertEqual(item.contents.map(\.type), [self.stringType.rawValue])
+        clipboard.onNewCopy { (item: ClipboardItem, _: Bool) in
+            XCTAssertEqual(item.contents.map(\.contentType), [self.stringType.rawValue])
             hookExpectation.fulfill()
         }
 
@@ -315,6 +311,22 @@ class ClipboardTests: XCTestCase {
         pasteboard.writeObjects([item])
 
         waitForExpectations(timeout: 2)
+    }
+
+    private func clipboardItem(contents: [ClipboardContent], application: String? = nil) -> ClipboardItem {
+        ClipboardItem(
+            id: UUID().uuidString,
+            application: application,
+            firstCopiedAt: 0,
+            lastCopiedAt: 0,
+            numberOfCopies: 1,
+            pin: nil,
+            title: "",
+            contents: contents,
+            syncTimestamp: 0,
+            syncSource: nil,
+            syncDeleted: false
+        )
     }
 }
 

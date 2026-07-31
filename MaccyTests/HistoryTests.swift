@@ -7,10 +7,13 @@ class HistoryTests: XCTestCase {
     let savedSize = Defaults[.size]
     let savedSortBy = Defaults[.sortBy]
     let history = History.shared
+    private var nextTimestamp = Int64(Date().timeIntervalSince1970 * 1000)
 
     override func setUp() {
         super.setUp()
         history.clearAll()
+        history.selectedApp = nil
+        history.excludedDevices = []
         Defaults[.size] = 10
         Defaults[.sortBy] = .firstCopiedAt
     }
@@ -32,15 +35,15 @@ class HistoryTests: XCTestCase {
     }
 
     func testAddingSame() {
-        let first = historyItem("foo")
+        var first = historyItem("foo")
         first.title = "xyz"
         first.application = "iTerm.app"
-        let firstDecorator = history.add(first)
         first.pin = "f"
+        let firstDecorator = history.add(first)
 
         let secondDecorator = history.add(historyItem("bar"))
 
-        let third = historyItem("foo")
+        var third = historyItem("foo")
         third.application = "Xcode.app"
         history.add(third)
 
@@ -55,33 +58,27 @@ class HistoryTests: XCTestCase {
 
     func testAddingItemThatIsSupersededByExisting() throws {
         let firstContents = try [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: XCTUnwrap("one".data(using: .utf8))
             ),
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.rtf.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.rtf.rawValue,
                 value: XCTUnwrap("two".data(using: .utf8))
             ),
         ]
-        let firstItem = HistoryItem()
-        Storage.shared.context.insert(firstItem)
+        var firstItem = historyItem(contents: firstContents)
         firstItem.application = "Maccy.app"
-        firstItem.contents = firstContents
-        firstItem.title = firstItem.generateTitle()
         history.add(firstItem)
 
         let secondContents = try [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: XCTUnwrap("one".data(using: .utf8))
             ),
         ]
-        let secondItem = HistoryItem()
-        Storage.shared.context.insert(secondItem)
+        var secondItem = historyItem(contents: secondContents)
         secondItem.application = "Maccy.app"
-        secondItem.contents = secondContents
-        secondItem.title = secondItem.generateTitle()
         let second = history.add(secondItem)
 
         XCTAssertEqual(history.items, [second])
@@ -90,33 +87,29 @@ class HistoryTests: XCTestCase {
 
     func testAddingItemWithDifferentModifiedType() throws {
         let firstContents = try [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: XCTUnwrap("one".data(using: .utf8))
             ),
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.modified.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.modified.rawValue,
                 value: XCTUnwrap("1".data(using: .utf8))
             ),
         ]
-        let firstItem = HistoryItem()
-        Storage.shared.context.insert(firstItem)
-        firstItem.contents = firstContents
+        let firstItem = historyItem(contents: firstContents)
         history.add(firstItem)
 
         let secondContents = try [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: XCTUnwrap("one".data(using: .utf8))
             ),
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.modified.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.modified.rawValue,
                 value: XCTUnwrap("2".data(using: .utf8))
             ),
         ]
-        let secondItem = HistoryItem()
-        Storage.shared.context.insert(secondItem)
-        secondItem.contents = secondContents
+        let secondItem = historyItem(contents: secondContents)
         let second = history.add(secondItem)
 
         XCTAssertEqual(history.items, [second])
@@ -125,31 +118,27 @@ class HistoryTests: XCTestCase {
 
     func testAddingItemFromMaccy() {
         let firstContents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: "one".data(using: .utf8)
             ),
         ]
-        let first = HistoryItem()
-        Storage.shared.context.insert(first)
+        var first = historyItem(contents: firstContents)
         first.application = "Xcode.app"
-        first.contents = firstContents
         history.add(first)
 
         let secondContents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: "one".data(using: .utf8)
             ),
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.fromMaccy.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.fromMaccy.rawValue,
                 value: "".data(using: .utf8)
             ),
         ]
-        let second = HistoryItem()
-        Storage.shared.context.insert(second)
+        var second = historyItem(contents: secondContents)
         second.application = "Maccy.app"
-        second.contents = secondContents
         let secondDecorator = history.add(second)
 
         XCTAssertEqual(history.items, [secondDecorator])
@@ -160,9 +149,9 @@ class HistoryTests: XCTestCase {
     func testModifiedAfterCopying() {
         history.add(historyItem("foo"))
 
-        let modifiedItem = historyItem("bar")
-        modifiedItem.contents.append(HistoryItemContent(
-            type: NSPasteboard.PasteboardType.modified.rawValue,
+        var modifiedItem = historyItem("bar")
+        modifiedItem.contents.append(ClipboardContent(
+            contentType: NSPasteboard.PasteboardType.modified.rawValue,
             value: String(Clipboard.shared.changeCount).data(using: .utf8)
         ))
         let modifiedItemDecorator = history.add(modifiedItem)
@@ -173,7 +162,7 @@ class HistoryTests: XCTestCase {
 
     func testClearingUnpinned() {
         let pinned = history.add(historyItem("foo"))
-        pinned.togglePin()
+        history.togglePin(pinned)
         history.add(historyItem("bar"))
         history.clear()
         XCTAssertEqual(history.items, [pinned])
@@ -201,7 +190,7 @@ class HistoryTests: XCTestCase {
 
         let item = history.add(historyItem("0"))
         items.append(item)
-        item.togglePin()
+        history.togglePin(item)
 
         for index in 1 ... 11 {
             items.append(history.add(historyItem(String(index))))
@@ -233,19 +222,68 @@ class HistoryTests: XCTestCase {
         XCTAssertEqual(history.items, [bar])
     }
 
-    private func historyItem(_ value: String) -> HistoryItem {
+    func testSelectingAppShowsOnlyItemsFromThatApp() {
+        var chrome = historyItem("chrome")
+        chrome.application = "com.google.Chrome"
+        history.add(chrome)
+
+        var telegram = historyItem("telegram")
+        telegram.application = "org.telegram.Telegram"
+        let telegramDecorator = history.add(telegram)
+
+        history.toggleAppSelection("org.telegram.Telegram")
+        waitForFilterUpdate()
+
+        XCTAssertEqual(history.items, [telegramDecorator])
+    }
+
+    func testSelectingSameAppAgainShowsAllItems() {
+        var chrome = historyItem("chrome")
+        chrome.application = "com.google.Chrome"
+        let chromeDecorator = history.add(chrome)
+
+        var telegram = historyItem("telegram")
+        telegram.application = "org.telegram.Telegram"
+        let telegramDecorator = history.add(telegram)
+
+        history.toggleAppSelection("org.telegram.Telegram")
+        waitForFilterUpdate()
+        history.toggleAppSelection("org.telegram.Telegram")
+        waitForFilterUpdate()
+
+        XCTAssertEqual(history.items, [telegramDecorator, chromeDecorator])
+    }
+
+    private func waitForFilterUpdate() {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+    }
+
+    private func historyItem(_ value: String) -> ClipboardItem {
         let contents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: value.data(using: .utf8)
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.numberOfCopies = 1
-        item.title = item.generateTitle()
+        return historyItem(contents: contents)
+    }
 
+    private func historyItem(contents: [ClipboardContent]) -> ClipboardItem {
+        nextTimestamp += 1
+        var item = ClipboardItem(
+            id: UUID().uuidString,
+            application: nil,
+            firstCopiedAt: nextTimestamp,
+            lastCopiedAt: nextTimestamp,
+            numberOfCopies: 1,
+            pin: nil,
+            title: "",
+            contents: contents,
+            syncTimestamp: nextTimestamp,
+            syncSource: nil,
+            syncDeleted: false
+        )
+        item.title = Clipboard.shared.generateTitle(for: item)
         return item
     }
 }

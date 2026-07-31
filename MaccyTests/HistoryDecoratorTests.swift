@@ -20,6 +20,14 @@ class HistoryItemDecoratorTests: XCTestCase {
         return formatter.date(from: "2020/07/10 12:41:34")
     }
 
+    var firstCopiedAtMilliseconds: Int64 {
+        Int64(firstCopiedAt.timeIntervalSince1970 * 1000)
+    }
+
+    var lastCopiedAtMilliseconds: Int64 {
+        Int64(lastCopiedAt.timeIntervalSince1970 * 1000)
+    }
+
     override func setUp() {
         super.setUp()
         Defaults[.highlightMatch] = .bold
@@ -107,15 +115,15 @@ class HistoryItemDecoratorTests: XCTestCase {
 
     func testPin() {
         let itemDecorator = historyItemDecorator("foo")
-        itemDecorator.togglePin()
+        itemDecorator.item.pin = "b"
         XCTAssertNotNil(itemDecorator.item.pin)
         XCTAssertTrue(itemDecorator.isPinned)
     }
 
     func testUnpin() {
         let itemDecorator = historyItemDecorator("foo")
-        itemDecorator.togglePin()
-        itemDecorator.togglePin()
+        itemDecorator.item.pin = "b"
+        itemDecorator.item.pin = nil
         XCTAssertNil(itemDecorator.item.pin)
         XCTAssertFalse(itemDecorator.isPinned)
     }
@@ -123,8 +131,8 @@ class HistoryItemDecoratorTests: XCTestCase {
     func testHighlight() throws {
         let itemDecorator = historyItemDecorator("foo bar baz")
         itemDecorator.highlight("random", [
-            range(from: 1, to: 2, in: itemDecorator),
-            range(from: 8, to: 10, in: itemDecorator),
+            range(from: 1, to: 2),
+            range(from: 8, to: 10),
         ])
         var expectedTitle = AttributedString("foo bar baz")
         try expectedTitle[XCTUnwrap(expectedTitle.range(of: "oo"))].font = .bold(.body)()
@@ -139,18 +147,13 @@ class HistoryItemDecoratorTests: XCTestCase {
         application: String? = "com.apple.finder"
     ) -> HistoryItemDecorator {
         let contents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: value?.data(using: .utf8)
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.title = item.generateTitle()
-        item.application = application
-        item.firstCopiedAt = firstCopiedAt
-        item.lastCopiedAt = lastCopiedAt
+        var item = clipboardItem(contents: contents, application: application)
+        item.title = Clipboard.shared.generateTitle(for: item)
 
         return HistoryItemDecorator(item)
     }
@@ -160,71 +163,68 @@ class HistoryItemDecoratorTests: XCTestCase {
         _ type: NSPasteboard.PasteboardType
     ) -> HistoryItemDecorator {
         let contents = [
-            HistoryItemContent(
-                type: type.rawValue,
+            ClipboardContent(
+                contentType: type.rawValue,
                 value: value
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.title = item.generateTitle()
-        item.application = "com.apple.finder"
-        item.firstCopiedAt = firstCopiedAt
-        item.lastCopiedAt = lastCopiedAt
-        item.numberOfCopies = 2
+        var item = clipboardItem(contents: contents, numberOfCopies: 2)
+        item.title = Clipboard.shared.generateTitle(for: item)
 
         return HistoryItemDecorator(item)
     }
 
     private func historyItemDecorator(_ value: NSImage) -> HistoryItemDecorator {
         let contents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.tiff.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.tiff.rawValue,
                 value: value.tiffRepresentation!
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.title = item.generateTitle()
-        item.application = "com.apple.finder"
-        item.firstCopiedAt = firstCopiedAt
-        item.lastCopiedAt = lastCopiedAt
-        item.numberOfCopies = 2
+        var item = clipboardItem(contents: contents, numberOfCopies: 2)
+        item.title = Clipboard.shared.generateTitle(for: item)
 
         return HistoryItemDecorator(item)
     }
 
     private func historyItemDecorator(_ value: URL) -> HistoryItemDecorator {
         let contents = [
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.fileURL.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.fileURL.rawValue,
                 value: value.dataRepresentation
             ),
-            HistoryItemContent(
-                type: NSPasteboard.PasteboardType.string.rawValue,
+            ClipboardContent(
+                contentType: NSPasteboard.PasteboardType.string.rawValue,
                 value: value.lastPathComponent.data(using: .utf8)
             ),
         ]
-        let item = HistoryItem()
-        Storage.shared.context.insert(item)
-        item.contents = contents
-        item.title = item.generateTitle()
-        item.application = "com.apple.finder"
-        item.firstCopiedAt = firstCopiedAt
-        item.lastCopiedAt = lastCopiedAt
-        item.numberOfCopies = 2
+        var item = clipboardItem(contents: contents, numberOfCopies: 2)
+        item.title = Clipboard.shared.generateTitle(for: item)
 
         return HistoryItemDecorator(item)
     }
 
-    // swiftlint:disable:next identifier_name
-    private func range(from: Int, to: Int, in item: HistoryItemDecorator) -> Range<String.Index> {
-        let startIndex = item.title.startIndex
-        let lowerBound = item.title.index(startIndex, offsetBy: from)
-        let upperBound = item.title.index(startIndex, offsetBy: to + 1)
+    private func clipboardItem(
+        contents: [ClipboardContent],
+        application: String? = "com.apple.finder",
+        numberOfCopies: Int32 = 1
+    ) -> ClipboardItem {
+        ClipboardItem(
+            id: UUID().uuidString,
+            application: application,
+            firstCopiedAt: firstCopiedAtMilliseconds,
+            lastCopiedAt: lastCopiedAtMilliseconds,
+            numberOfCopies: numberOfCopies,
+            pin: nil,
+            title: "",
+            contents: contents,
+            syncTimestamp: lastCopiedAtMilliseconds,
+            syncSource: nil,
+            syncDeleted: false
+        )
+    }
 
-        return lowerBound ..< upperBound
+    private func range(from: Int64, to: Int64) -> MatchRange {
+        MatchRange(start: from, end: to + 1)
     }
 }

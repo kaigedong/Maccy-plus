@@ -40,7 +40,7 @@ class History: ItemsContainer {
         }
     }
 
-    var excludedApps: Set<String> = [] {
+    var selectedApp: String? {
         didSet {
             throttler.throttle { [self] in
                 let mode = mapSearchMode(Defaults[.searchMode])
@@ -49,6 +49,10 @@ class History: ItemsContainer {
                 AppState.shared.popup.needsResize = true
             }
         }
+    }
+
+    func toggleAppSelection(_ bundleId: String) {
+        selectedApp = selectedApp == bundleId ? nil : bundleId
     }
 
     var excludedDevices: Set<String> = [] {
@@ -572,12 +576,13 @@ class History: ItemsContainer {
     // MARK: - Private Helpers
 
     private func filteredItems() -> [HistoryItemDecorator] {
-        if excludedApps.isEmpty, excludedDevices.isEmpty { return all }
+        if selectedApp == nil, excludedDevices.isEmpty {
+            return all
+        }
+
         return all.filter { item in
             let bundleId = item.item.application ?? ""
-            if bundleId.isEmpty {
-                if excludedApps.contains("") { return false }
-            } else if excludedApps.contains(bundleId) {
+            if let selectedApp, bundleId != selectedApp {
                 return false
             }
             if let syncSource = item.item.syncSource,
