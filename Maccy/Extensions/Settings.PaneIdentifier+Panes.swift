@@ -1,5 +1,10 @@
 import Settings
 
+enum SettingsLayout {
+    static let contentWidth = 550.0
+    static let paneWidth = contentWidth + 60
+}
+
 extension Settings.PaneIdentifier {
     static let advanced = Self("advanced")
     static let appearance = Self("appearance")

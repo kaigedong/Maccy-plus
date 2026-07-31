@@ -49,7 +49,7 @@ struct AppearanceSettingsPane: View {
     }()
 
     var body: some View {
-        Settings.Container(contentWidth: 650) {
+        Settings.Container(contentWidth: SettingsLayout.contentWidth) {
             Settings.Section(label: { Text("PopupAt", tableName: "AppearanceSettings") }) {
                 HStack {
                     Picker("", selection: $popupAt) {

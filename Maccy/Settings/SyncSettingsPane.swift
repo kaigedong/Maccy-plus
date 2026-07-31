@@ -3,6 +3,8 @@ import Settings
 import SwiftUI
 
 struct SyncSettingsPane: View {
+    private static let sectionContentWidth = SettingsLayout.contentWidth - 150
+
     @Default(.syncEnabled) private var syncEnabled
     @Default(.syncDeviceName) private var syncDeviceName
     @Default(.syncDiscoverable) private var syncDiscoverable
@@ -19,7 +21,7 @@ struct SyncSettingsPane: View {
     @State private var connectionStatus: String?
 
     var body: some View {
-        Settings.Container(contentWidth: 450) {
+        Settings.Container(contentWidth: SettingsLayout.contentWidth) {
             Settings.Section(label: { Text("Enable") }) {
                 Toggle(isOn: $syncEnabled) {
                     Text("Enable Clipboard Sync")
@@ -33,6 +35,8 @@ struct SyncSettingsPane: View {
                 Text("When enabled, other devices on the same network can find this device automatically via mDNS.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .frame(width: Self.sectionContentWidth, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Settings.Section(label: { Text("This Device") }) {
@@ -178,6 +182,7 @@ struct SyncSettingsPane: View {
                 .controlSize(.small)
             }
         }
+        .frame(width: Self.sectionContentWidth)
     }
 
     private func editDeviceSheet(_ device: PairedDeviceInfo) -> some View {

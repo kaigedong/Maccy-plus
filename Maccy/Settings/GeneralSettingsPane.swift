@@ -19,7 +19,7 @@ struct GeneralSettingsPane: View {
     @Default(.appendModeTimeWindow) private var appendModeTimeWindow
 
     var body: some View {
-        Settings.Container(contentWidth: 450) {
+        Settings.Container(contentWidth: SettingsLayout.contentWidth) {
             Settings.Section(title: "", bottomDivider: true) {
                 LaunchAtLogin.Toggle {
                     Text("LaunchAtLogin", tableName: "GeneralSettings")
